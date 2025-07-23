@@ -11,3 +11,4 @@ def BatalhaLoop(tela, relogio, estados, config):
 
         pygame.display.update()
         relogio.tick(config["FPS"])
+        

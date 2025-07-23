@@ -1,6 +1,9 @@
 import pygame
 import os
+import re
 import sys
+
+from Prefabs.Sonoridade import tocar
 
 def resource_path(relative_path):
     """Garante o caminho correto mesmo quando empacotado em .exe com PyInstaller."""
@@ -219,3 +222,78 @@ def Botao_Selecao(
                         desfazer_esquerdo()
                         estado_global["selecionado_esquerdo"] = None
                     aplicar_selecao("direito")
+
+def quebrar_texto(texto, fonte, largura_max):
+    palavras = texto.split()
+    linhas = []
+    linha_atual = ""
+    for palavra in palavras:
+        teste = linha_atual + " " + palavra if linha_atual else palavra
+        if fonte.size(teste)[0] <= largura_max:
+            linha_atual = teste
+        else:
+            linhas.append(linha_atual)
+            linha_atual = palavra
+    if linha_atual:
+        linhas.append(linha_atual)
+    return linhas
+
+def tooltip(area, local, texto, titulo, fonte_texto, fonte_titulo, tela):
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    area_rect = pygame.Rect(area)
+    local_rect = pygame.Rect(local)
+
+    if not area_rect.collidepoint((mouse_x, mouse_y)):
+        return
+
+    # Prepara texto quebrado sem limite artificial de largura
+    linhas_texto = quebrar_texto(texto, fonte_texto, local_rect.width - 20)
+    altura_texto = fonte_texto.get_height() * len(linhas_texto)
+
+    # Prepara título (sem quebra)
+    titulo_render = fonte_titulo.render(titulo, True, (255, 255, 255))
+    altura_titulo = titulo_render.get_height()
+
+    # Cria fundo com transparência no tamanho definido por 'local'
+    fundo = pygame.Surface((local_rect.width, local_rect.height), pygame.SRCALPHA)
+    fundo.fill((0, 0, 0, 200))
+
+    # Desenha o título centralizado horizontalmente no topo
+    titulo_rect = titulo_render.get_rect(center=(local_rect.width // 2, altura_titulo // 2 + 5))
+    fundo.blit(titulo_render, titulo_rect)
+
+    # Desenha o texto abaixo, centralizado horizontalmente
+    y_texto_inicio = altura_titulo + 10
+    for i, linha in enumerate(linhas_texto):
+        render_linha = fonte_texto.render(linha, True, (255, 255, 255))
+        linha_rect = render_linha.get_rect(center=(local_rect.width // 2, y_texto_inicio + fonte_texto.get_height() // 2 + i * fonte_texto.get_height()))
+        fundo.blit(render_linha, linha_rect)
+
+    # Blita no local especificado
+    tela.blit(fundo, local_rect.topleft)
+
+def carregar_frames(pasta):
+    def extrair_numero(nome):
+        numeros = re.findall(r'\d+', nome)
+        return int(numeros[0]) if numeros else -1
+
+    arquivos = [nome for nome in os.listdir(pasta) if nome.lower().endswith((".png", ".jpg", ".jpeg"))]
+    arquivos.sort(key=extrair_numero)  # ordena com base nos números encontrados no nome
+
+    frames = []
+    for nome in arquivos:
+        caminho = os.path.join(pasta, nome)
+        imagem = pygame.image.load(caminho).convert_alpha()
+        frames.append(imagem)
+
+    return frames
+
+def animar(D_inicial,D_final,anima,tempo=200):
+    
+    if anima is None:
+        anima = pygame.time.get_ticks()
+    tempo_passado = pygame.time.get_ticks() - anima
+    progresso = min(tempo_passado / tempo, 1.0)
+    D = int(D_inicial + (D_final - D_inicial) * progresso)
+
+    return D

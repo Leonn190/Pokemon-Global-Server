@@ -1,5 +1,10 @@
 import pygame
 
+from Prefabs.FunçõesPrefabs import Botao
+
+def InicioTela():
+    pass
+
 def InicioLoop(tela, relogio, estados, config):
 
     while estados["Inicio"]:
