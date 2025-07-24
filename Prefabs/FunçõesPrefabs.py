@@ -11,23 +11,53 @@ def resource_path(relative_path):
         base_path = sys._MEIPASS  # Usado pelo PyInstaller
     except Exception:
         base_path = os.path.abspath(".")
-
     return os.path.join(base_path, relative_path)
 
-def Carregar_Imagem(nome_arquivo, tamanho):
-    caminho_completo = resource_path(nome_arquivo)
+def Carregar_Imagem(nome_arquivo, tamanho=None):
+    caminho_completo = resource_path(os.path.join("Recursos", "Visual", nome_arquivo))
     extensao = os.path.splitext(nome_arquivo)[1].lower()
 
     try:
         imagem_original = pygame.image.load(caminho_completo)
-        if extensao == ".png":
-            imagem_convertida = imagem_original.convert_alpha()
-        else:
-            imagem_convertida = imagem_original.convert()
-        return pygame.transform.scale(imagem_convertida, tamanho)
+        imagem_convertida = (
+            imagem_original.convert_alpha() if extensao == ".png"
+            else imagem_original.convert()
+        )
+
+        if tamanho is not None:
+            imagem_convertida = pygame.transform.scale(imagem_convertida, tamanho)
+
+        return imagem_convertida
     except pygame.error as erro:
         print(f"[Erro ao carregar imagem] {nome_arquivo}: {erro}")
         return None
+
+def Carregar_Frames(pasta_relativa):
+    def extrair_numero(nome):
+        numeros = re.findall(r'\d+', nome)
+        return int(numeros[0]) if numeros else -1
+
+    caminho_completo = resource_path(os.path.join("Recursos", "Visual", pasta_relativa))
+    
+    if not os.path.isdir(caminho_completo):
+        print(f"[Erro] Pasta não encontrada: {caminho_completo}")
+        return []
+
+    arquivos = [nome for nome in os.listdir(caminho_completo)
+                if nome.lower().endswith((".png", ".jpg", ".jpeg"))]
+    arquivos.sort(key=extrair_numero)
+
+    frames = []
+    for nome in arquivos:
+        caminho = os.path.join(caminho_completo, nome)
+        try:
+            imagem = pygame.image.load(caminho).convert_alpha()
+            frames.append(imagem)
+        except pygame.error as erro:
+            print(f"[Erro ao carregar frame] {nome}: {erro}")
+            continue
+
+    return frames
 
 def Botao(tela, texto, espaço, cor_normal, cor_borda, cor_passagem,
            acao, Fonte, estado_clique, eventos, grossura=2, tecla_atalho=None,
@@ -238,7 +268,7 @@ def quebrar_texto(texto, fonte, largura_max):
         linhas.append(linha_atual)
     return linhas
 
-def tooltip(area, local, texto, titulo, fonte_texto, fonte_titulo, tela):
+def Tooltip(area, local, texto, titulo, fonte_texto, fonte_titulo, tela):
     mouse_x, mouse_y = pygame.mouse.get_pos()
     area_rect = pygame.Rect(area)
     local_rect = pygame.Rect(local)
@@ -272,23 +302,7 @@ def tooltip(area, local, texto, titulo, fonte_texto, fonte_titulo, tela):
     # Blita no local especificado
     tela.blit(fundo, local_rect.topleft)
 
-def carregar_frames(pasta):
-    def extrair_numero(nome):
-        numeros = re.findall(r'\d+', nome)
-        return int(numeros[0]) if numeros else -1
-
-    arquivos = [nome for nome in os.listdir(pasta) if nome.lower().endswith((".png", ".jpg", ".jpeg"))]
-    arquivos.sort(key=extrair_numero)  # ordena com base nos números encontrados no nome
-
-    frames = []
-    for nome in arquivos:
-        caminho = os.path.join(pasta, nome)
-        imagem = pygame.image.load(caminho).convert_alpha()
-        frames.append(imagem)
-
-    return frames
-
-def animar(D_inicial,D_final,anima,tempo=200):
+def Animar(D_inicial,D_final,anima,tempo=200):
     
     if anima is None:
         anima = pygame.time.get_ticks()
@@ -297,3 +311,41 @@ def animar(D_inicial,D_final,anima,tempo=200):
     D = int(D_inicial + (D_final - D_inicial) * progresso)
 
     return D
+
+def Barra_De_Texto(tela, espaço, fonte, cor_fundo, cor_borda, cor_texto,
+                   eventos, texto_atual, ao_enviar, cor_selecionado, selecionada):
+
+    x, y, largura, altura = espaço
+    retangulo = pygame.Rect(x, y, largura, altura)
+
+    texto_modificado = False
+
+    for evento in eventos:
+        if evento.type == pygame.MOUSEBUTTONDOWN:
+            if retangulo.collidepoint(evento.pos):
+                selecionada = not selecionada
+            else:
+                selecionada = False
+
+        if selecionada and evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_BACKSPACE:
+                texto_atual = texto_atual[:-1]
+                texto_modificado = True
+            elif evento.key == pygame.K_RETURN:
+                pass  # Enter agora não faz nada
+            else:
+                texto_atual += evento.unicode
+                texto_modificado = True
+
+    if texto_modificado:
+        ao_enviar(texto_atual)
+
+    cor_borda_atual = cor_selecionado if selecionada else cor_borda
+
+    pygame.draw.rect(tela, cor_fundo, retangulo)
+    pygame.draw.rect(tela, cor_borda_atual, retangulo, 2)
+
+    texto_surface = fonte.render(str(texto_atual), True, cor_texto)
+    tela.blit(texto_surface, (retangulo.x + 10, retangulo.y + (altura - texto_surface.get_height()) // 2))
+
+    return texto_atual, selecionada

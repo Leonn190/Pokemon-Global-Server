@@ -1,6 +1,6 @@
 import pygame
 
-def BatalhaLoop(tela, relogio, estados, config):
+def BatalhaLoop(tela, relogio, estados, config, info):
 
     while estados["Batalha"]:
         eventos = pygame.event.get()
@@ -11,4 +11,3 @@ def BatalhaLoop(tela, relogio, estados, config):
 
         pygame.display.update()
         relogio.tick(config["FPS"])
-        

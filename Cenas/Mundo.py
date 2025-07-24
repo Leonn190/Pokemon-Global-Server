@@ -1,6 +1,6 @@
 import pygame
 
-def MundoLoop(tela, relogio, estados, config):
+def MundoLoop(tela, relogio, estados, config, info):
 
     while estados["Mundo"]:
         eventos = pygame.event.get()
