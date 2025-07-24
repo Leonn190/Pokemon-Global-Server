@@ -1,7 +1,7 @@
 import pygame
 
 class Animação:
-    def __init__(self, frames, posicao, intervalo=45, duracao=None, ao_terminar=None, loop=True, ping_pong=False):
+    def __init__(self, frames, posicao, intervalo=50, duracao=None, ao_terminar=None, loop=True, ping_pong=False):
         self.frames = frames
         self.pos = posicao
         self.intervalo = intervalo  # tempo entre frames (ms)

@@ -1,4 +1,5 @@
 import pygame
+import pyperclip
 import os
 import re
 import sys
@@ -61,75 +62,107 @@ def Carregar_Frames(pasta_relativa):
 
 def Botao(tela, texto, espaço, cor_normal, cor_borda, cor_passagem,
            acao, Fonte, estado_clique, eventos, grossura=2, tecla_atalho=None,
-           mostrar_na_tela=True, som=None):
-
-    # Desempacota as dimensões do botão
+           mostrar_na_tela=True, som=None, cor_texto=(0, 0, 0)):
+    
     x, y, largura, altura = espaço
 
-    # Obtém a posição e o clique atual do mouse
     mouse = pygame.mouse.get_pos()
     clique = pygame.mouse.get_pressed()
 
-    # Verifica se o mouse está sobre o botão
     mouse_sobre = x <= mouse[0] <= x + largura and y <= mouse[1] <= y + altura
 
-    # Verifica se uma tecla de atalho foi pressionada (caso tenha sido definida)
     tecla_ativada = False
     if tecla_atalho and eventos:
         for evento in eventos:
             if evento.type == pygame.KEYDOWN and evento.key == tecla_atalho:
                 tecla_ativada = True
 
-    # Define a cor da borda: muda se o mouse estiver sobre ou se a tecla foi ativada
     cor_borda_atual = cor_passagem if mouse_sobre or tecla_ativada else cor_borda
 
-    # Desenha o botão na tela (se for permitido)
-    if mostrar_na_tela:
-        # Se cor_normal for uma imagem (Surface), desenha a imagem no botão
-        if isinstance(cor_normal, pygame.Surface):
-            imagem = pygame.transform.scale(cor_normal, (largura, altura))
-            tela.blit(imagem, (x, y))
-        else:
-            # Caso contrário, desenha o retângulo do botão
-            pygame.draw.rect(tela, cor_normal, (x, y, largura, altura))
+    # --- Início da adaptação para lista de imagens (animação simples) ---
+    frames = None
+    if isinstance(cor_normal, list) and cor_normal and all(isinstance(f, pygame.Surface) for f in cor_normal):
+        frames = cor_normal
+        # Inicializa estado se necessário
+        if "_frame_index" not in estado_clique:
+            estado_clique["_frame_index"] = 0
+            estado_clique["_last_time"] = pygame.time.get_ticks()
 
-        # Desenha a borda do botão
+        agora = pygame.time.get_ticks()
+        intervalo = 50  # milissegundos por frame (pode ajustar)
+
+        if mouse_sobre:
+            # Atualiza frame se tempo passou
+            if agora - estado_clique["_last_time"] > intervalo:
+                estado_clique["_frame_index"] = (estado_clique["_frame_index"] + 1) % len(frames)
+                estado_clique["_last_time"] = agora
+        else:
+            # Mouse saiu, volta para frame 0
+            estado_clique["_frame_index"] = 0
+
+        # Pega o frame atual para desenhar e escala
+        frame_atual = pygame.transform.scale(frames[estado_clique["_frame_index"]], (largura, altura))
+        if mostrar_na_tela:
+            tela.blit(frame_atual, (x, y))
+
+    else:
+        # Se cor_normal for imagem única
+        if mostrar_na_tela:
+            if isinstance(cor_normal, pygame.Surface):
+                imagem = pygame.transform.scale(cor_normal, (largura, altura))
+                tela.blit(imagem, (x, y))
+            else:
+                pygame.draw.rect(tela, cor_normal, (x, y, largura, altura))
+
+    if mostrar_na_tela and not frames:
         pygame.draw.rect(tela, cor_borda_atual, (x, y, largura, altura), grossura)
 
-        # Desenha o texto centralizado dentro do botão (se houver texto)
         if texto:
-            texto_render = Fonte.render(texto, True, (0, 0, 0))  # Texto preto
+            texto_render = Fonte.render(texto, True, cor_texto)  # Usa cor_texto aqui
+            texto_rect = texto_render.get_rect(center=(x + largura // 2, y + altura // 2))
+            tela.blit(texto_render, texto_rect)
+    elif mostrar_na_tela and frames:
+        # Desenha borda e texto mesmo se animado
+        pygame.draw.rect(tela, cor_borda_atual, (x, y, largura, altura), grossura)
+        if texto:
+            texto_render = Fonte.render(texto, True, cor_texto)  # Usa cor_texto aqui também
             texto_rect = texto_render.get_rect(center=(x + largura // 2, y + altura // 2))
             tela.blit(texto_render, texto_rect)
 
-    # Se o mouse clicou sobre o botão e ainda não estava clicado anteriormente
     if mostrar_na_tela and mouse_sobre and clique[0] == 1 and not estado_clique.get("pressionado", False):
-        estado_clique["pressionado"] = True  # Marca que o botão foi pressionado
+        estado_clique["pressionado"] = True
         if som:
-            tocar(som)  # Toca o som do botão
+            tocar(som)
         if acao:
-            acao()  # Executa a função atribuída ao botão
+            if isinstance(acao, (list, tuple)):
+                for func in acao:
+                    if callable(func):
+                        func()
+            elif callable(acao):
+                acao()
 
-    # Reseta o estado de clique se o botão do mouse foi solto
     if clique[0] == 0:
         estado_clique["pressionado"] = False
 
-    # Se a tecla de atalho foi pressionada e ainda não registrada
     if tecla_ativada and not estado_clique.get("pressionado_tecla", False):
         estado_clique["pressionado_tecla"] = True
         if som:
             tocar(som)
         if acao:
-            acao()
+            if isinstance(acao, (list, tuple)):
+                for func in acao:
+                    if callable(func):
+                        func()
+            elif callable(acao):
+                acao()
 
-    # Reseta o estado da tecla quando for solta
     if tecla_atalho and eventos:
         for evento in eventos:
             if evento.type == pygame.KEYUP and evento.key == tecla_atalho:
                 estado_clique["pressionado_tecla"] = False
 
 def Botao_Selecao(
-    tela, espaço, texto, Fonte,
+    tela, texto, espaço, Fonte,
     cor_fundo, cor_borda_normal,
     cor_borda_esquerda=None, cor_borda_direita=None,
     cor_passagem=None, id_botao=None,
@@ -313,12 +346,22 @@ def Animar(D_inicial,D_final,anima,tempo=200):
     return D
 
 def Barra_De_Texto(tela, espaço, fonte, cor_fundo, cor_borda, cor_texto,
-                   eventos, texto_atual, ao_enviar, cor_selecionado, selecionada):
+                   eventos, texto_atual, ao_enviar=None, cor_selecionado=(255, 255, 255), selecionada=False,
+                   tempo_held_backspace=70):
 
     x, y, largura, altura = espaço
     retangulo = pygame.Rect(x, y, largura, altura)
 
     texto_modificado = False
+
+    # Configuração para apagar com tecla pressionada
+    keys = pygame.key.get_pressed()
+    tempo_atual = pygame.time.get_ticks()
+
+    # Estado de controle estático da função
+    if not hasattr(Barra_De_Texto, "backspace_timer"):
+        Barra_De_Texto.backspace_timer = 0
+        Barra_De_Texto.backspace_held = False
 
     for evento in eventos:
         if evento.type == pygame.MOUSEBUTTONDOWN:
@@ -331,17 +374,33 @@ def Barra_De_Texto(tela, espaço, fonte, cor_fundo, cor_borda, cor_texto,
             if evento.key == pygame.K_BACKSPACE:
                 texto_atual = texto_atual[:-1]
                 texto_modificado = True
+                Barra_De_Texto.backspace_timer = tempo_atual
+                Barra_De_Texto.backspace_held = True
+            elif evento.key == pygame.K_v and (pygame.key.get_mods() & pygame.KMOD_CTRL):
+                texto_atual += pyperclip.paste()
+                texto_modificado = True
             elif evento.key == pygame.K_RETURN:
-                pass  # Enter agora não faz nada
+                pass  # Enter ainda não faz nada
             else:
                 texto_atual += evento.unicode
                 texto_modificado = True
 
-    if texto_modificado:
+        if evento.type == pygame.KEYUP and evento.key == pygame.K_BACKSPACE:
+            Barra_De_Texto.backspace_held = False
+
+    # Lógica de repetição automática do backspace
+    if selecionada and Barra_De_Texto.backspace_held:
+        if tempo_atual - Barra_De_Texto.backspace_timer > tempo_held_backspace:
+            texto_atual = texto_atual[:-1]
+            texto_modificado = True
+            Barra_De_Texto.backspace_timer = tempo_atual
+
+    # Chama função de envio, se houver
+    if texto_modificado and ao_enviar:
         ao_enviar(texto_atual)
 
+    # Desenho visual
     cor_borda_atual = cor_selecionado if selecionada else cor_borda
-
     pygame.draw.rect(tela, cor_fundo, retangulo)
     pygame.draw.rect(tela, cor_borda_atual, retangulo, 2)
 
@@ -349,3 +408,5 @@ def Barra_De_Texto(tela, espaço, fonte, cor_fundo, cor_borda, cor_texto,
     tela.blit(texto_surface, (retangulo.x + 10, retangulo.y + (altura - texto_surface.get_height()) // 2))
 
     return texto_atual, selecionada
+
+

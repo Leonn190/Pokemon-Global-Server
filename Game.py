@@ -3,6 +3,8 @@ import sys
 import ctypes
 import threading
 
+from Prefabs.Sonoridade import VerificaSonoridade
+
 try:
     ctypes.windll.user32.SetProcessDPIAware()
 except:
@@ -18,8 +20,11 @@ relogio = pygame.time.Clock()
 
 config = {
     "FPS": 100,
-    "Volume": 0.5
+    "Volume": 0.5,
+    "Mudo": False
 }
+
+VerificaSonoridade(config)
 
 info = {
     "Carregado": False,
