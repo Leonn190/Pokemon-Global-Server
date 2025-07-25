@@ -4,7 +4,7 @@ import os
 import ctypes
 import threading
 
-from Prefabs.Sonoridade import VerificaSonoridade
+from Codigo.Prefabs.Sonoridade import VerificaSonoridade
 
 try:
     ctypes.windll.user32.SetProcessDPIAware()
@@ -41,12 +41,12 @@ info = {
     "Alvo": "Inicio"
 }
 
-from Cenas.Inicio import InicioLoop
-from Cenas.Carregamento import CarregamentoLoop
-from Cenas.Mundo import MundoLoop 
-from Cenas.Batalha import BatalhaLoop
+from Codigo.Cenas.Inicio import InicioLoop
+from Codigo.Cenas.Carregamento import CarregamentoLoop
+from Codigo.Cenas.Mundo import MundoLoop 
+from Codigo.Cenas.Batalha import BatalhaLoop
 
-from Carregar.CarregamentoBasico import CarregamentoBasico
+from Codigo.Carregar.CarregamentoBasico import CarregamentoBasico
 
 estados = {
     "Rodando": True,
