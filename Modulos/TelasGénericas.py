@@ -1,5 +1,6 @@
 import pygame
-from Prefabs.FunçõesPrefabs import Barra_De_Texto, Botao
+from Prefabs.FunçõesPrefabs import Barra_De_Texto
+from Prefabs.BotoesPrefab import Botao
 
 B1 = {}
 B2 = {}

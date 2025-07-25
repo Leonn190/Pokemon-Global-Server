@@ -1,5 +1,6 @@
 import pygame
 import sys
+import os
 import ctypes
 import threading
 
@@ -21,8 +22,17 @@ relogio = pygame.time.Clock()
 config = {
     "FPS": 100,
     "Volume": 0.5,
-    "Mudo": False
+    "Claridade": 75,
+    "Mudo": False,
+    "FPS Visivel": False
 }
+
+if os.path.exists("ConfigFixa.py"):
+    try:
+        from ConfigFixa import Config as ConfigSalva
+        config = ConfigSalva
+    except Exception as e:
+        pass  # Silenciosamente ignora erro
 
 VerificaSonoridade(config)
 
@@ -36,7 +46,7 @@ from Cenas.Carregamento import CarregamentoLoop
 from Cenas.Mundo import MundoLoop 
 from Cenas.Batalha import BatalhaLoop
 
-from Prefabs.Aspectos import CarregamentoBasico
+from Carregar.CarregamentoBasico import CarregamentoBasico
 
 estados = {
     "Rodando": True,

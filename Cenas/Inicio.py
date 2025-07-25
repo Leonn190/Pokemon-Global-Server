@@ -1,10 +1,11 @@
 import pygame
 
-from Prefabs.FunçõesPrefabs import Botao, Barra_De_Texto, Botao_Selecao
-from Prefabs.Animações import Animação
+from Prefabs.BotoesPrefab import Botao, Botao_Selecao
+from Prefabs.FunçõesPrefabs import Barra_De_Texto
 from Prefabs.Sonoridade import Musica
 from Modulos.Server import AdicionaServer, CarregarServers, ApagarServer, RenomearServer
 from Modulos.TelasGénericas import TelaEntradaDeTexto, TelaDeCerteza
+from Modulos.Config import TelaConfigurações, aplicar_claridade
 
 B1 = {}
 
@@ -29,19 +30,19 @@ SelecionadoLink = False
 def InicioTelaPrincipal(tela, estados, eventos, parametros):
 
     Botao(
-        tela, "JOGAR", (750, 550, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
+        tela, "JOGAR", (750, 560, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
         lambda: parametros.update({"Tela": InicioTelaJogar}),
         Fontes[40], B_jogar, eventos, som="Clique", cor_texto=Cores["branco"]
     )
 
     Botao(
-        tela, "CONFIGURAÇÕES", (750, 710, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
-        lambda: parametros.update({"Tela": False}),
+        tela, "CONFIGURAÇÕES", (750, 730, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
+        lambda: parametros.update({"Tela": TelaConfigurações, "TelaConfigurações": {"Voltar":lambda: parametros.update({"Tela": InicioTelaPrincipal})}}),
         Fontes[40], B_config, eventos, som="Clique", cor_texto=Cores["branco"]
     )
 
     Botao(
-        tela, "SAIR", (750, 870, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
+        tela, "SAIR", (750, 900, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
         lambda: estados.update({"Inicio": False, "Rodando": False}),
         Fontes[40], B_sair, eventos, som="Clique", cor_texto=Cores["branco"]
     )
@@ -53,7 +54,7 @@ def InicioTelaJogar(tela, estados, eventos, parametros):
     Botao(
         tela, "Adicionar Novo Server", (640, 170, 610, 150),
         Texturas["Cosmico"], Cores["preto"], Cores["branco"],
-        lambda: parametros.update({"Tela": InicioTelaNovoServer}),
+        lambda: parametros.update({"Tela": InicioTelaNovoServer, "ServerSelecionado": None,}),
         Fontes[40], B_Adicionar, eventos, som="Clique", cor_texto=Cores["branco"]
     )
 
@@ -106,7 +107,7 @@ def InicioTelaJogar(tela, estados, eventos, parametros):
         x = inicio_x + i * (largura_botao + espacamento_horizontal)
 
         if nome == "Voltar":
-            funcao = lambda: parametros.update({"Tela": InicioTelaPrincipal})
+            funcao = lambda: parametros.update({"Tela": InicioTelaPrincipal, "ServerSelecionado": None,})
             textura = Texturas["azul"]
         else:
             server_selecionado = parametros.get("ServerSelecionado")
@@ -114,16 +115,16 @@ def InicioTelaJogar(tela, estados, eventos, parametros):
                 funcao = None
                 textura = Cores["cinza"]
             elif nome == "Entrar":
-                funcao = lambda: parametros.update({"Tela": TelaEntradaDeTexto, "TelaEntradaDeTexto": {"Rotulo": "Codigo de login do server", "Texto": "000", "Voltar": lambda: parametros.update({"Tela": InicioTelaJogar}), "Enviar": print("pass")}})
+                funcao = lambda: parametros.update({"Tela": TelaEntradaDeTexto, "TelaEntradaDeTexto": {"Rotulo": "Codigo de login do server", "Texto": "000", "Voltar": lambda: parametros.update({"Tela": InicioTelaJogar, "ServerSelecionado": None,}), "Enviar": print("pass")}})
                 textura = Texturas["amarelo"]
             elif nome == "Renomear":
-                funcao = [lambda: parametros.update({"Tela": TelaEntradaDeTexto, "TelaEntradaDeTexto": {"Rotulo": "Digite o novo nome do server", "Texto": f"{server_selecionado["nome"]}", "Voltar": lambda: parametros.update({"Tela": InicioTelaJogar, "Carregar": True}), "Enviar": RenomearServer, "Info1": server_selecionado["link"]}})]
+                funcao = [lambda: parametros.update({"Tela": TelaEntradaDeTexto, "TelaEntradaDeTexto": {"Rotulo": "Digite o novo nome do server", "Texto": f"{server_selecionado["nome"]}", "Voltar": lambda: parametros.update({"Tela": InicioTelaJogar, "Carregar": True, "ServerSelecionado": None,}), "Enviar": RenomearServer, "Info1": server_selecionado["link"]}})]
                 textura = Texturas["verde"]
             elif nome == "Apagar":
-                funcao = lambda: parametros.update({"Tela": TelaDeCerteza, "TelaDeCerteza": {"Voltar": lambda: parametros.update({"Tela": InicioTelaJogar, "Carregar": True}), "Funcao": [lambda: ApagarServer(server_selecionado["nome"]),lambda: parametros.update({"Tela": InicioTelaJogar})]}})
+                funcao = lambda: parametros.update({"Tela": TelaDeCerteza, "TelaDeCerteza": {"Voltar": lambda: parametros.update({"Tela": InicioTelaJogar, "Carregar": True, "ServerSelecionado": None,}), "Funcao": [lambda: ApagarServer(server_selecionado["nome"]),lambda: parametros.update({"Tela": InicioTelaJogar})]}})
                 textura = Texturas["vermelho"]
             elif nome == "Operar":
-                funcao = lambda: parametros.update({"Tela": TelaEntradaDeTexto, "TelaEntradaDeTexto": {"Rotulo": "Digite o codigo de operador so server", "Texto": "0000", "Voltar": lambda: parametros.update({"Tela": InicioTelaJogar, "Carregar": True}), "Enviar": print("pass")}})
+                funcao = lambda: parametros.update({"Tela": TelaEntradaDeTexto, "TelaEntradaDeTexto": {"Rotulo": "Digite o codigo de operador so server", "Texto": "0000", "Voltar": lambda: parametros.update({"Tela": InicioTelaJogar, "Carregar": True, "ServerSelecionado": None}), "Enviar": print("pass")}})
                 textura = Texturas["roxo"]
             else:
                 funcao = None
@@ -198,7 +199,8 @@ def InicioLoop(tela, relogio, estados, config, info):
         "ServerSelecionado": None,
         "NomeServer": "Novo Server",
         "LinkServer": "Link do Server",
-        "Carregar": False
+        "Carregar": False,
+        "Config": config
     }
 
     x = 0
@@ -233,5 +235,12 @@ def InicioLoop(tela, relogio, estados, config, info):
         else:
             x -= 0.35  # vai para a esquerda
 
+        if config["FPS Visivel"]:
+            fps_atual = relogio.get_fps()
+            texto_fps = Fontes[30].render(f"FPS: {fps_atual:.1f}", True, (255, 255, 255))
+            tela.blit(texto_fps, (tela.get_width() - texto_fps.get_width() - 10, 10))
+
+        aplicar_claridade(tela,config["Claridade"])
         pygame.display.update()
         relogio.tick(config["FPS"])
+        
