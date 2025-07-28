@@ -1,6 +1,8 @@
 import pygame
 import pyperclip
 import os
+import math
+from collections import Counter
 import re
 import sys
 
@@ -119,7 +121,7 @@ def Animar(D_inicial,D_final,anima,tempo=200):
 
 def Barra_De_Texto(tela, espaço, fonte, cor_fundo, cor_borda, cor_texto,
                    eventos, texto_atual, ao_enviar=None, cor_selecionado=(255, 255, 255), selecionada=False,
-                   tempo_held_backspace=70):
+                   tempo_held_backspace=70, limite=0):
 
     x, y, largura, altura = espaço
     retangulo = pygame.Rect(x, y, largura, altura)
@@ -149,13 +151,20 @@ def Barra_De_Texto(tela, espaço, fonte, cor_fundo, cor_borda, cor_texto,
                 Barra_De_Texto.backspace_timer = tempo_atual
                 Barra_De_Texto.backspace_held = True
             elif evento.key == pygame.K_v and (pygame.key.get_mods() & pygame.KMOD_CTRL):
-                texto_atual += pyperclip.paste()
+                conteudo_colado = pyperclip.paste()
+                # Aplica limite se existir
+                if limite > 0:
+                    espaco_disponivel = limite - len(texto_atual)
+                    conteudo_colado = conteudo_colado[:espaco_disponivel]
+                texto_atual += conteudo_colado
                 texto_modificado = True
             elif evento.key == pygame.K_RETURN:
                 pass  # Enter ainda não faz nada
             else:
-                texto_atual += evento.unicode
-                texto_modificado = True
+                # Só adiciona se não ultrapassar o limite
+                if limite <= 0 or len(texto_atual) < limite:
+                    texto_atual += evento.unicode
+                    texto_modificado = True
 
         if evento.type == pygame.KEYUP and evento.key == pygame.K_BACKSPACE:
             Barra_De_Texto.backspace_held = False
@@ -181,7 +190,7 @@ def Barra_De_Texto(tela, espaço, fonte, cor_fundo, cor_borda, cor_texto,
 
     return texto_atual, selecionada
 
-def Slider(tela, nome, x, y, largura, valor, min_val, max_val, cor_base, cor_botao, eventos, Mostragem=None):
+def Slider(tela, nome, x, y, largura, valor, min_val, max_val, cor_base, cor_botao, eventos, Mostragem=None,Mostrar=True):
     # Desenha a linha base
     pygame.draw.line(tela, cor_base, (x, y), (x + largura, y), 13)
     
@@ -192,14 +201,15 @@ def Slider(tela, nome, x, y, largura, valor, min_val, max_val, cor_base, cor_bot
     # Desenha o botão do slider
     pygame.draw.circle(tela, cor_botao, (int(pos_botao), y), 20)
     
-    # Nome e valor
-    fonte = pygame.font.SysFont(None, 24)
-    if Mostragem == "%":
-        texto = fonte.render(f"{nome}: {int(proporcao * 100)}%", True, (0,0,0))
-    else:
-        texto = fonte.render(f"{nome}: {int(valor)}", True, (0,0,0))
+    if Mostrar:
+        # Nome e valor
+        fonte = pygame.font.SysFont(None, 24)
+        if Mostragem == "%":
+            texto = fonte.render(f"{nome}: {int(proporcao * 100)}%", True, (0,0,0))
+        else:
+            texto = fonte.render(f"{nome}: {int(valor)}", True, (0,0,0))
     
-    tela.blit(texto, (x + largura + 25, y - 10))
+        tela.blit(texto, (x + largura + 25, y - 10))
 
     # Verifica se está arrastando
     mouse = pygame.mouse.get_pos()
@@ -221,3 +231,61 @@ def Slider(tela, nome, x, y, largura, valor, min_val, max_val, cor_base, cor_bot
 
 # Atributo estático para controlar arraste
 Slider.arrastando = None
+
+def extrair_cor_predominante(imagem):
+    largura, altura = imagem.get_size()
+    contador_cores = Counter()
+
+    for y in range(altura):
+        for x in range(largura):
+            cor = imagem.get_at((x, y))
+            if cor.a > 20:  # Ignora pixels transparentes
+                contador_cores[(cor.r, cor.g, cor.b)] += 1
+
+    if contador_cores:
+        cor_mais_comum = contador_cores.most_common(1)[0][0]
+        return pygame.Color(*cor_mais_comum)
+    else:
+        return pygame.Color("white")
+
+def DesenharPlayer(tela, imagem_corpo, posicao):
+    x, y = posicao
+
+    # Extrair uma cor confiável do corpo
+    cor_braco = extrair_cor_predominante(imagem_corpo)
+    mouse_pos = pygame.mouse.get_pos()
+
+    # Ângulo entre boneco e mouse
+    dx, dy = mouse_pos[0] - x, mouse_pos[1] - y
+    angulo = math.degrees(math.atan2(dy, dx))
+    angulo_correcao = angulo - 90
+    angulo_rad = math.radians(angulo)
+
+    # Rotacionar o corpo
+    corpo_rotacionado = pygame.transform.rotate(imagem_corpo, -angulo_correcao)
+    corpo_rect = corpo_rotacionado.get_rect(center=posicao)
+    tela.blit(corpo_rotacionado, corpo_rect)
+
+    # Respiração: movimento para frente e para trás
+    t = pygame.time.get_ticks() / 250
+    respiracao = math.sin(t) * 3  # amplitude de 3 pixels
+
+    distancia_braco_base = 56
+    distancia_braco = distancia_braco_base
+    profundidade = respiracao  # movimento ao longo do eixo do ângulo
+
+    # Base dos braços (posição lateral)
+    offset_x = math.cos(angulo_rad + math.pi / 2) * distancia_braco
+    offset_y = math.sin(angulo_rad + math.pi / 2) * distancia_braco
+
+    # Movimento respiratório (ao longo do corpo)
+    depth_x = math.cos(angulo_rad) * profundidade
+    depth_y = math.sin(angulo_rad) * profundidade
+
+    pos_braco_esquerdo = (x - offset_x + depth_x, y - offset_y + depth_y)
+    pos_braco_direito = (x + offset_x + depth_x, y + offset_y + depth_y)
+
+    # Desenha os braços
+    pygame.draw.circle(tela, cor_braco, pos_braco_esquerdo, 10)
+    pygame.draw.circle(tela, cor_braco, pos_braco_direito, 10)
+

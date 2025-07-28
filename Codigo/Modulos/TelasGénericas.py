@@ -1,6 +1,6 @@
 import pygame
-from Prefabs.FunçõesPrefabs import Barra_De_Texto
-from Prefabs.BotoesPrefab import Botao
+from Codigo.Prefabs.FunçõesPrefabs import Barra_De_Texto
+from Codigo.Prefabs.BotoesPrefab import Botao
 
 B1 = {}
 B2 = {}
@@ -9,9 +9,10 @@ SelecionadoEntrada = False
 def TelaEntradaDeTexto(tela, estados, eventos, parametros):
     global SelecionadoEntrada
 
-    from Cenas.Inicio import Fontes, Cores, Texturas, Outros, Fontes
+    from Codigo.Cenas.Inicio import Fontes, Cores, Texturas, Outros, Fontes
 
     Rotulo = parametros.get("TelaEntradaDeTexto", {}).get("Rotulo")
+    Limite = parametros.get("TelaEntradaDeTexto", {}).get("Limite",0)
     Enviar = parametros.get("TelaEntradaDeTexto", {}).get("Enviar")
     Voltar = parametros.get("TelaEntradaDeTexto", {}).get("Voltar")
 
@@ -38,7 +39,8 @@ def TelaEntradaDeTexto(tela, estados, eventos, parametros):
         eventos,
         parametros["TelaEntradaDeTexto"]["Texto"],
         cor_selecionado=Cores["amarelo"],
-        selecionada=SelecionadoEntrada
+        selecionada=SelecionadoEntrada,
+        limite=Limite
     )
 
     # Botão Enviar
@@ -61,7 +63,7 @@ B3 = {}
 B4 = {}
 
 def TelaDeCerteza(tela, estados, eventos, parametros):
-    from Cenas.Inicio import Fontes, Cores, Texturas, Outros
+    from Codigo.Cenas.Inicio import Fontes, Cores, Texturas, Outros
 
     # Parâmetros esperados
     Recado = parametros.get("TelaDeCerteza", {}).get("Recado", "Tem certeza?")

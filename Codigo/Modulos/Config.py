@@ -1,8 +1,8 @@
 import pygame
 
-from Prefabs.BotoesPrefab import Botao, Botao_Alavanca
-from Prefabs.FunçõesPrefabs import Slider
-from Prefabs.Sonoridade import VerificaSonoridade
+from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Alavanca
+from Codigo.Prefabs.FunçõesPrefabs import Slider
+from Codigo.Prefabs.Sonoridade import VerificaSonoridade
 
 B1= {}
 B2 = {}
@@ -38,7 +38,7 @@ def SalvarConfig(Config):
         f.write(f"Config = {repr(Config)}\n")
 
 def TelaConfigurações(tela, estados, eventos, parametros):
-    from Cenas.Inicio import Fontes, Cores, Texturas, Outros
+    from Codigo.Cenas.Inicio import Fontes, Cores, Texturas, Outros
 
     Voltar = parametros["TelaConfigurações"]["Voltar"]
 
@@ -64,20 +64,28 @@ def TelaConfigurações(tela, estados, eventos, parametros):
     parametros["Config"]["FPS"] = Slider(tela, "FPS", x + 50, y + 250, 670, parametros["Config"]["FPS"], 20, 240, (180, 180, 180), (255, 255, 255), eventos)
 
     # Botões alavanca
+        # Botão Mudo
     texto_mudo = Fontes[30].render("Mudo:", True, Cores["branco"])
     tela.blit(texto_mudo, (x + 110, y + 325))
-    parametros["Config"]["Mudo"] = Botao_Alavanca(tela, (x + 225, y + 320, 150, 50), Fontes[30], estados.setdefault("Mudo", {}), eventos,
-                                                  parametros["Config"].get("Mudo", False), False, True,
-                                                  cor1=(100, 0, 0), cor2=(0, 150, 0),
-                                                  texto1="Desligado", texto2="Ligado", som="Clique")
+    parametros["Config"]["Mudo"] = Botao_Alavanca(
+        tela, (x + 225, y + 320, 150, 50), Fontes[30], estados.setdefault("Mudo", {}), eventos,
+        parametros["Config"].get("Mudo", False),
+        valores=[False, True],
+        cores=[(100, 0, 0), (0, 150, 0)],
+        textos=["Desligado", "Ligado"],
+        som="Clique"
+    )
 
     texto_fps = Fontes[30].render("Mostrar FPS:", True, Cores["branco"])
     tela.blit(texto_fps, (x + 460, y + 325))
-    parametros["Config"]["FPS Visivel"] = Botao_Alavanca(tela, (x + 655, y + 320, 150, 50), Fontes[30], estados.setdefault("FPS Visivel", {}), eventos,
-                                                         parametros["Config"].get("FPS Visivel", False), False, True,
-                                                         cor1=(100, 0, 0), cor2=(0, 150, 0),
-                                                         texto1="Desligado", texto2="Ligado", som="Clique")
-
+    parametros["Config"]["FPS Visivel"] = Botao_Alavanca(
+        tela, (x + 655, y + 320, 150, 50), Fontes[30], estados.setdefault("FPS Visivel", {}), eventos,
+        parametros["Config"].get("FPS Visivel", False),
+        valores=[False, True],
+        cores=[(100, 0, 0), (0, 150, 0)],
+        textos=["Desligado", "Ligado"],
+        som="Clique"
+    )
     # Botões de Voltar e Salvar
     Botao(tela, "Voltar", (x + largura - 470 - 390, y + altura - 85, 390, 70), Texturas["azul"], Cores["preto"], Cores["branco"],
           [lambda: Voltar(), VerificaSonoridade(parametros["Config"])], Fontes[40], estados.setdefault("Voltar", {}), eventos=eventos)

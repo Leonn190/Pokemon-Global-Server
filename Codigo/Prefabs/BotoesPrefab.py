@@ -1,6 +1,6 @@
 import pygame
 
-from Prefabs.Sonoridade import tocar
+from Codigo.Prefabs.Sonoridade import tocar
 
 def Botao(tela, texto, espaço, cor_normal, cor_borda, cor_passagem,
            acao, Fonte, estado_clique, eventos, grossura=2, tecla_atalho=None,
@@ -228,60 +228,44 @@ def Botao_Selecao(
                         estado_global["selecionado_esquerdo"] = None
                     aplicar_selecao("direito")
 
-def Botao_Alavanca(tela, espaço, fonte, estado, eventos, 
-                   valor_atual, valor1, valor2, valor3=None,
-                   cor1=(100,100,100), cor2=(150,150,150), cor3=None,
-                   cor_passagem=(200,200,200), cor_borda=(0,0,0),
-                   texto1="", texto2="", texto3="",
-                   som=None, grossura_borda=2):  # nova variável
+def Botao_Alavanca(tela, espaço, fonte, estado, eventos,
+                   valor_atual, valores,
+                   cores=None, textos=None,
+                   cor_passagem=(200, 200, 200), cor_borda=(0, 0, 0),
+                   som=None, grossura_borda=2):
 
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()[0]
     x, y, w, h = espaço
     rect = pygame.Rect(espaço)
 
-    # Verifica se mouse está sobre o botão
-    dentro = rect.collidepoint(mouse)
     pygame.draw.rect(tela, cor_borda, rect, width=grossura_borda, border_radius=10)
 
-    # Escolhe cor e texto de acordo com o valor atual
-    if valor_atual == valor1:
-        cor_fundo = cor1
-        texto = texto1
-    elif valor_atual == valor2:
-        cor_fundo = cor2
-        texto = texto2
-    elif valor_atual == valor3:
-        cor_fundo = cor3 if cor3 else cor2
-        texto = texto3
-    else:
-        cor_fundo = cor1
-        texto = texto1
+    # Determina índice do valor atual
+    try:
+        idx = valores.index(valor_atual)
+    except ValueError:
+        idx = 0  # se não achar, usa primeiro valor como padrão
 
-    # Aplica cor de passagem
-    if dentro:
+    cor_fundo = cores[idx] if cores and idx < len(cores) else (100, 100, 100)
+    texto = textos[idx] if textos and idx < len(textos) else ""
+
+    if rect.collidepoint(mouse):
         pygame.draw.rect(tela, cor_passagem, rect.inflate(-4, -4), border_radius=8)
     else:
         pygame.draw.rect(tela, cor_fundo, rect.inflate(-4, -4), border_radius=8)
 
-    # Desenha texto
     if texto:
         texto_render = fonte.render(texto, True, (0, 0, 0))
         texto_rect = texto_render.get_rect(center=rect.center)
         tela.blit(texto_render, texto_rect)
 
-    # Detecta clique
-    if dentro and click and not estado.get("pressionado", False):
+    if rect.collidepoint(mouse) and click and not estado.get("pressionado", False):
         estado["pressionado"] = True
         if som:
             tocar(som)
-        # Alterna valor
-        if valor_atual == valor1:
-            return valor2
-        elif valor_atual == valor2 and valor3 is not None:
-            return valor3
-        else:
-            return valor1
+        proximo_idx = (idx + 1) % len(valores)
+        return valores[proximo_idx]
     elif not click:
         estado["pressionado"] = False
 

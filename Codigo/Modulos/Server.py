@@ -1,7 +1,6 @@
-import pygame
 import requests
 import os
-from Prefabs.Mensagens import adicionar_mensagem_passageira
+from Codigo.Prefabs.Mensagens import adicionar_mensagem_passageira
 
 def AdicionaServer(Nome, Link, Limite=7):
     os.makedirs("Servers", exist_ok=True)
@@ -100,21 +99,148 @@ def RenomearServer(NomeNovo, Link):
 
 def EntrarServer(Code, Parametros):
     try:
-        url = f"{Parametros["ServerSelecionado"]['link']}/acessar"
+        url = f"{Parametros['ServerSelecionado']['link']}/acessar"
         response = requests.post(url, json={'codigo': Code}, timeout=5)
+        rjson = response.json() if response.content else {}
 
         if response.status_code == 201:
-            print("Conta acessada com sucesso!")
+            Parametros["EstadoServidor"] = {
+                "status": 201,
+                "mensagem": "Conta acessada com sucesso!",
+                "dados": rjson
+            }
+        elif response.status_code == 200:
+            Parametros["EstadoServidor"] = {
+                "status": 200,
+                "mensagem": "Conta já estava ativa.",
+                "dados": rjson
+            }
+        elif response.status_code == 202:
+            Parametros["EstadoServidor"] = {
+                "status": 202,
+                "mensagem": "Conta ainda não registrada.",
+                "dados": rjson
+            }
+        elif response.status_code == 503:
+            Parametros["EstadoServidor"] = {
+                "status": 503,
+                "mensagem": "Servidor não está ativado.",
+                "dados": rjson
+            }
+        elif response.status_code == 504:
+            Parametros["EstadoServidor"] = {
+                "status": 504,
+                "mensagem": "Servidor está desligado.",
+                "dados": rjson
+            }
+        else:
+            Parametros["EstadoServidor"] = {
+                "status": 600,
+                "mensagem": f"Erro inesperado: {response.status_code}",
+                "dados": rjson
+            }
+    except requests.exceptions.RequestException as e:
+        Parametros["EstadoServidor"] = {
+            "status": None,
+            "mensagem": f"Erro de conexão: {e}",
+            "dados": None
+        }
+
+def RegistrarNoServer(Code, Personagem, Parametros):
+    try:
+        url = f"{Parametros['ServerSelecionado']['link']}/salvar"
+        # Monta o JSON com os dados que quer salvar — aqui estou incluindo 'codigo' e 'personagem'
+        payload = {
+            'codigo': Code,
+            'personagem': Personagem  # ajuste conforme o que sua API espera receber
+        }
+        response = requests.post(url, json=payload, timeout=5)
+
+        if response.status_code == 201:
+            print("Conta registrada com sucesso!")
             return response.json()
         elif response.status_code == 200:
-            print("Conta já estava ativa.")
-            return response.json()
-        elif response.status_code == 202:
-            print("Conta ainda não registrada.")
+            print("Conta atualizada com sucesso!")
             return response.json()
         else:
-            print(f"Erro inesperado: {response.status_code}")
+            print(f"Erro inesperado: {response.status_code} - {response.text}")
             return None
     except requests.exceptions.RequestException as e:
         print(f"Erro de conexão: {e}")
+        return None
+
+def VerificaOperador(codigo_operador, Parametros):
+    url = f"{Parametros['ServerSelecionado']['link']}/verificar-operador"
+    try:
+        # Envia o código como JSON no corpo da requisição
+        response = requests.post(url, json={"codigo": codigo_operador}, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            Parametros["Operador"] = data.get("operador", False)
+        else:
+            Parametros["Operador"] = False
+            adicionar_mensagem_passageira("Senha Invalida",cor=(200,0,0))
+    except requests.RequestException:
+        Parametros["Operador"] = False
+
+def AtivarServidor(Parametros):
+    url = f"{Parametros['ServerSelecionado']['link']}/ativar-servidor"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            # Servidor ativado ou já ativo
+            return True
+        else:
+            return False
+    except requests.RequestException:
+        return False
+
+def LigarDesligarServidor(Parametros, ligar):
+    url = f"{Parametros['ServerSelecionado']['link']}/ligar-desligar"
+    try:
+        response = requests.post(url, json={"ligar": ligar}, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            # Confirmar se o estado é o esperado
+            return data.get("ligado", None) == ligar
+        else:
+            return False
+    except requests.RequestException:
+        return False
+
+def ObterEstadoServidor(Parametros):
+    url = f"{Parametros['ServerSelecionado']['link']}/estado-server"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            ligado = data.get("ligado", False)
+            ativo = data.get("ativo", False)
+            # Atualiza os índices de controle do servidor em Parametros
+            Parametros["ServerOperadoLigado"] = ligado
+            Parametros["ServerOperadoAtivado"] = ativo
+            return True  # sucesso
+        else:
+            # Falha na requisição
+            Parametros["ServerOperadoLigado"] = False
+            Parametros["ServerOperadoAtivado"] = False
+            return False
+    except requests.RequestException:
+        # Exceção na conexão com o servidor
+        Parametros["ServerOperadoLigado"] = False
+        Parametros["ServerOperadoAtivado"] = False
+        return False
+
+def ResetarServidor(Parametros):
+    url = f"{Parametros['ServerSelecionado']['link']}/resetar-servidor"
+    try:
+        response = requests.post(url, timeout=5)
+        if response.status_code == 200:
+            Parametros["ServerOperadoAtivado"] = False
+            Parametros["ServerOperadoLigado"] = False
+        else:
+            adicionar_mensagem_passageira("Erro Inesperado 1",cor=(200,0,0))
+    except requests.RequestException as e:
+        adicionar_mensagem_passageira("Erro Inesperado 2",cor=(200,0,0))
     

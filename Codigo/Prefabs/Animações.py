@@ -1,8 +1,8 @@
 import pygame
 
 class Animação:
-    def __init__(self, frames, posicao, intervalo=50, duracao=None, ao_terminar=None, loop=True, ping_pong=False):
-        self.frames = frames
+    def __init__(self, frames, posicao, intervalo=50, duracao=None, ao_terminar=None, loop=True, ping_pong=False, tamanho=1):
+        self.frames = [pygame.transform.scale(frame, (int(frame.get_width() * tamanho), int(frame.get_height() * tamanho))) for frame in frames]
         self.pos = posicao
         self.intervalo = intervalo  # tempo entre frames (ms)
         self.duracao = duracao  # tempo total da animação (ms) ou None para infinita

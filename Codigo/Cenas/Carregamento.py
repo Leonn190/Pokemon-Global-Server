@@ -1,6 +1,6 @@
 import pygame
-from Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem
-from Prefabs.Animações import Animação
+from Codigo.Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem
+from Codigo.Prefabs.Animações import Animação
 
 CarregandoGif = None
 

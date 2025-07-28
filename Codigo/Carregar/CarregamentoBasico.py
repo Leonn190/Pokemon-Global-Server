@@ -1,6 +1,6 @@
 import pygame
 
-from Prefabs.FunçõesPrefabs import Carregar_Imagem, Carregar_Frames
+from Codigo.Prefabs.FunçõesPrefabs import Carregar_Imagem, Carregar_Frames
 
 def CarregarTexturas():
     return {
@@ -15,7 +15,8 @@ def CarregarTexturas():
 
 def CarregarFundos():
     return {
-        "FundoInicio": Carregar_Imagem("Fundos/FundoInicio.png")
+        "FundoInicio": Carregar_Imagem("Fundos/FundoInicio.png"),
+        "FundoPersonagem": Carregar_Imagem("Fundos/FundoPersonagem.jpg")
         
     }
 
@@ -23,6 +24,9 @@ def CarregarOutros():
     return {
         "Logo": Carregar_Imagem("Outros/Logo.png",(750,750)),
         "Conectando": Carregar_Frames("Outros/Conectando_Frames"),
+
+        "Skins": [None] + [Carregar_Imagem(f"Skins/S{i}.png") for i in range(1, 13)],
+
         "PokemonsIniciais": {
         "Charmander": Carregar_Imagem("Pokemons/Icones/charmander.png"),
         "Torchic": Carregar_Imagem("Pokemons/Icones/torchic.png"),
@@ -37,10 +41,24 @@ def CarregarOutros():
         "Squirtle": Carregar_Imagem("Pokemons/Icones/squirtle.png"),
         "Mudkip": Carregar_Imagem("Pokemons/Icones/mudkip.png"),
         "Froakie": Carregar_Imagem("Pokemons/Icones/froakie.png"),
-        "Popplio": Carregar_Imagem("Pokemons/Icones/popplio.png")
-    }
-    }
+        "Popplio": Carregar_Imagem("Pokemons/Icones/popplio.png"),
 
+        "CharmanderGif": Carregar_Frames("Pokemons/Animação/charmander"),
+        "TorchicGif": Carregar_Frames("Pokemons/Animação/torchic"),
+        "FennekinGif": Carregar_Frames("Pokemons/Animação/fennekin"),
+        "LittenGif": Carregar_Frames("Pokemons/Animação/litten"),
+
+        "BulbasaurGif": Carregar_Frames("Pokemons/Animação/bulbasaur"),
+        "TreeckoGif": Carregar_Frames("Pokemons/Animação/treecko"),
+        "ChespinGif": Carregar_Frames("Pokemons/Animação/chespin"), 
+        "RowletGif": Carregar_Frames("Pokemons/Animação/rowlet"),
+
+        "SquirtleGif": Carregar_Frames("Pokemons/Animação/squirtle"),
+        "MudkipGif": Carregar_Frames("Pokemons/Animação/mudkip"),
+        "FroakieGif": Carregar_Frames("Pokemons/Animação/froakie"),
+        "PopplioGif": Carregar_Frames("Pokemons/Animação/popplio"),
+    }
+        }
 
 def CarregamentoBasico(info):
 
@@ -59,7 +77,6 @@ def CarregamentoBasico(info):
     VERDE_CLARO = (144, 238, 144)
     MARROM      = (139, 69, 19)
 
-    # Dicionário de cores (para acesso por string)
     Cores = {
         "branco": BRANCO,
         "preto": PRETO,
@@ -73,8 +90,7 @@ def CarregamentoBasico(info):
         "rosa": ROSA,
         "azul_claro": AZUL_CLARO,
         "verde_claro": VERDE_CLARO,
-        "marrom": MARROM,
-    }
+        "marrom": MARROM,}
 
     # 🔠 FONTES
     CAMINHO_FONTE = "Recursos/Visual/Fontes/FontePadrão.ttf"
@@ -83,9 +99,6 @@ def CarregamentoBasico(info):
 
     for tamanho in [16, 20, 24, 25, 30, 35, 40, 50, 60, 72]:
         Fontes[tamanho] = pygame.font.Font(CAMINHO_FONTE, tamanho)
-
-    
-    from Carregar.CarregamentoBasico import CarregarFundos, CarregarTexturas, CarregarOutros
 
     Texturas = CarregarTexturas()
     Fundos = CarregarFundos()
