@@ -1,5 +1,4 @@
 import pygame
-
 from Codigo.Prefabs.FunçõesPrefabs import Carregar_Imagem, Carregar_Frames
 
 def CarregarTexturas():
@@ -16,7 +15,8 @@ def CarregarTexturas():
 def CarregarFundos():
     return {
         "FundoInicio": Carregar_Imagem("Fundos/FundoInicio.png"),
-        "FundoPersonagem": Carregar_Imagem("Fundos/FundoPersonagem.jpg")
+        "FundoPersonagem": Carregar_Imagem("Fundos/FundoPersonagem.jpg"),
+        "FundoQuadradoNeutro": Carregar_Imagem("Fundos/FundoQuadradoNeutro.jpg")
         
     }
 
@@ -25,23 +25,23 @@ def CarregarOutros():
         "Logo": Carregar_Imagem("Outros/Logo.png",(750,750)),
         "Conectando": Carregar_Frames("Outros/Conectando_Frames"),
 
-        "Skins": [None] + [Carregar_Imagem(f"Skins/S{i}.png") for i in range(1, 13)],
+        "Skins": [None] + [Carregar_Imagem(f"Skins/Liberadas/S{i}.png") for i in range(1, 13)],
 
         "PokemonsIniciais": {
-        "Charmander": Carregar_Imagem("Pokemons/Icones/charmander.png"),
-        "Torchic": Carregar_Imagem("Pokemons/Icones/torchic.png"),
-        "Fennekin": Carregar_Imagem("Pokemons/Icones/fennekin.png"),
-        "Litten": Carregar_Imagem("Pokemons/Icones/litten.png"),
+        "Charmander": Carregar_Imagem("Pokemons/Imagens/charmander.png"),
+        "Torchic": Carregar_Imagem("Pokemons/Imagens/torchic.png"),
+        "Fennekin": Carregar_Imagem("Pokemons/Imagens/fennekin.png"),
+        "Litten": Carregar_Imagem("Pokemons/Imagens/litten.png"),
         
-        "Bulbasaur": Carregar_Imagem("Pokemons/Icones/bulbasaur.png"),
-        "Treecko": Carregar_Imagem("Pokemons/Icones/treecko.png"),
-        "Chespin": Carregar_Imagem("Pokemons/Icones/chespin.png"),
-        "Rowlet": Carregar_Imagem("Pokemons/Icones/rowlet.png"),
+        "Bulbasaur": Carregar_Imagem("Pokemons/Imagens/bulbasaur.png"),
+        "Treecko": Carregar_Imagem("Pokemons/Imagens/treecko.png"),
+        "Chespin": Carregar_Imagem("Pokemons/Imagens/chespin.png"),
+        "Rowlet": Carregar_Imagem("Pokemons/Imagens/rowlet.png"),
         
-        "Squirtle": Carregar_Imagem("Pokemons/Icones/squirtle.png"),
-        "Mudkip": Carregar_Imagem("Pokemons/Icones/mudkip.png"),
-        "Froakie": Carregar_Imagem("Pokemons/Icones/froakie.png"),
-        "Popplio": Carregar_Imagem("Pokemons/Icones/popplio.png"),
+        "Squirtle": Carregar_Imagem("Pokemons/Imagens/squirtle.png"),
+        "Mudkip": Carregar_Imagem("Pokemons/Imagens/mudkip.png"),
+        "Froakie": Carregar_Imagem("Pokemons/Imagens/froakie.png"),
+        "Popplio": Carregar_Imagem("Pokemons/Imagens/popplio.png"),
 
         "CharmanderGif": Carregar_Frames("Pokemons/Animação/charmander"),
         "TorchicGif": Carregar_Frames("Pokemons/Animação/torchic"),

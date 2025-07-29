@@ -36,9 +36,12 @@ if os.path.exists("ConfigFixa.py"):
 
 VerificaSonoridade(config)
 
+config.update({"Ver": 1.0})
+
 info = {
     "Carregado": False,
-    "Alvo": "Inicio"
+    "Alvo": "Inicio",
+    "Escuro": 100
 }
 
 from Codigo.Cenas.Inicio import InicioLoop

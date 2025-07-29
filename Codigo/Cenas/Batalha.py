@@ -1,4 +1,5 @@
 import pygame
+from Codigo.Modulos.Outros import Clarear, Escurecer
 
 def BatalhaLoop(tela, relogio, estados, config, info):
 
@@ -9,5 +10,8 @@ def BatalhaLoop(tela, relogio, estados, config, info):
                 estados["Batalha"] = False
                 estados["Rodando"] = False
 
-        pygame.display.update()
+        Clarear(tela,info)
+        pygame.display.update() 
         relogio.tick(config["FPS"])
+    
+    Escurecer(tela,info)

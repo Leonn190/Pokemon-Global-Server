@@ -220,16 +220,19 @@ def ObterEstadoServidor(Parametros):
             # Atualiza os índices de controle do servidor em Parametros
             Parametros["ServerOperadoLigado"] = ligado
             Parametros["ServerOperadoAtivado"] = ativo
+            print (ligado, ativo)
             return True  # sucesso
         else:
             # Falha na requisição
             Parametros["ServerOperadoLigado"] = False
             Parametros["ServerOperadoAtivado"] = False
+            print("deu ruim")
             return False
     except requests.RequestException:
         # Exceção na conexão com o servidor
         Parametros["ServerOperadoLigado"] = False
         Parametros["ServerOperadoAtivado"] = False
+        print("deu ruim 2")
         return False
 
 def ResetarServidor(Parametros):

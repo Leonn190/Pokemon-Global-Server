@@ -7,9 +7,11 @@ from Codigo.Prefabs.FunçõesPrefabs import Barra_De_Texto, DesenharPlayer, Slid
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Sonoridade import Musica
 from Codigo.Prefabs.Mensagens import adicionar_mensagem_passageira, mensagens_passageiras
-from Codigo.Modulos.Server import AdicionaServer, CarregarServers, ApagarServer, RenomearServer, EntrarServer, RegistrarNoServer, VerificaOperador, ObterEstadoServidor, AtivarServidor, LigarDesligarServidor, ResetarServidor
+from Codigo.Modulos.ServerInicio import AdicionaServer, CarregarServers, ApagarServer, RenomearServer, EntrarServer, RegistrarNoServer, VerificaOperador, ObterEstadoServidor, AtivarServidor, LigarDesligarServidor, ResetarServidor
 from Codigo.Modulos.TelasGénericas import TelaEntradaDeTexto, TelaDeCerteza
 from Codigo.Modulos.Config import TelaConfigurações, aplicar_claridade
+from Codigo.Modulos.Outros import Clarear, Escurecer
+from Codigo.Carregar.CarregamentoAvançado import CarregamentoAvançado
 
 B1 = {}
 
@@ -42,19 +44,19 @@ def InicioTelaPrincipal(tela, estados, eventos, parametros):
     Botao(
         tela, "JOGAR", (750, 560, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
         lambda: parametros.update({"Tela": InicioTelaJogar}),
-        Fontes[40], B_jogar, eventos, som="Clique", cor_texto=Cores["branco"]
+        Fontes[40], B_jogar, eventos, som="Clique", cor_texto=Cores["branco"], aumento=1.2
     )
 
     Botao(
         tela, "CONFIGURAÇÕES", (750, 730, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
         lambda: parametros.update({"Tela": TelaConfigurações, "TelaConfigurações": {"Voltar":lambda: parametros.update({"Tela": InicioTelaPrincipal})}}),
-        Fontes[40], B_config, eventos, som="Clique", cor_texto=Cores["branco"]
+        Fontes[40], B_config, eventos, som="Clique", cor_texto=Cores["branco"], aumento=1.2
     )
 
     Botao(
         tela, "SAIR", (750, 900, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
         lambda: estados.update({"Inicio": False, "Rodando": False}),
-        Fontes[40], B_sair, eventos, som="Clique", cor_texto=Cores["branco"]
+        Fontes[40], B_sair, eventos, som="Clique", cor_texto=Cores["branco"], aumento=1.2
     )
 
     tela.blit(Outros["Logo"], (620, -120))
@@ -235,13 +237,13 @@ def InicioTelaConectando(tela, estados, eventos, parametros):
     estado = parametros.get("EstadoServidor")
     tempo_decorrido_ms = pygame.time.get_ticks() - parametros.get("TempoInicioConexao", 0)
 
-    if estado is None or tempo_decorrido_ms < 4000:  # 6000 ms = 6 segundos
+    if estado is None or tempo_decorrido_ms < 3000:  # 6000 ms = 6 segundos
         # Ainda esperando resposta OU não completou 6 segundos
         pass
     else:
         status = estado.get("status")
         if status == 201:
-            estados.update({"Inicio": False, "Carregando": True})
+            estados.update({"Inicio": False, "Carregamento": True})
         elif status == 200:
             parametros.update({"Tela": InicioTelaJogar, "TentarEntrarNoServidor": True, "ServerSelecionado": None})
             adicionar_mensagem_passageira("Outro jogador já está usando essa conta", cor=Cores["vermelho"])
@@ -269,17 +271,21 @@ def InicioTelaCriandoPersonagem(tela, estados, eventos, parametros):
             "Code": parametros["Code"],
             "Nome": "Nome",
             "Skin": 1,
-            "Cor": "amarelo",
             "Inicial": None,
             "Inventario": [],
             "Pokemons": [],
             "Nivel": 0,
-            "XP": 0
+            "XP": 0,
+            "Ouro": 100,
+            "Velocidade": 0,
+            "Mochila": 0,
+            "Maestria":0,
+            "Loc": [500,500]
         }
         SelecionadoNome = False
 
     largura = 1000
-    altura = 740
+    altura = 750
     centro_x = (tela.get_width() - largura) // 2
     centro_y = (tela.get_height() - altura) // 2
 
@@ -316,7 +322,8 @@ def InicioTelaCriandoPersonagem(tela, estados, eventos, parametros):
     x_quadrado = 1235
     y_quadrado = centro_y + 120
 
-    pygame.draw.rect(tela, Cores["azul_claro"], (x_quadrado, y_quadrado, largura_quadrado, altura_quadrado))
+    imagem_quadrado = pygame.transform.scale(Fundos["FundoQuadradoNeutro"], (largura_quadrado, altura_quadrado))
+    tela.blit(imagem_quadrado, (x_quadrado, y_quadrado))
     DesenharPlayer(tela, Outros["Skins"][round(parametros["Personagem"]["Skin"])],(x_quadrado + largura_quadrado/2, y_quadrado + altura_quadrado /2))
 
     # TEXTO: Escolha seu Visual
@@ -388,7 +395,8 @@ def InicioTelaCriandoPersonagem(tela, estados, eventos, parametros):
     x_quadrado = x_inicial + 3 * (2 * tamanho_botao + espaco_botao + espaco_blocos) + 10
     y_quadrado = y_inicial - 60
 
-    pygame.draw.rect(tela, Cores["azul_claro"], (x_quadrado, y_quadrado, largura_quadrado, altura_quadrado))
+    imagem_quadrado = pygame.transform.scale(Fundos["FundoQuadradoNeutro"], (largura_quadrado, altura_quadrado))
+    tela.blit(imagem_quadrado, (x_quadrado, y_quadrado))
 
     if parametros["Personagem"]["Inicial"] is not None:
         nome_pokemon = parametros["Personagem"]["Inicial"]
@@ -408,7 +416,7 @@ def InicioTelaCriandoPersonagem(tela, estados, eventos, parametros):
     Botao(
         tela, "Registrar", (x_quadrado - 200, y_quadrado + 210, 350, 60),
         Texturas["AzulRoxa"], Cores["preto"], Cores["branco"],
-        lambda: parametros.update({"Tela": TelaDeCerteza, "TelaDeCerteza": {"Voltar": lambda: parametros.update({"Tela": InicioTelaCriandoPersonagem}),"Recado": "O personagem não será salvo, Tem certeza?", "Funcao": [lambda: RegistrarNoServer(parametros["Personagem"]["Code"], parametros["Personagem"], parametros), parametros.update({"Tela": InicioTelaConectando, "TentandoEntrarNoServidor": True})]}}),
+        lambda: parametros.update({"Tela": TelaDeCerteza, "TelaDeCerteza": {"Voltar": lambda: parametros.update({"Tela": InicioTelaCriandoPersonagem}),"Recado": "O personagem não será salvo, Tem certeza?", "Funcao": [lambda: RegistrarNoServer(parametros["Personagem"]["Code"], parametros["Personagem"], parametros),lambda: parametros.update({"Tela": InicioTelaConectando, "TentandoEntrarNoServidor": True})]}}),
         Fontes[40], B_Salvar, eventos, som="Clique"
     )
     Botao(
@@ -465,6 +473,12 @@ def InicioTelaOperador(tela, estados, eventos, parametros):
         texto_rect = texto.get_rect(center=(960, 80))  # Centralizado no topo
         tela.blit(texto, texto_rect)
 
+        if parametros["TentarOperarServidor"]:
+            parametros["TentarOperarServidor"] = False
+            threading.Thread(target=lambda: requests.get(f"{parametros['ServerSelecionado']['link']}/verifica-servidor-ativo"),daemon=True).start()
+            threading.Thread(target=ObterEstadoServidor, args=(parametros,), daemon=True).start()
+            threading.Thread(target=VerificaOperador, args=(parametros["OperadorCode"], parametros), daemon=True).start()
+        
         Botao(
             tela, "Voltar", (800, 700, 320, 80),
             Texturas["AzulRoxa"], Cores["preto"], Cores["branco"],
@@ -472,12 +486,6 @@ def InicioTelaOperador(tela, estados, eventos, parametros):
             Fontes[40], B_Voltar, eventos, som="Clique"
         )
         ConectandoGif.atualizar(tela)
-
-        if parametros["TentarOperarServidor"]:
-            parametros["TentarOperarServidor"] = False
-            threading.Thread(target=lambda: requests.get(f"{parametros['ServerSelecionado']['link']}/verifica-servidor-ativo"),daemon=True).start()
-            threading.Thread(target=ObterEstadoServidor, args=(parametros,), daemon=True).start()
-            threading.Thread(target=VerificaOperador, args=(parametros["OperadorCode"], parametros), daemon=True).start()
 
 def InicioLoop(tela, relogio, estados, config, info):
     global Cores, Fontes, Texturas, Fundos, Outros 
@@ -515,6 +523,8 @@ def InicioLoop(tela, relogio, estados, config, info):
             if evento.type == pygame.QUIT:
                 estados["Inicio"] = False
                 estados["Rodando"] = False
+                Escurecer(tela,info)
+                return
 
         # Atualiza reversão de direção
         if x <= LIMITE_ESQUERDA:
@@ -550,6 +560,20 @@ def InicioLoop(tela, relogio, estados, config, info):
             tela.blit(texto_fps, (tela.get_width() - texto_fps.get_width() - 10, 10))
 
         aplicar_claridade(tela, config["Claridade"])
-        pygame.display.update()
+        Clarear(tela,info)
+        pygame.display.update() 
         relogio.tick(config["FPS"])
-
+    
+    info.update({
+    "Server": {
+        "Code": parametros["Code"],
+        "Player": parametros["EstadoServidor"]["dados"]["conta"],
+        "Link": parametros["ServerSelecionado"]["link"]
+    },
+    "Alvo": "Mundo",
+    "Carregado": False
+})
+    
+    carregamento_thread = threading.Thread(target=CarregamentoAvançado, args=(info,))
+    carregamento_thread.start()
+    Escurecer(tela,info)

@@ -1,6 +1,7 @@
 import pygame
 from Codigo.Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem
 from Codigo.Prefabs.Animações import Animação
+from Codigo.Modulos.Outros import Clarear, Escurecer
 
 CarregandoGif = None
 
@@ -28,6 +29,9 @@ def CarregamentoLoop(tela, relogio, estados, config, info):
             estados[info["Alvo"]] = True
             info["Carregado"] = False
             info["Alvo"] = None
-
-        pygame.display.update()
+        
+        Clarear(tela,info)
+        pygame.display.update() 
         relogio.tick(config["FPS"])
+    
+    Escurecer(tela,info)

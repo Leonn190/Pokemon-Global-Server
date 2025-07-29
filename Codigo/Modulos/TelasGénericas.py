@@ -4,6 +4,9 @@ from Codigo.Prefabs.BotoesPrefab import Botao
 
 B1 = {}
 B2 = {}
+B3 = {}
+B4 = {}
+
 SelecionadoEntrada = False
 
 def TelaEntradaDeTexto(tela, estados, eventos, parametros):
@@ -59,9 +62,6 @@ def TelaEntradaDeTexto(tela, estados, eventos, parametros):
         Fontes[40], B2, eventos, som="Clique"
     )
 
-B3 = {}
-B4 = {}
-
 def TelaDeCerteza(tela, estados, eventos, parametros):
     from Codigo.Cenas.Inicio import Fontes, Cores, Texturas, Outros
 
@@ -99,3 +99,4 @@ def TelaDeCerteza(tela, estados, eventos, parametros):
         lambda: [f() for f in Voltar] if isinstance(Voltar, list) else Voltar(),
         Fontes[40], B4, eventos, som="Clique"
     )
+

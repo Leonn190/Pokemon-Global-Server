@@ -4,13 +4,12 @@ from Codigo.Prefabs.Sonoridade import tocar
 
 def Botao(tela, texto, espaço, cor_normal, cor_borda, cor_passagem,
            acao, Fonte, estado_clique, eventos, grossura=2, tecla_atalho=None,
-           mostrar_na_tela=True, som=None, cor_texto=(0, 0, 0)):
+           mostrar_na_tela=True, som=None, cor_texto=(0, 0, 0), aumento=None):
     
     x, y, largura, altura = espaço
 
     mouse = pygame.mouse.get_pos()
     clique = pygame.mouse.get_pressed()
-
     mouse_sobre = x <= mouse[0] <= x + largura and y <= mouse[1] <= y + altura
 
     tecla_ativada = False
@@ -21,54 +20,65 @@ def Botao(tela, texto, espaço, cor_normal, cor_borda, cor_passagem,
 
     cor_borda_atual = cor_passagem if mouse_sobre or tecla_ativada else cor_borda
 
-    # --- Início da adaptação para lista de imagens (animação simples) ---
+    # ---------- AUMENTO DE TAMANHO SUAVE ----------
+    escalar = 1.0
+    if aumento:
+        if "_escala" not in estado_clique:
+            estado_clique["_escala"] = 1.0
+        alvo = aumento if mouse_sobre else 1.0
+        velocidade_escala = 0.01  # ajuste a suavidade aqui
+        atual = estado_clique["_escala"]
+        if abs(atual - alvo) > 0.01:
+            atual += velocidade_escala if atual < alvo else -velocidade_escala
+            atual = max(min(atual, aumento), 1.0)
+            estado_clique["_escala"] = atual
+        escalar = estado_clique["_escala"]
+
+    # Ajusta espaço com base na escala
+    esc_largura = int(largura * escalar)
+    esc_altura = int(altura * escalar)
+    esc_x = x - (esc_largura - largura) // 2
+    esc_y = y - (esc_altura - altura) // 2
+
+    # --- Animação com imagens ---
     frames = None
     if isinstance(cor_normal, list) and cor_normal and all(isinstance(f, pygame.Surface) for f in cor_normal):
         frames = cor_normal
-        # Inicializa estado se necessário
         if "_frame_index" not in estado_clique:
             estado_clique["_frame_index"] = 0
             estado_clique["_last_time"] = pygame.time.get_ticks()
 
         agora = pygame.time.get_ticks()
-        intervalo = 50  # milissegundos por frame (pode ajustar)
-
+        intervalo = 50
         if mouse_sobre:
-            # Atualiza frame se tempo passou
             if agora - estado_clique["_last_time"] > intervalo:
                 estado_clique["_frame_index"] = (estado_clique["_frame_index"] + 1) % len(frames)
                 estado_clique["_last_time"] = agora
         else:
-            # Mouse saiu, volta para frame 0
             estado_clique["_frame_index"] = 0
 
-        # Pega o frame atual para desenhar e escala
-        frame_atual = pygame.transform.scale(frames[estado_clique["_frame_index"]], (largura, altura))
+        frame_atual = pygame.transform.scale(frames[estado_clique["_frame_index"]], (esc_largura, esc_altura))
         if mostrar_na_tela:
-            tela.blit(frame_atual, (x, y))
-
+            tela.blit(frame_atual, (esc_x, esc_y))
     else:
-        # Se cor_normal for imagem única
         if mostrar_na_tela:
             if isinstance(cor_normal, pygame.Surface):
-                imagem = pygame.transform.scale(cor_normal, (largura, altura))
-                tela.blit(imagem, (x, y))
+                imagem = pygame.transform.scale(cor_normal, (esc_largura, esc_altura))
+                tela.blit(imagem, (esc_x, esc_y))
             else:
-                pygame.draw.rect(tela, cor_normal, (x, y, largura, altura))
+                pygame.draw.rect(tela, cor_normal, (esc_x, esc_y, esc_largura, esc_altura))
 
     if mostrar_na_tela and not frames:
-        pygame.draw.rect(tela, cor_borda_atual, (x, y, largura, altura), grossura)
-
+        pygame.draw.rect(tela, cor_borda_atual, (esc_x, esc_y, esc_largura, esc_altura), grossura)
         if texto:
-            texto_render = Fonte.render(texto, True, cor_texto)  # Usa cor_texto aqui
-            texto_rect = texto_render.get_rect(center=(x + largura // 2, y + altura // 2))
+            texto_render = Fonte.render(texto, True, cor_texto)
+            texto_rect = texto_render.get_rect(center=(esc_x + esc_largura // 2, esc_y + esc_altura // 2))
             tela.blit(texto_render, texto_rect)
     elif mostrar_na_tela and frames:
-        # Desenha borda e texto mesmo se animado
-        pygame.draw.rect(tela, cor_borda_atual, (x, y, largura, altura), grossura)
+        pygame.draw.rect(tela, cor_borda_atual, (esc_x, esc_y, esc_largura, esc_altura), grossura)
         if texto:
-            texto_render = Fonte.render(texto, True, cor_texto)  # Usa cor_texto aqui também
-            texto_rect = texto_render.get_rect(center=(x + largura // 2, y + altura // 2))
+            texto_render = Fonte.render(texto, True, cor_texto)
+            texto_rect = texto_render.get_rect(center=(esc_x + esc_largura // 2, esc_y + esc_altura // 2))
             tela.blit(texto_render, texto_rect)
 
     if mostrar_na_tela and mouse_sobre and clique[0] == 1 and not estado_clique.get("pressionado", False):

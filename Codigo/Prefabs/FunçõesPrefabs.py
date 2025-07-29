@@ -248,6 +248,10 @@ def extrair_cor_predominante(imagem):
     else:
         return pygame.Color("white")
 
+def escurecer_cor(cor, fator=0.8):
+    """Retorna uma cor mais escura baseada em um fator."""
+    return pygame.Color(int(cor.r * fator), int(cor.g * fator), int(cor.b * fator))
+
 def DesenharPlayer(tela, imagem_corpo, posicao):
     x, y = posicao
 
@@ -267,10 +271,10 @@ def DesenharPlayer(tela, imagem_corpo, posicao):
     tela.blit(corpo_rotacionado, corpo_rect)
 
     # Respiração: movimento para frente e para trás
-    t = pygame.time.get_ticks() / 250
-    respiracao = math.sin(t) * 3  # amplitude de 3 pixels
+    t = pygame.time.get_ticks() / 200
+    respiracao = math.sin(t) * 4  # amplitude de 3 pixels
 
-    distancia_braco_base = 56
+    distancia_braco_base = 58
     distancia_braco = distancia_braco_base
     profundidade = respiracao  # movimento ao longo do eixo do ângulo
 
@@ -285,7 +289,56 @@ def DesenharPlayer(tela, imagem_corpo, posicao):
     pos_braco_esquerdo = (x - offset_x + depth_x, y - offset_y + depth_y)
     pos_braco_direito = (x + offset_x + depth_x, y + offset_y + depth_y)
 
-    # Desenha os braços
-    pygame.draw.circle(tela, cor_braco, pos_braco_esquerdo, 10)
-    pygame.draw.circle(tela, cor_braco, pos_braco_direito, 10)
+    cor_borda = escurecer_cor(cor_braco)
+
+    raio = 10
+    raio_borda = 13  # ligeiramente maior para formar a borda
+
+    # Desenha os braços com borda
+    for pos in [pos_braco_esquerdo, pos_braco_direito]:
+        pygame.draw.circle(tela, cor_borda, pos, raio_borda)  # borda
+        pygame.draw.circle(tela, cor_braco, pos, raio)        # centro
+
+def Barra(tela, posicao, tamanho, valor_atual, valor_maximo, cor, estado_barra, chave):
+    """
+    Desenha uma barra com animação suave.
+
+    Args:
+        tela: superfície pygame.
+        posicao: (x, y) da barra.
+        tamanho: (largura, altura).
+        valor_atual: valor alvo atual da barra.
+        valor_maximo: valor máximo da barra.
+        cor: cor principal da barra.
+        estado_barra: dicionário para guardar o valor visível atual.
+        chave: identificador único da barra (ex: nome ou id).
+    """
+    x, y = posicao
+    largura, altura = tamanho
+
+    # Inicializa o valor visível se ainda não existir
+    if chave not in estado_barra:
+        estado_barra[chave] = float(valor_atual)
+
+    # Suaviza a transição do valor visível para o atual
+    visivel = estado_barra[chave]
+    visivel += (valor_atual - visivel) * 0.15  # quanto menor, mais lenta a animação
+
+    # Garante que fique dentro dos limites
+    visivel = max(0, min(visivel, valor_maximo))
+    estado_barra[chave] = visivel
+
+    # Calcula a proporção da barra preenchida
+    proporcao = visivel / valor_maximo if valor_maximo else 0
+    largura_preenchida = int(largura * proporcao)
+
+    # Desenha o fundo da barra
+    pygame.draw.rect(tela, (50, 50, 50), (x, y, largura, altura))  # fundo cinza escuro
+
+    # Desenha a parte preenchida
+    pygame.draw.rect(tela, cor, (x, y, largura_preenchida, altura))
+
+    # Desenha a borda da barra
+    pygame.draw.rect(tela, (0, 0, 0), (x, y, largura, altura), 2)
+
 
