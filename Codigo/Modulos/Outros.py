@@ -36,3 +36,4 @@ def Escurecer(tela, Info, cor=(0, 0, 0), velocidade=3, fps=70):
         tela.blit(camada, (0, 0))
         pygame.display.update()
         clock.tick(fps)
+        

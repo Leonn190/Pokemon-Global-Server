@@ -1,6 +1,7 @@
 import pygame
 import threading
 import requests
+import time
 
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Selecao, Botao_Alavanca
 from Codigo.Prefabs.FunçõesPrefabs import Barra_De_Texto, DesenharPlayer, Slider
@@ -237,7 +238,7 @@ def InicioTelaConectando(tela, estados, eventos, parametros):
     estado = parametros.get("EstadoServidor")
     tempo_decorrido_ms = pygame.time.get_ticks() - parametros.get("TempoInicioConexao", 0)
 
-    if estado is None or tempo_decorrido_ms < 3000:  # 6000 ms = 6 segundos
+    if estado is None or tempo_decorrido_ms < 2500:  # 6000 ms = 6 segundos
         # Ainda esperando resposta OU não completou 6 segundos
         pass
     else:
@@ -473,9 +474,18 @@ def InicioTelaOperador(tela, estados, eventos, parametros):
         texto_rect = texto.get_rect(center=(960, 80))  # Centralizado no topo
         tela.blit(texto, texto_rect)
 
-        if parametros["TentarOperarServidor"]:
+        
+        # Inicializa o tempo da última tentativa
+        if "TempoUltimaTentativa" not in parametros:
+            parametros["TempoUltimaTentativa"] = 0
+
+        tempo_entre_tentativas = 6  # segundos
+        tempo_atual = time.time()
+
+        if parametros["TentarOperarServidor"] or (tempo_atual - parametros["TempoUltimaTentativa"]) > tempo_entre_tentativas:
+            parametros["TempoUltimaTentativa"] = tempo_atual
             parametros["TentarOperarServidor"] = False
-            threading.Thread(target=lambda: requests.get(f"{parametros['ServerSelecionado']['link']}/verifica-servidor-ativo"),daemon=True).start()
+            threading.Thread(target=lambda: requests.get(f"{parametros['ServerSelecionado']['link']}/verifica-servidor-ativo"), daemon=True).start()
             threading.Thread(target=ObterEstadoServidor, args=(parametros,), daemon=True).start()
             threading.Thread(target=VerificaOperador, args=(parametros["OperadorCode"], parametros), daemon=True).start()
         
@@ -559,21 +569,30 @@ def InicioLoop(tela, relogio, estados, config, info):
             texto_fps = Fontes[30].render(f"FPS: {fps_atual:.1f}", True, (255, 255, 255))
             tela.blit(texto_fps, (tela.get_width() - texto_fps.get_width() - 10, 10))
 
+            texto_ver = Fontes[40].render(f"VER: {config['Ver']:.1f}", True, (0, 0, 0))
+            tela.blit(texto_ver, (10, tela.get_height() - texto_ver.get_height()))
+
         aplicar_claridade(tela, config["Claridade"])
         Clarear(tela,info)
         pygame.display.update() 
         relogio.tick(config["FPS"])
-    
-    info.update({
-    "Server": {
-        "Code": parametros["Code"],
-        "Player": parametros["EstadoServidor"]["dados"]["conta"],
-        "Link": parametros["ServerSelecionado"]["link"]
-    },
-    "Alvo": "Mundo",
-    "Carregado": False
-})
-    
+
+    try:
+        info.update({
+
+        "Server": {
+            "Code": parametros["Code"],
+            "Player": parametros["EstadoServidor"]["dados"]["conta"],
+            "Link": parametros["ServerSelecionado"]["link"]
+        },
+
+        "Alvo": "Mundo",
+        "Carregado": False
+    })
+        
+    except KeyError:
+        return
+
     carregamento_thread = threading.Thread(target=CarregamentoAvançado, args=(info,))
     carregamento_thread.start()
     Escurecer(tela,info)

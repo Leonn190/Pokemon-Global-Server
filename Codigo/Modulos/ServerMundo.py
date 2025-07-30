@@ -1,30 +1,57 @@
 import requests
+import json
 
 def VerificaçãoSimplesServer(Parametros):
     try:
-        url = Parametros["Link"].rstrip('/') + "/Verificar"  # monta a URL completa
-        
+        url = Parametros["Link"].rstrip('/') + "/Verificar"
+
         payload = {
-            "Raio": Parametros.get("Raio", 10),   # define um valor padrão se quiser
+            "Raio": Parametros.get("Raio", 50),
             "X": Parametros["Loc"][0],
             "Y": Parametros["Loc"][1],
             "Code": Parametros["Code"]
         }
-        
-        resposta = requests.post(url, json=payload, timeout=5)
-        resposta.raise_for_status()  # levanta exceção para status >=400
-        
+
+        payload_json = json.dumps(payload)
+
+        resposta = requests.post(url, data=payload_json, headers={'Content-Type': 'application/json'}, timeout=5)
+        resposta.raise_for_status()
+
+        # Calcular o tamanho do JSON recebido (em KB)
+        tamanho_recebido_kb = len(resposta.content) / 1024
+        print(f"Tamanho do JSON recebido: {tamanho_recebido_kb:.2f} KB")
+
         dados = resposta.json()
-        
-        # Atualiza parâmetros com os dados recebidos
-        Parametros["GridBiomas"] = dados.get("GridBiomas")
-        Parametros["GridObjetos"] = dados.get("GridObjetos")
+
         Parametros["PlayersProximos"] = dados.get("players")
         Parametros["PokemonsProximos"] = dados.get("pokemons")
-        
-        return True  # sucesso
-    
+
     except requests.exceptions.RequestException as e:
-        print(f"Erro ao acessar servidor: {e}")
-        return False
-    
+        print(f"Erro na requisição: {e}")
+
+def VerificaMapa(Parametros):
+    try:
+        url = Parametros["Link"].rstrip('/') + "/Mapa"
+
+        payload = {
+            "X": Parametros["Loc"][0],
+            "Y": Parametros["Loc"][1],
+            "Code": Parametros["Code"]
+        }
+
+        # Calcula tamanho do JSON que enviaria (só para debug)
+        payload_json = json.dumps(payload)
+        tamanho_kb = len(payload_json.encode('utf-8')) / 1024
+        print(f"Tamanho do JSON que seria enviado (debug): {tamanho_kb:.2f} KB")
+
+        # Faz a requisição GET passando os dados como query params
+        resposta = requests.get(url, params=payload, timeout=5)
+        resposta.raise_for_status()
+
+        dados = resposta.json()
+
+        Parametros["GridBiomas"] = dados.get("biomas")
+        Parametros["GridObjetos"] = dados.get("objetos")
+
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao acessar servidor (Mapa): {e}")
