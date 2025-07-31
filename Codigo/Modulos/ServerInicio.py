@@ -150,6 +150,9 @@ def RegistrarNoServer(Code, Personagem, Parametros):
     try:
         url = f"{Parametros['ServerSelecionado']['link']}/salvar"
         # Monta o JSON com os dados que quer salvar — aqui estou incluindo 'codigo' e 'personagem'
+
+        Personagem["Skin"] = round(Personagem["Skin"])
+
         payload = {
             'codigo': Code,
             'personagem': Personagem  # ajuste conforme o que sua API espera receber

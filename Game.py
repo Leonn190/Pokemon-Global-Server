@@ -24,7 +24,10 @@ config = {
     "Volume": 0.5,
     "Claridade": 75,
     "Mudo": False,
-    "FPS Visivel": False
+    "FPS Visivel": False,
+    "Cords Visiveis": False,
+    "Ping Visivel": False,
+    "Pré-Carregamento": False
 }
 
 if os.path.exists("ConfigFixa.py"):

@@ -4,7 +4,7 @@ import requests
 import time
 
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Selecao, Botao_Alavanca
-from Codigo.Prefabs.FunçõesPrefabs import Barra_De_Texto, DesenharPlayer, Slider
+from Codigo.Prefabs.FunçõesPrefabs import Barra_De_Texto, DesenharPlayer, Slider, texto_com_borda
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Sonoridade import Musica
 from Codigo.Prefabs.Mensagens import adicionar_mensagem_passageira, mensagens_passageiras
@@ -208,7 +208,9 @@ def InicioTelaNovoServer(tela, estados, eventos, parametros):
     )
 
 def InicioTelaConectando(tela, estados, eventos, parametros):
-    global ConectandoGif
+    global ConectandoGif, CriandoPersonagem
+
+    CriandoPersonagem = False
 
     if ConectandoGif is None:
         ConectandoGif = Animação(Outros["Conectando"], (960, 520))
@@ -238,7 +240,7 @@ def InicioTelaConectando(tela, estados, eventos, parametros):
     estado = parametros.get("EstadoServidor")
     tempo_decorrido_ms = pygame.time.get_ticks() - parametros.get("TempoInicioConexao", 0)
 
-    if estado is None or tempo_decorrido_ms < 2500:  # 6000 ms = 6 segundos
+    if estado is None or tempo_decorrido_ms < 2000:  # 6000 ms = 6 segundos
         # Ainda esperando resposta OU não completou 6 segundos
         pass
     else:
@@ -566,11 +568,13 @@ def InicioLoop(tela, relogio, estados, config, info):
 
         if config["FPS Visivel"]:
             fps_atual = relogio.get_fps()
-            texto_fps = Fontes[30].render(f"FPS: {fps_atual:.1f}", True, (255, 255, 255))
-            tela.blit(texto_fps, (tela.get_width() - texto_fps.get_width() - 10, 10))
+            texto = f"FPS: {fps_atual:.1f}"
+            texto_surface = Fontes[25].render(texto, True, (255, 255, 255))
+            x_fps = tela.get_width() - texto_surface.get_width() - 10
+            texto_com_borda(tela, texto, Fontes[25], (x_fps, 10), (255, 255, 255), (0, 0, 0))
 
-            texto_ver = Fontes[40].render(f"VER: {config['Ver']:.1f}", True, (0, 0, 0))
-            tela.blit(texto_ver, (10, tela.get_height() - texto_ver.get_height()))
+        texto = f"VER: {config['Ver']:.1f}"
+        texto_com_borda(tela, texto, Fontes[40], (10, tela.get_height() - Fontes[40].get_height()), (255, 255, 255), (0, 0, 0))
 
         aplicar_claridade(tela, config["Claridade"])
         Clarear(tela,info)
@@ -592,7 +596,11 @@ def InicioLoop(tela, relogio, estados, config, info):
         
     except KeyError:
         return
+    
+    if config["Pré-Carregamento"]:
+        carregamento_thread = threading.Thread(target=CarregamentoAvançado, args=(info,True))
+    else:
+        carregamento_thread = threading.Thread(target=CarregamentoAvançado, args=(info,False))
 
-    carregamento_thread = threading.Thread(target=CarregamentoAvançado, args=(info,))
     carregamento_thread.start()
     Escurecer(tela,info)

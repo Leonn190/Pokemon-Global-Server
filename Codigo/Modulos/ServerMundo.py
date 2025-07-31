@@ -33,19 +33,8 @@ def VerificaMapa(Parametros):
     try:
         url = Parametros["Link"].rstrip('/') + "/Mapa"
 
-        payload = {
-            "X": Parametros["Loc"][0],
-            "Y": Parametros["Loc"][1],
-            "Code": Parametros["Code"]
-        }
-
-        # Calcula tamanho do JSON que enviaria (só para debug)
-        payload_json = json.dumps(payload)
-        tamanho_kb = len(payload_json.encode('utf-8')) / 1024
-        print(f"Tamanho do JSON que seria enviado (debug): {tamanho_kb:.2f} KB")
-
         # Faz a requisição GET passando os dados como query params
-        resposta = requests.get(url, params=payload, timeout=5)
+        resposta = requests.get(url, timeout=5)
         resposta.raise_for_status()
 
         dados = resposta.json()

@@ -66,9 +66,9 @@ def TelaConfigurações(tela, estados, eventos, parametros):
     # Botões alavanca
         # Botão Mudo
     texto_mudo = Fontes[30].render("Mudo:", True, Cores["branco"])
-    tela.blit(texto_mudo, (x + 110, y + 325))
+    tela.blit(texto_mudo, (x + 110, y + 300))
     parametros["Config"]["Mudo"] = Botao_Alavanca(
-        tela, (x + 225, y + 320, 150, 50), Fontes[30], estados.setdefault("Mudo", {}), eventos,
+        tela, (x + 240, y + 295, 150, 50), Fontes[30], estados.setdefault("Mudo", {}), eventos,
         parametros["Config"].get("Mudo", False),
         valores=[False, True],
         cores=[(100, 0, 0), (0, 150, 0)],
@@ -77,15 +77,49 @@ def TelaConfigurações(tela, estados, eventos, parametros):
     )
 
     texto_fps = Fontes[30].render("Mostrar FPS:", True, Cores["branco"])
-    tela.blit(texto_fps, (x + 460, y + 325))
+    tela.blit(texto_fps, (x + 460, y + 300))
     parametros["Config"]["FPS Visivel"] = Botao_Alavanca(
-        tela, (x + 655, y + 320, 150, 50), Fontes[30], estados.setdefault("FPS Visivel", {}), eventos,
+        tela, (x + 670, y + 295, 150, 50), Fontes[30], estados.setdefault("FPS Visivel", {}), eventos,
         parametros["Config"].get("FPS Visivel", False),
         valores=[False, True],
         cores=[(100, 0, 0), (0, 150, 0)],
         textos=["Desligado", "Ligado"],
         som="Clique"
     )
+
+    texto_cords = Fontes[30].render("Mostrar Cords:", True, Cores["branco"])
+    tela.blit(texto_cords, (x + 25, y + 380))
+    parametros["Config"]["Cords Visiveis"] = Botao_Alavanca(
+        tela, (x + 240, y + 375, 150, 50), Fontes[30], estados.setdefault("Cords Visiveis", {}), eventos,
+        parametros["Config"].get("Cords Visiveis", False),
+        valores=[False, True],
+        cores=[(100, 0, 0), (0, 150, 0)],
+        textos=["Desligado", "Ligado"],
+        som="Clique"
+    )
+
+    texto_ping = Fontes[30].render("Mostrar Ping:", True, Cores["branco"])
+    tela.blit(texto_ping, (x + 460, y + 380))
+    parametros["Config"]["Ping Visivel"] = Botao_Alavanca(
+        tela, (x + 670, y + 375, 150, 50), Fontes[30], estados.setdefault("Ping Visivel", {}), eventos,
+        parametros["Config"].get("Ping Visivel", False),
+        valores=[False, True],
+        cores=[(100, 0, 0), (0, 150, 0)],
+        textos=["Desligado", "Ligado"],
+        som="Clique"
+    )
+
+    texto_precarregamento = Fontes[30].render("Pré-Carregamento:", True, Cores["branco"])
+    tela.blit(texto_precarregamento, (x + 450, y + 460))
+    parametros["Config"]["Pré-Carregamento"] = Botao_Alavanca(
+        tela, (x + 670, y + 455, 150, 50), Fontes[30], estados.setdefault("Pré-Carregamento", {}), eventos,
+        parametros["Config"].get("Pré-Carregamento", False),
+        valores=[False, True],
+        cores=[(100, 0, 0), (0, 150, 0)],
+        textos=["Desligado", "Ligado"],
+        som="Clique"
+    )
+
     # Botões de Voltar e Salvar
     Botao(tela, "Voltar", (x + largura - 470 - 390, y + altura - 85, 390, 70), Texturas["azul"], Cores["preto"], Cores["branco"],
           [lambda: Voltar(), VerificaSonoridade(parametros["Config"])], Fontes[40], estados.setdefault("Voltar", {}), eventos=eventos)

@@ -341,4 +341,16 @@ def Barra(tela, posicao, tamanho, valor_atual, valor_maximo, cor, estado_barra, 
     # Desenha a borda da barra
     pygame.draw.rect(tela, (0, 0, 0), (x, y, largura, altura), 2)
 
+def texto_com_borda(tela, texto, fonte, pos, cor_texto, cor_borda, espessura=2):
 
+    x, y = pos
+    texto_surface = fonte.render(texto, True, cor_texto)
+    borda_surface = fonte.render(texto, True, cor_borda)
+
+    for dx in range(-espessura, espessura + 1):
+        for dy in range(-espessura, espessura + 1):
+            if dx == 0 and dy == 0:
+                continue
+            tela.blit(borda_surface, (x + dx, y + dy))
+
+    tela.blit(texto_surface, (x, y))
