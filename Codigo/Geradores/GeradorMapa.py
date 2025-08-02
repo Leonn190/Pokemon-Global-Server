@@ -3,12 +3,40 @@ import pygame
 class Mapa:
     def __init__(self, GridBiomas, DicObjetos):
         self.GridBiomas = GridBiomas  # matriz de números
-        self.DicObjetos = DicObjetos  # matriz (opcional ou futura)
+        self.DicObjetos = DicObjetos  # dicionário global de objetos {(x, y): objeto}
 
-        self.Tile = 64  # tamanho de um tile em pixels
+        self.Tile = 70  # tamanho de um tile em pixels
         self.Largura = len(GridBiomas[0]) * self.Tile
         self.Altura = len(GridBiomas) * self.Tile
 
+        self.ChunksObjetos = self.dividir_em_chunks(DicObjetos)
+        self.ChunksCarregados = {}
+
+    def dividir_em_chunks(self, dic_objetos):
+        chunks = {}
+
+        # Garante que todos os chunks possíveis existam, mesmo vazios
+        max_x = len(self.GridBiomas[0])
+        max_y = len(self.GridBiomas)
+
+        for y in range(max_y):
+            for x in range(max_x):
+                cx = x // 100
+                cy = y // 100
+                coord_chunk = (cx, cy)
+
+                if coord_chunk not in chunks:
+                    chunks[coord_chunk] = {}
+
+        # Adiciona os objetos existentes nos seus chunks
+        for (x, y), objeto in dic_objetos.items():
+            cx = x // 100
+            cy = y // 100
+            coord_chunk = (cx, cy)
+
+            chunks[coord_chunk][(x, y)] = objeto
+
+        return chunks
 
 class Camera:
     def __init__(self, raio_em_tiles):
@@ -23,7 +51,7 @@ class Camera:
         self.largura_em_tiles = 2 * raio_em_tiles + 1
         self.altura_em_tiles = 2 * raio_em_tiles + 1
 
-    def desenhar(self, tela, jogador_pos, mapa, EstruturasIMG):
+    def desenhar(self, tela, jogador_pos, mapa, EstruturasIMG, PokemonsAtivos):
         tile = mapa.Tile
         grid = mapa.GridBiomas
         objetos = mapa.DicObjetos
@@ -48,7 +76,6 @@ class Camera:
                     bioma = grid[grid_y][grid_x]
                     cor = self.pegar_cor_bioma(bioma)
 
-                    # Posição real considerando o offset do centro
                     pos_x = centro_tela_x + (coluna - self.raio) * tile - offset_x
                     pos_y = centro_tela_y + (linha - self.raio) * tile - offset_y
 
@@ -59,9 +86,23 @@ class Camera:
             if inicio_x <= x < inicio_x + self.largura_em_tiles and inicio_y <= y < inicio_y + self.altura_em_tiles:
                 coluna = x - inicio_x
                 linha = y - inicio_y
+
                 pos_x = centro_tela_x + (coluna - self.raio) * tile - offset_x
                 pos_y = centro_tela_y + (linha - self.raio) * tile - offset_y
-                estrutura.desenhar(tela, (pos_x, pos_y), EstruturasIMG[estrutura.nome])
+
+                img = EstruturasIMG[estrutura.nome]  # <- pegamos imagem aqui
+                estrutura.desenhar(tela, (pos_x + tile // 2, pos_y + tile // 2), img)  # <- ajusta para centro
+        
+        for chave, pokemon in PokemonsAtivos.items():
+            x, y = pokemon.Loc  # Obtemos diretamente do atributo .Loc do objeto
+            if inicio_x <= x < inicio_x + self.largura_em_tiles and inicio_y <= y < inicio_y + self.altura_em_tiles:
+                coluna = x - inicio_x
+                linha = y - inicio_y
+
+                pos_x = centro_tela_x + (coluna - self.raio) * tile - offset_x
+                pos_y = centro_tela_y + (linha - self.raio) * tile - offset_y
+
+                pokemon.Atualizar(tela, (pos_x + tile // 2, pos_y + tile // 2))
 
     def pegar_cor_bioma(self, bioma):
         # Dicionário simples de cor por tipo de bioma

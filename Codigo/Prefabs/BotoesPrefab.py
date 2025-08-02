@@ -280,3 +280,29 @@ def Botao_Alavanca(tela, espaço, fonte, estado, eventos,
         estado["pressionado"] = False
 
     return valor_atual
+
+def Botao_Tecla(tecla, acao):
+
+    keys = pygame.key.get_pressed()
+    
+    # Dicionário para suportar nomes especiais de teclas
+    teclas_especiais = {
+        "esc": pygame.K_ESCAPE,
+        "space": pygame.K_SPACE,
+        "enter": pygame.K_RETURN,
+        "tab": pygame.K_TAB,
+        "shift": pygame.K_LSHIFT,  # ou RSHIFT se quiser
+        "ctrl": pygame.K_LCTRL,    # idem
+    }
+
+    tecla_formatada = tecla.strip().lower()
+    tecla_codigo = teclas_especiais.get(tecla_formatada, getattr(pygame, f'K_{tecla_formatada}', None))
+
+    if tecla_codigo and keys[tecla_codigo]:
+        if callable(acao):
+            acao()
+        elif isinstance(acao, list):
+            for a in acao:
+                if callable(a):
+                    a()
+    

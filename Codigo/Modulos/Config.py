@@ -40,6 +40,12 @@ def SalvarConfig(Config):
 def TelaConfigurações(tela, estados, eventos, parametros):
     from Codigo.Cenas.Inicio import Fontes, Cores, Texturas, Outros
 
+    if parametros["TelaConfigurações"]["Entrou"]:
+        if pygame.mouse.get_pressed()[0]:
+            return
+        else:
+            parametros["TelaConfigurações"]["Entrou"] = False
+
     Voltar = parametros["TelaConfigurações"]["Voltar"]
 
     x = 510

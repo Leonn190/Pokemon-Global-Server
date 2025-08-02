@@ -50,7 +50,7 @@ def InicioTelaPrincipal(tela, estados, eventos, parametros):
 
     Botao(
         tela, "CONFIGURAÇÕES", (750, 730, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
-        lambda: parametros.update({"Tela": TelaConfigurações, "TelaConfigurações": {"Voltar":lambda: parametros.update({"Tela": InicioTelaPrincipal})}}),
+        lambda: parametros.update({"Tela": TelaConfigurações, "TelaConfigurações": {"Voltar":lambda: parametros.update({"Tela": InicioTelaPrincipal}), "Entrou": True}}),
         Fontes[40], B_config, eventos, som="Clique", cor_texto=Cores["branco"], aumento=1.2
     )
 
@@ -501,7 +501,10 @@ def InicioTelaOperador(tela, estados, eventos, parametros):
 
 def InicioLoop(tela, relogio, estados, config, info):
     global Cores, Fontes, Texturas, Fundos, Outros 
-    Cores, Fontes, Texturas, Fundos, Outros = info["Conteudo"]
+    if Cores == None:
+        Cores, Fontes, Texturas, Fundos, Outros = info["Conteudo"]
+    else:
+        info["Conteudo"] = Cores, Fontes, Texturas, Fundos, Outros
 
     parametros = {
         "Tela": InicioTelaPrincipal,

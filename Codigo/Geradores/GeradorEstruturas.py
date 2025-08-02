@@ -1,11 +1,23 @@
+import pygame
 
 class Estrutura:
     def __init__(self, nome, pos):
         self.nome = nome
-        self.pos = pos  # (x, y)
+        self.pos = pos  # posição central no mundo (x, y) em tiles
+        self.rect = None  # será atualizado dinamicamente
 
     def desenhar(self, tela, pos_tela, img):
-        tela.blit(img, pos_tela)
+        largura, altura = img.get_size()
+
+        # Desenhar com o centro no tile
+        pos_img = (pos_tela[0] - largura // 2, pos_tela[1] - altura // 2)
+        tela.blit(img, pos_img)
+
+        # Atualizar o rect da estrutura para refletir a posição da imagem
+        self.rect = pygame.Rect(pos_img[0], pos_img[1], largura, altura)
+
+        # Debug opcional
+        # pygame.draw.rect(tela, (255, 0, 0), self.rect, 2)
 
 def GridToDic(grid_numerica):
 
@@ -29,3 +41,4 @@ def GridToDic(grid_numerica):
             mapa_estruturas[(x, y)] = estrutura
 
     return mapa_estruturas
+

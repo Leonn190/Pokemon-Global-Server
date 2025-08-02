@@ -5,6 +5,7 @@ import ctypes
 import threading
 
 from Codigo.Prefabs.Sonoridade import VerificaSonoridade
+from Codigo.Prefabs.FunçõesPrefabs import Carregar_Imagem
 
 try:
     ctypes.windll.user32.SetProcessDPIAware()
@@ -14,8 +15,13 @@ except:
 pygame.init()
 pygame.mixer.init()
 
+# Iniciar tela
 tela = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
-pygame.display.set_caption("Jogo Pokémon")
+pygame.display.set_caption("Pokemon Global Server")
+
+# Ícone da janela (funciona com PNG)
+icone = Carregar_Imagem("Outros/Logo.png")  # ou use sua função Carregar_Imagem
+pygame.display.set_icon(icone)
 
 relogio = pygame.time.Clock()
 
@@ -46,6 +52,9 @@ info = {
     "Alvo": "Inicio",
     "Escuro": 100
 }
+
+from Outros.Discord import iniciar_discord_presence
+rpc = iniciar_discord_presence()
 
 from Codigo.Cenas.Inicio import InicioLoop
 from Codigo.Cenas.Carregamento import CarregamentoLoop

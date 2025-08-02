@@ -21,8 +21,7 @@ def CarregarAnimações():
     dic = {}
 
     for nome_arquivo in os.listdir(pasta):
-        if nome_arquivo.lower().endswith(".png"):
-            caminho_relativo = os.path.join("Pokemons", "Imagens", nome_arquivo)
+            caminho_relativo = os.path.join("Pokemons", "Animação", nome_arquivo)
             frames = Carregar_Frames(caminho_relativo)
             if frames is not None:
                 dic[nome_arquivo] = frames  # Mantém com extensão, conforme instruído
@@ -101,6 +100,10 @@ def CarregamentoAvançado(info,Pré):
         Animações = None
 
     Cores, Fontes, Texturas, Fundos, Outros = info["Conteudo"]
+
+    Fundos.update({
+        "FundoMundo": Carregar_Imagem("Fundos/FundoMundo.jpg")
+        })
 
     Outros["SkinsTodas"] = Outros["Skins"] + CarregarOutrasSkins()
 
