@@ -1,3 +1,4 @@
+import pygame
 
 CAMPOS_POKEMON = [
     "Nome",
@@ -51,8 +52,7 @@ class Pokemon:
         self.contador_anim = 0
 
     def Atualizar(self, tela, pos):
-        # Controlar a velocidade da animação (ajuste esse valor como quiser)
-        VELOCIDADE_ANIMACAO = 4
+        VELOCIDADE_ANIMACAO = 3
 
         # Atualiza índice com base no contador
         self.contador_anim += 1
@@ -63,7 +63,19 @@ class Pokemon:
         # Pega o quadro atual da animação
         quadro = self.animação[self.indice_anim]
         ret = quadro.get_rect(center=pos)
+
+        # Desenhar o círculo de fundo (atrás do Pokémon)
+        raio = max(ret.width, ret.height) // 2 + 8  # um pouco maior que o sprite
+        cor_fundo = (173, 216, 230)  # azul claro
+        cor_borda = (100, 149, 237)  # azul mais escuro (cornflower blue)
+
+        # Círculo de fundo
+        pygame.draw.circle(tela, cor_fundo, pos, raio)
+        # Borda
+        pygame.draw.circle(tela, cor_borda, pos, raio, 3)
+
+        # Desenhar o Pokémon por cima
         tela.blit(quadro, ret)
 
-        
+
 

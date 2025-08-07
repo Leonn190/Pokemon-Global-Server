@@ -354,3 +354,36 @@ def texto_com_borda(tela, texto, fonte, pos, cor_texto, cor_borda, espessura=2):
             tela.blit(borda_surface, (x + dx, y + dy))
 
     tela.blit(texto_surface, (x, y))
+
+def Fluxo(tela, x1, y1, x2, y2, num_pontos=30, frequencia=4, velocidade=3, cor_base=(0, 255, 0), raio=3):
+
+    dx = x2 - x1
+    dy = y2 - y1
+    dist_total = math.hypot(dx, dy)
+
+    if dist_total == 0:
+        return  # Evita divisão por zero
+
+    # Normalizar direção
+    dir_x = dx / dist_total
+    dir_y = dy / dist_total
+
+    # Tempo atual para animação
+    t = pygame.time.get_ticks() / 1000  # em segundos
+
+    for i in range(num_pontos):
+        fator = i / num_pontos
+        px = int(x1 + dir_x * fator * dist_total)
+        py = int(y1 + dir_y * fator * dist_total)
+
+        # Onda de pulsação (vai e volta)
+        onda = 0.5 + 0.5 * math.sin(2 * math.pi * frequencia * fator - velocidade * t)
+
+        # Alpha com base na onda
+        alpha = int(onda * 255)
+        cor = (*cor_base, alpha)
+
+        # Desenhar com alpha
+        superficie = pygame.Surface((raio * 2, raio * 2), pygame.SRCALPHA)
+        pygame.draw.circle(superficie, cor, (raio, raio), raio)
+        tela.blit(superficie, (px - raio, py - raio))

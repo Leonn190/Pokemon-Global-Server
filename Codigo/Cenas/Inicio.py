@@ -240,7 +240,7 @@ def InicioTelaConectando(tela, estados, eventos, parametros):
     estado = parametros.get("EstadoServidor")
     tempo_decorrido_ms = pygame.time.get_ticks() - parametros.get("TempoInicioConexao", 0)
 
-    if estado is None or tempo_decorrido_ms < 2000:  # 6000 ms = 6 segundos
+    if estado is None or tempo_decorrido_ms < 1000:  # 6000 ms = 6 segundos
         # Ainda esperando resposta OU não completou 6 segundos
         pass
     else:
@@ -275,7 +275,7 @@ def InicioTelaCriandoPersonagem(tela, estados, eventos, parametros):
             "Nome": "Nome",
             "Skin": 1,
             "Inicial": None,
-            "Inventario": [],
+            "Inventario": [None] * 70,
             "Pokemons": [],
             "Nivel": 0,
             "XP": 0,
@@ -419,7 +419,7 @@ def InicioTelaCriandoPersonagem(tela, estados, eventos, parametros):
     Botao(
         tela, "Registrar", (x_quadrado - 200, y_quadrado + 210, 350, 60),
         Texturas["AzulRoxa"], Cores["preto"], Cores["branco"],
-        lambda: parametros.update({"Tela": TelaDeCerteza, "TelaDeCerteza": {"Voltar": lambda: parametros.update({"Tela": InicioTelaCriandoPersonagem}),"Recado": "O personagem não será salvo, Tem certeza?", "Funcao": [lambda: RegistrarNoServer(parametros["Personagem"]["Code"], parametros["Personagem"], parametros),lambda: parametros.update({"Tela": InicioTelaConectando, "TentandoEntrarNoServidor": True})]}}),
+        lambda: parametros.update({"Tela": TelaDeCerteza, "TelaDeCerteza": {"Voltar": lambda: parametros.update({"Tela": InicioTelaCriandoPersonagem}),"Funcao": [lambda: RegistrarNoServer(parametros["Personagem"]["Code"], parametros["Personagem"], parametros),lambda: parametros.update({"Tela": InicioTelaConectando, "TentandoEntrarNoServidor": True})]}}),
         Fontes[40], B_Salvar, eventos, som="Clique"
     )
     Botao(

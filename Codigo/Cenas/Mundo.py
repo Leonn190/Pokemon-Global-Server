@@ -3,15 +3,16 @@ import threading
 import time
 
 from Codigo.Modulos.Outros import Clarear, Escurecer
-from Codigo.Modulos.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, SalvarConta, SairConta
+from Codigo.Modulos.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, SalvarConta, SairConta, RemoverBau
 from Codigo.Modulos.Config import TelaConfigurações
 from Codigo.Modulos.Inventario import TelaInventario
 from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Tecla
 from Codigo.Prefabs.Sonoridade import Musica
+from Codigo.Prefabs.Mensagens import atualizar_e_desenhar_mensagens_itens
 from Codigo.Geradores.GeradorPlayer import Player
 from Codigo.Geradores.GeradorMapa import Mapa, Camera
-from Codigo.Geradores.GeradorEstruturas import GridToDic
+from Codigo.Geradores.GeradorEstruturas import GridToDic, Bau
 from Codigo.Geradores.GeradorPokemon import Pokemon
 
 Cores = None
@@ -33,26 +34,38 @@ B_voltar = {}
 B_config = {}
 B_sair = {}
 
-def atualizar_chunks(parametros, player, mapa):
+def AtualizarColisaoProxima(mapa, player, parametros):
     while parametros["Running"]:
-        x, y = player.Loc  # posição absoluta em tiles
-        chunk_x = int(x) // 100
-        chunk_y = int(y) // 100
+        px, py = player.Loc  # posição do player em coordenadas de tile
 
-        chunks_ao_redor = [
-            (chunk_x + dx, chunk_y + dy)
-            for dx in [-1, 0, 1]
-            for dy in [-1, 0, 1]
-        ]
+        # Define os limites do raio (8 tiles em todas as direções)
+        raio = 8
+        x_min, x_max = px - raio, px + raio
+        y_min, y_max = py - raio, py + raio
 
-        # Filtrar os que realmente existem
-        mapa.ChunksCarregados = {
-            chave: mapa.ChunksObjetos[chave]
-            for chave in chunks_ao_redor
-            if chave in mapa.ChunksObjetos
-        }
+        # Limpar colisões anteriores
+        mapa.ObjetosColisão = {}
+        mapa.PokemonsColisão = {}
+        mapa.BausColisão = {}
 
-        time.sleep(0.5)
+        # Atualizar Objetos (baseado na posição fixa)
+        for (x, y), obj in mapa.DicObjetos.items():
+            if x_min <= x <= x_max and y_min <= y <= y_max:
+                mapa.ObjetosColisão[(x, y)] = obj
+
+        # Atualizar Pokémons
+        for pokemon in mapa.PokemonsAtivos.values():
+            x, y = pokemon.Loc
+            if x_min <= x <= x_max and y_min <= y <= y_max:
+                mapa.PokemonsColisão[(x, y)] = pokemon
+
+        # Atualizar Baús
+        for bau in mapa.BausAtivos.values():
+            x, y = bau.Loc
+            if x_min <= x <= x_max and y_min <= y <= y_max:
+                mapa.BausColisão[(x, y)] = bau
+
+        time.sleep(0.25)
 
 def thread_verificacao_continua(parametros):
     while parametros["Running"]:
@@ -64,17 +77,14 @@ def thread_verificacao_continua(parametros):
         else:
             time.sleep(3)
 
-def GerenciadorDePokemonsProximos(Parametros):
-    # Inicializa o dicionário se não existir ainda
-    if "PokemonsAtivos" not in Parametros:
-        Parametros["PokemonsAtivos"] = {}
+def GerenciadorDePokemonsProximos(Parametros, Mapa):
 
     while Parametros["Running"]:
+        # ====== POKÉMONS ======
         pokemons_novos = {}
-
         for pkm_info in Parametros["PokemonsProximos"]:
             id_ = pkm_info["id"]
-            if id_ not in Parametros["PokemonsAtivos"]:
+            if id_ not in Mapa.PokemonsAtivos:
                 # Criar novo Pokémon
                 novo_pokemon = Pokemon(
                     Loc=pkm_info["loc"],
@@ -84,17 +94,54 @@ def GerenciadorDePokemonsProximos(Parametros):
                 )
                 pokemons_novos[id_] = novo_pokemon
             else:
-                # Mantém e atualiza o Pokémon já existente
-                pokemons_novos[id_] = Parametros["PokemonsAtivos"][id_]
+                # Atualiza o Pokémon existente
+                pokemons_novos[id_] = Mapa.PokemonsAtivos[id_]
                 pokemons_novos[id_].Loc = pkm_info["loc"]
 
-        # Atualiza o dicionário de ativos
-        Parametros["PokemonsAtivos"] = pokemons_novos
+        Mapa.PokemonsAtivos = pokemons_novos
 
-        time.sleep(0.5)
+        # ====== BAÚS ======
+        baus_novos = {}
+
+        # Marca todos os baús atuais como potencialmente "desaparecidos"
+        baus_antigos = dict(Mapa.BausAtivos)
+
+        # Percorre os baús próximos
+        for bau_info in Parametros.get("BausProximos", []):
+            id_ = bau_info["ID"]
+            loc = (bau_info["X"], bau_info["Y"])
+            raridade = bau_info["Raridade"]
+
+            if id_ not in Mapa.BausAtivos:
+                novo_bau = Bau(raridade=raridade, ID=id_, Loc=loc)
+                baus_novos[id_] = novo_bau
+            else:
+                bau_existente = Mapa.BausAtivos[id_]
+                bau_existente.Loc = loc  # atualiza a posição
+                baus_novos[id_] = bau_existente
+
+            # Como esse baú ainda existe, removemos da lista de antigos
+            if id_ in baus_antigos:
+                del baus_antigos[id_]
+
+        # Todos os baús que *não* estão mais em BausProximos devem ser marcados como abertos
+        for bau_removido in baus_antigos.values():
+            bau_removido.Aberto = True
+            baus_novos[bau_removido.ID] = bau_removido  # Mantém o baú nos ativos
+
+        Mapa.BausAtivos = baus_novos
+
+        time.sleep(0.75)
+
+def LoopRemoveBaus(parametros):
+    while parametros["Running"]:
+        for bauID in parametros["BausRemover"]:
+            RemoverBau(parametros, bauID)
+        parametros["BausRemover"] = []
+        time.sleep(1.5)
 
 def MundoTelaOpçoes(tela, estados, eventos, parametros):
-    
+
     Botao(
         tela, "Voltar", (710, 300, 500, 150), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
         lambda: parametros.update({"Tela": MundoTelaPadrao}),
@@ -115,12 +162,12 @@ def MundoTelaOpçoes(tela, estados, eventos, parametros):
 
 def MundoTelaPadrao(tela, estados, eventos, parametros):
     
-    camera.desenhar(tela,player.Loc,mapa,Estruturas,parametros["PokemonsAtivos"])
+    camera.desenhar(tela,player.Loc,mapa,Estruturas,Outros["Baus"])
 
     if parametros["InventarioAtivo"]:
         TelaInventario(tela, player, eventos, parametros)
     else:
-        player.Atualizar(tela, parametros["delta_time"], mapa, Fontes[20])
+        player.Atualizar(tela, parametros["delta_time"], mapa, Fontes[20], parametros, Consumiveis)
 
     Botao_Tecla("esc",lambda: parametros.update({"Tela": MundoTelaOpçoes}))
     Botao_Tecla("E",lambda: parametros.update({"InventarioAtivo": True}))
@@ -140,7 +187,8 @@ def MundoLoop(tela, relogio, estados, config, info):
         "Config": config,
         "PokemonsProximos": [],
         "PlayersProximos": [],
-        "PokemonsAtivos": {},
+        "BausProximos": [],
+        "BausRemover": [],
         "InventarioAtivo": False,
         "Inventario": {
             "Setor": None
@@ -157,10 +205,10 @@ def MundoLoop(tela, relogio, estados, config, info):
     parametros.update({"Player": player})
 
     # Cria e inicia thread da verificação
-    verif_thread = threading.Thread(target=thread_verificacao_continua, args=(parametros,), daemon=True)
-    verif_thread.start()
-    threading.Thread(target=atualizar_chunks, args=(parametros,player,mapa), daemon=True).start()
-    threading.Thread(target=GerenciadorDePokemonsProximos, args=(parametros,), daemon=True).start()
+    threading.Thread(target=thread_verificacao_continua, args=(parametros,), daemon=True).start()
+    threading.Thread(target=AtualizarColisaoProxima, args=(mapa,player,parametros), daemon=True).start()
+    threading.Thread(target=GerenciadorDePokemonsProximos, args=(parametros, mapa), daemon=True).start()
+    threading.Thread(target=LoopRemoveBaus, args=(parametros,), daemon=True).start()
 
     # tela = pygame.display.set_mode(camera.Resolucao, pygame.FULLSCREEN)
 
@@ -179,6 +227,8 @@ def MundoLoop(tela, relogio, estados, config, info):
 
         y_base = 10  # Posição inicial do topo
         espaco = 5   # Espaço entre as linhas
+
+        atualizar_e_desenhar_mensagens_itens(tela)
 
         if config["FPS Visivel"]:
             fps_atual = relogio.get_fps()
@@ -208,7 +258,5 @@ def MundoLoop(tela, relogio, estados, config, info):
         relogio.tick(config["FPS"])
 
     parametros["Running"] = False  # garante que a thread pare ao sair do loop
-    verif_thread.join(timeout=1)
-    
     Escurecer(tela, info)
     

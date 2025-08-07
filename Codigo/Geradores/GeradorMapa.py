@@ -5,12 +5,17 @@ class Mapa:
         self.GridBiomas = GridBiomas  # matriz de números
         self.DicObjetos = DicObjetos  # dicionário global de objetos {(x, y): objeto}
 
+        self.PokemonsAtivos = {}
+        self.BausAtivos = {}
+        self.PlayerAtivos = {}
+
         self.Tile = 70  # tamanho de um tile em pixels
         self.Largura = len(GridBiomas[0]) * self.Tile
         self.Altura = len(GridBiomas) * self.Tile
 
-        self.ChunksObjetos = self.dividir_em_chunks(DicObjetos)
-        self.ChunksCarregados = {}
+        self.ObjetosColisão = None
+        self.PokemonsColisão = None
+        self.BausColisão = None
 
     def dividir_em_chunks(self, dic_objetos):
         chunks = {}
@@ -51,10 +56,12 @@ class Camera:
         self.largura_em_tiles = 2 * raio_em_tiles + 1
         self.altura_em_tiles = 2 * raio_em_tiles + 1
 
-    def desenhar(self, tela, jogador_pos, mapa, EstruturasIMG, PokemonsAtivos):
+    def desenhar(self, tela, jogador_pos, mapa, EstruturasIMG, BausIMG):
         tile = mapa.Tile
         grid = mapa.GridBiomas
         objetos = mapa.DicObjetos
+        PokemonsAtivos = mapa.PokemonsAtivos
+        BausAtivos = mapa.BausAtivos
 
         jogador_x, jogador_y = jogador_pos
 
@@ -103,6 +110,45 @@ class Camera:
                 pos_y = centro_tela_y + (linha - self.raio) * tile - offset_y
 
                 pokemon.Atualizar(tela, (pos_x + tile // 2, pos_y + tile // 2))
+
+        baus_para_remover = []
+
+        for bau_id, bau in BausAtivos.items():
+            x, y = bau.Loc
+
+            if inicio_x <= x < inicio_x + self.largura_em_tiles and inicio_y <= y < inicio_y + self.altura_em_tiles:
+                coluna = x - inicio_x
+                linha = y - inicio_y
+
+                pos_x = centro_tela_x + (coluna - self.raio) * tile - offset_x
+                pos_y = centro_tela_y + (linha - self.raio) * tile - offset_y
+
+                centro_pos = (pos_x + tile // 2, pos_y + tile // 2)
+
+                if bau.Aberto:
+                    imagens = BausIMG[bau.raridade]
+                    frame_total = len(imagens)
+
+                    frame_index = int(bau.Animando)
+                    if frame_index >= frame_total:
+                        frame_index = frame_total - 1
+
+                    img = imagens[frame_index]
+                    bau.desenhar(tela, centro_pos, img)
+
+                    if bau.Animando < frame_total - 1:
+                        bau.Animando += 0.2
+                    else:
+                        bau.TempoAposAbrir += 1
+                        if bau.TempoAposAbrir >= 180:
+                            baus_para_remover.append(bau_id)
+                else:
+                    img = BausIMG[bau.raridade][0]
+                    bau.desenhar(tela, centro_pos, img)
+
+        # Remover após o loop
+        for bau_id in baus_para_remover:
+            del mapa.BausAtivos[bau_id]
 
     def pegar_cor_bioma(self, bioma):
         # Dicionário simples de cor por tipo de bioma

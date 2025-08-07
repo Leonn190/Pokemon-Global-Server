@@ -99,4 +99,3 @@ def TelaDeCerteza(tela, estados, eventos, parametros):
         lambda: [f() for f in Voltar] if isinstance(Voltar, list) else Voltar(),
         Fontes[40], B4, eventos, som="Clique"
     )
-

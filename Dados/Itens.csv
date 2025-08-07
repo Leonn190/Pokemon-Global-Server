@@ -1,0 +1,41 @@
+Nome,Descrição,Valor,Raridade,Estilo,Code
+Poção,cura,,1,poção,1
+Super Poção,cura +,,2,poção,2
+Hiper Poção,cura ++,,4,poção,3
+Mega Poção,cura +++,,5,poção,4
+Poção Máxima,Maximo de vida,,6,poção,5
+Revive,Revive o pokemon com 25% da vida,,3,poção,6
+Revive Maximo,Revive o pokemon com 100% da vida,,6,poção,7
+Elixir,Xp,,1,poção,8
+Super Elixir,Xp +,,2,poção,9
+Hiper Elixir,Xp ++,,4,poção,10
+Mega Elixir,Xp +++,,6,poção,11
+Pokeball,Captura,,1,bola,12
+Greatball,Captura +,,2,bola,13
+Hiperball,Captura ++,,5,bola,14
+Levelball,Aumenta 5 niveis do pokemon e aumenta o poder de captura com base no nivel,,3,bola,16
+Furyball,Consegue capturar pokemons irritados direto,,4,bola,17
+Heavyball,Escala com o peso,,3,bola,18
+Aquaball,mais chances de capturar pokemons na agua,,2,bola,19
+Attemptball,mais chances conforme o numero de tentativas de capturar o pokemon,,4,bola,20
+Premierball,mais chances de capturar pokemons em batalhas,,5,bola,21
+Candyball,dropa o triplo de doces na captura,,3,bola,22
+Loveball,aumenta a amizade do pokemon ao capturar,,3,bola,23
+Secretball,aumenta 10% de IV do pokemon ao capturar,,6,bola,24
+Fastball,escala com velocidade e a pokebola é mais rapida,,3,bola,25
+Fruitball,Aumenta as chances conforme o numero de frutas dadas ao pokemon,,3,bola,26
+Tallball,Mais chances de captura se o pokemon estiver encima de algo,,2,bola,27
+Sniperball,"pokebola mais rapida e vai mais longe, escala com distancia",,4,bola,28
+Beastball,mais chances de capturar pokemons não spawnaveis,,4,bola,29
+Caxi Berry,dobra o numero de doces,,3,fruta,30
+Frambo Berry,mais chances de capturar o pokemon,,1,fruta,31
+Super Frambo Berry,mais chances de capturar o pokemon +,,4,fruta,32
+Simp Berry,aumenta a amizade do pokemon ao capturar,,1,fruta,33
+Secret Berry,Aumenta 5% o IV ao capturar,,6,fruta,34
+Lum Berry,Aumenta 3 niveis do pokemon,,3,fruta,35
+Jujuca Berry,Aumenta o numero de frutas que um pokemon pode consumir,,2,fruta,36
+Jungle Berry,Aumenta as chances de captura se estiver numa floresta,,2,fruta,37
+Desert Berry,Aumenta as chances de captura se estiver num deserto,,2,fruta,38
+Frozen Berry,Aumenta as chances de captura se estiver na neve,,2,fruta,39
+Field Berry,Aumenta as chances de captura se estiver num campo,,2,fruta,40
+Water Berry,Aumenta as chances de captura se estiver na agua,,2,fruta,41

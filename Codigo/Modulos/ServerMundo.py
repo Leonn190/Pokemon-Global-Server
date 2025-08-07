@@ -1,12 +1,20 @@
 import requests
 import json
+import math
+
+def limpar_nans(d):
+    for k, v in d.items():
+        if isinstance(v, dict):
+            limpar_nans(v)
+        elif isinstance(v, float) and math.isnan(v):
+            d[k] = None
 
 def VerificaçãoSimplesServer(Parametros):
     try:
         url = Parametros["Link"].rstrip('/') + "/Verificar"
 
         payload = {
-            "Raio": Parametros.get("Raio", 50),
+            "Raio": Parametros.get("Raio", 18),
             "X": Parametros["Player"].Loc[0],
             "Y": Parametros["Player"].Loc[1],
             "Code": Parametros["Code"],
@@ -20,8 +28,17 @@ def VerificaçãoSimplesServer(Parametros):
 
         dados = resposta.json()
 
-        Parametros["PlayersProximos"] = dados.get("players")
-        Parametros["PokemonsProximos"] = dados.get("pokemons")
+        Parametros["PlayersProximos"] = dados.get("players", [])
+        Parametros["PokemonsProximos"] = dados.get("pokemons", [])
+        Parametros["BausProximos"] = dados.get("baus", [])
+
+        if Parametros["BausProximos"] == []:
+            Parametros["BausProximos"].append({
+                    "ID": 111,
+                    "X": 510,
+                    "Y": 520,
+                    "Raridade": 1
+                })
 
     except requests.exceptions.RequestException as e:
         print(f"Erro na requisição: {e}")
@@ -47,9 +64,12 @@ def SalvarConta(Parametros):
         player = Parametros["Player"]
         url = f'{Parametros["Link"]}/salvar'
 
+        envio = player.ToDicTotal()
+        limpar_nans(envio)
+
         dados_para_enviar = {
             "codigo": Parametros["Code"],
-            "personagem": player.ToDicTotal()
+            "personagem": envio
         }
 
         resposta = requests.post(url, json=dados_para_enviar)
@@ -78,3 +98,21 @@ def SairConta(Parametros):
 
     except Exception as e:
         print(f'[✘] Erro ao tentar sair da conta: {e}')
+
+def RemoverBau(Parametros, bau_id):
+    try:
+        url = f'{Parametros["Link"]}/remover-bau'
+        dados_para_enviar = {
+            "id": bau_id
+        }
+
+        resposta = requests.post(url, json=dados_para_enviar)
+        if resposta.status_code == 200:
+            print(f'[✔] Baú removido com sucesso: {resposta.json()["mensagem"]}')
+        elif resposta.status_code == 404:
+            print(f'[⚠] Baú não encontrado: {resposta.json()["erro"]}')
+        else:
+            print(f'[⚠] Erro ao remover baú: {resposta.status_code} - {resposta.text}')
+
+    except Exception as e:
+        print(f'[✘] Erro ao tentar remover baú: {e}')

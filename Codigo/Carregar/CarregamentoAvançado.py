@@ -102,8 +102,24 @@ def CarregamentoAvançado(info,Pré):
     Cores, Fontes, Texturas, Fundos, Outros = info["Conteudo"]
 
     Fundos.update({
-        "FundoMundo": Carregar_Imagem("Fundos/FundoMundo.jpg")
+        "FundoMundo": Carregar_Imagem("Fundos/FundoMundo.jpg"),
+        "FundoSlots": Carregar_Imagem("Fundos/FundoSlots.jpg")
         })
+    
+    Texturas.update({
+        "Madeira": Carregar_Imagem("Texturas/TexturaMadeira.jpg")
+    })
+
+    Outros.update({
+        "Baus": {
+            "Comum": Carregar_Frames("Outros/Bau Comum"),
+            "Incomum": Carregar_Frames("Outros/Bau Incomum"),
+            "Raro": Carregar_Frames("Outros/Bau Raro"),
+            "Epico": Carregar_Frames("Outros/Bau Epico"),
+            "Mitico": Carregar_Frames("Outros/Bau Mitico"),
+            "Lendario": Carregar_Frames("Outros/Bau Lendario")
+        }
+    })
 
     Outros["SkinsTodas"] = Outros["Skins"] + CarregarOutrasSkins()
 

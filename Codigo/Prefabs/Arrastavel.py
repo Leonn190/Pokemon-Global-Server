@@ -1,45 +1,45 @@
 import pygame
 
 class Arrastavel:
-    def __init__(self, imagem, pos, dados=None, categoria=None, interno=False, funcao_execucao=None):
+    def __init__(self, imagem, pos, dados=None, interno=None, funcao_execucao=None):
         self.imagem = imagem
         self.rect = self.imagem.get_rect(topleft=pos)
-        self.pos_inicial = pos
-        self.arrastando = False
-        self.offset = (0, 0)
+
         self.dados = dados
-        self.categoria = categoria
         self.interno = interno
         self.funcao_execucao = funcao_execucao
 
-    def verificar_clique(self, mouse_pos):
-        if self.rect.collidepoint(mouse_pos):
-            self.arrastando = True
-            mouse_x, mouse_y = mouse_pos
-            self.offset = (self.rect.x - mouse_x, self.rect.y - mouse_y)
+        self.esta_arrastando = False
+        self.offset_x = 0
+        self.offset_y = 0
 
-    def arrastar(self, mouse_pos):
-        if self.arrastando:
-            mouse_x, mouse_y = mouse_pos
-            self.rect.x = mouse_x + self.offset[0]
-            self.rect.y = mouse_y + self.offset[1]
-
-    def soltar(self):
-        if self.arrastando:
-            self.arrastando = False
-            if self.funcao_execucao:
-                resultado = self.funcao_execucao(
-                    self.rect.center,
-                    self.dados,
-                    self.categoria,
-                    self.interno
-                )
-                if resultado is False:
-                    self.rect.topleft = self.pos_inicial
+        self.posicao_original = self.rect.topleft  # nova linha
 
     def desenhar(self, tela):
         tela.blit(self.imagem, self.rect.topleft)
 
-    @property
-    def esta_arrastando(self):
-        return self.arrastando
+    def arrastar(self, mouse_pos):
+        if self.esta_arrastando:
+            self.rect.topleft = (mouse_pos[0] + self.offset_x, mouse_pos[1] + self.offset_y)
+
+    def atualizar(self, eventos):
+        mouse_pos = pygame.mouse.get_pos()
+
+        for evento in eventos:
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                if self.rect.collidepoint(mouse_pos):
+                    self.esta_arrastando = True
+                    self.offset_x = self.rect.x - mouse_pos[0]
+                    self.offset_y = self.rect.y - mouse_pos[1]
+                    self.posicao_original = self.rect.topleft  # salva antes de arrastar
+
+            elif evento.type == pygame.MOUSEBUTTONUP and evento.button == 1:
+                if self.esta_arrastando:
+                    self.esta_arrastando = False
+                    sucesso = True
+                    if self.funcao_execucao:
+                        sucesso = self.funcao_execucao(mouse_pos, self.dados, self.interno)
+
+                    # Se não deu certo, volta pra posição original
+                    if sucesso is False:
+                        self.rect.topleft = self.posicao_original
