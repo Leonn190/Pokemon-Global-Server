@@ -157,7 +157,7 @@ def SetorPokemons(tela, player, eventos, parametros):
         texto_time = fonte_equipes.render(f"Time {idx + 1}", True, (255, 255, 255))
 
         # desenha poder à esquerda e "Time X" à direita (dentro da área dos times)
-        tela.blit(texto_poder, (pos_equipes_x + texto_poder.get_width() - 10, cur_y))
+        tela.blit(texto_poder, (pos_equipes_x + 5, cur_y))
         tela.blit(texto_time, (pos_equipes_x + largura_times - texto_time.get_width(), cur_y))
 
         y_slots = cur_y + header_h + 4

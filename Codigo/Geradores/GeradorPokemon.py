@@ -3,6 +3,8 @@ import random
 import math
 import pandas as pd
 
+from Server.ServerMundo import RemoverPokemon
+
 df = pd.read_csv("Dados/Pokemons.csv")
 
 CAMPOS_POKEMON = [
@@ -16,14 +18,8 @@ CAMPOS_POKEMON = [
     "Nivel",
     "IV",
     "IV_Vida", "IV_Atk", "IV_Def", "IV_SpA", "IV_SpD", "IV_Vel",
-    "IV_Mag", "IV_Per", "IV_Ene", "IV_EnR", "IV_CrD", "IV_CrC"
+    "IV_Mag", "IV_Per", "IV_Ene", "IV_EnR", "IV_CrD", "IV_CrC", "ID"
 ]
-
-def gerar_id_unico(code, iv):
-    # Gera número aleatório de 1 a 999
-    extra = random.randint(1, 999)
-    # Monta o ID único
-    return f"{code}_{iv}_{extra}"
 
 def desserializar_pokemon(string):
     partes = string.split(",")
@@ -49,7 +45,6 @@ def desserializar_pokemon(string):
                     pass
             info[campo] = valor
     
-    info["ID"] = gerar_id_unico(info["Code"], info["IV"])
     return info
 
 def CompactarPokemon(info):
@@ -130,53 +125,59 @@ def criar_pokemon_especifico(nome):
     return CompactarPokemon(info_serializavel)
 
 class Pokemon:
-    def __init__(self, Loc, string_dados, Imagens, Animaçoes):
+    def __init__(self, Loc, string_dados, Imagens, Animaçoes, Parametros):
         dados = desserializar_pokemon(string_dados)
-        for campo, valor in dados.items():
-            setattr(self, campo, valor)
-
+        self.Dados = dados
         self.Loc = Loc
-        self.imagem = Imagens.get(self.Nome.lower(), Imagens["pikachu"])
-        self.animação = Animaçoes.get(self.Nome.lower(), Animaçoes["pikachu"])
+        self.Parametros = Parametros
+
+        self.imagem = Imagens.get(self.Dados["Nome"].lower(), Imagens["pikachu"])
+        self.animação = Animaçoes.get(self.Dados["Nome"].lower(), Animaçoes["pikachu"])
         self.indice_anim = 0
         self.contador_anim = 0
 
-        self.TamanhoMirando = random.randint(10,40)  # % da volta completa (1 a 100)
-        self.VelocidadeMirando = random.randint(2,6)  # graus por frame
+        self.TamanhoMirando = random.randint(10, 40)  # % da volta completa
+        self.VelocidadeMirando = random.randint(2, 6)  # graus por frame
+        self.Dificuldade = 0
+        self.Frutas = 0
 
-        # Criar máscara circular só da borda (anel)
+        # Criar máscara circular só da borda
         ret = self.imagem.get_rect()
         self.raio = max(ret.width, ret.height) // 2 + 8
         diametro = self.raio * 2
 
         surf_mask = pygame.Surface((diametro, diametro), pygame.SRCALPHA)
-
-        # Desenhar anel: circulo externo cheio e circulo interno transparente para "furar" o centro
         cor_mascara = (255, 255, 255, 255)
         espessura_anel = 3
         pygame.draw.circle(surf_mask, cor_mascara, (self.raio, self.raio), self.raio)
         pygame.draw.circle(surf_mask, (0, 0, 0, 0), (self.raio, self.raio), self.raio - espessura_anel)
-        self.mask = pygame.mask.from_surface(surf_mask)
+        self.Mask = pygame.mask.from_surface(surf_mask)
 
         # Criar superfície para o fluxo verde giratório
         self.mask_mirando_raio = self.raio + 12
         diam_mirando = self.mask_mirando_raio * 2
         self.surf_mirando = pygame.Surface((diam_mirando, diam_mirando), pygame.SRCALPHA)
-        
+
         espessura = 4
         rect_arc = pygame.Rect(espessura, espessura, diam_mirando - 2 * espessura, diam_mirando - 2 * espessura)
 
         arco_graus = 360 * (self.TamanhoMirando / 100)
         arco_radianos = math.radians(arco_graus)
-
         pygame.draw.arc(self.surf_mirando, (0, 255, 0, 180), rect_arc, 0, arco_radianos, espessura)
-
         self.MaskMirando = pygame.mask.from_surface(self.surf_mirando)
 
         self.angulo_mirando = 0
 
+        # --- Rect pré-verificação (quadrado que engloba as duas masks) ---
+        maior_raio = max(self.mask_mirando_raio, self.raio)
+        diam_max = maior_raio * 2
+        self.Rect = pygame.Rect(0, 0, diam_max, diam_max)
+        self.Rect.center = (int(self.Loc[0] * 70), int(self.Loc[1] * 70))
+
     def Atualizar(self, tela, pos, player):
         VELOCIDADE_ANIMACAO = 3
+
+        self.Rect.center = pos
 
         # Atualiza índice com base no contador
         self.contador_anim += 1
@@ -207,3 +208,14 @@ class Pokemon:
 
         # Desenhar o Pokémon por cima
         tela.blit(quadro, ret)
+    
+    def Frutificar(self):
+        pass
+
+    def Capturar(self, player):
+        for i, pokemon in enumerate(player.Pokemons):
+            if pokemon == None:
+                player.Pokemons[i] = self.Dados
+                self.Parametros["PokemonsRemover"].append(self.Dados["ID"])
+                break
+        

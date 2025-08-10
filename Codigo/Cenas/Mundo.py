@@ -3,7 +3,7 @@ import threading
 import time
 
 from Codigo.Modulos.Outros import Clarear, Escurecer
-from Codigo.Modulos.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, SalvarConta, SairConta, RemoverBau
+from Server.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, SalvarConta, SairConta, RemoverBau, RemoverPokemon
 from Codigo.Modulos.Config import TelaConfigurações
 from Codigo.Modulos.Inventario import TelaInventario
 from Codigo.Modulos.Paineis import BarraDeItens
@@ -96,7 +96,8 @@ def GerenciadorDePokemonsProximos(Parametros, Mapa):
                     Loc=pkm_info["loc"],
                     string_dados=pkm_info["info"],
                     Imagens=Pokemons,
-                    Animaçoes=Animaçoes
+                    Animaçoes=Animaçoes,
+                    Parametros=Parametros
                 )
                 pokemons_novos[id_] = novo_pokemon
             else:
@@ -143,8 +144,11 @@ def LoopRemoveBaus(parametros):
     while parametros["Running"]:
         for bauID in parametros["BausRemover"]:
             RemoverBau(parametros, bauID)
+        for PokemonID in parametros["PokemonsRemover"]:
+            RemoverPokemon(parametros, PokemonID)
         parametros["BausRemover"] = []
-        time.sleep(1.5)
+        parametros["PokemonsRemover"] = []
+        time.sleep(1.25)
 
 def MundoTelaOpçoes(tela, estados, eventos, parametros):
 
@@ -193,6 +197,7 @@ def MundoLoop(tela, relogio, estados, config, info):
         "Tela": MundoTelaPadrao,
         "Config": config,
         "PokemonsProximos": [],
+        "PokemonsRemover": [],
         "PlayersProximos": [],
         "BausProximos": [],
         "BausRemover": [],

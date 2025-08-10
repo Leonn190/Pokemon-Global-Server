@@ -126,3 +126,23 @@ def RemoverBau(Parametros, bau_id):
 
     except Exception as e:
         print(f'[✘] Erro ao tentar remover baú: {e}')
+
+def RemoverPokemon(Parametros, pokemon_id):
+    try:
+        url = f'{Parametros["Link"]}/remover-pokemon'
+        print (pokemon_id)
+        dados_para_enviar = {
+            "id": pokemon_id
+        }
+
+        resposta = requests.post(url, json=dados_para_enviar)
+        if resposta.status_code == 200:
+            print(f'[✔] Pokémon removido com sucesso: {resposta.json()["mensagem"]}')
+        elif resposta.status_code == 404:
+            print(f'[⚠] Pokémon não encontrado: {resposta.json()["erro"]}')
+        else:
+            print(f'[⚠] Erro ao remover Pokémon: {resposta.status_code} - {resposta.text}')
+
+    except Exception as e:
+        print(f'[✘] Erro ao tentar remover Pokémon: {e}')
+        

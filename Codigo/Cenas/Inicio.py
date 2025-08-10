@@ -8,7 +8,7 @@ from Codigo.Prefabs.FunçõesPrefabs import Barra_De_Texto, DesenharPlayer, Slid
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Sonoridade import Musica
 from Codigo.Prefabs.Mensagens import adicionar_mensagem_passageira, mensagens_passageiras
-from Codigo.Modulos.ServerInicio import AdicionaServer, CarregarServers, ApagarServer, RenomearServer, EntrarServer, RegistrarNoServer, VerificaOperador, ObterEstadoServidor, AtivarServidor, LigarDesligarServidor, ResetarServidor
+from Server.ServerInicio import AdicionaServer, CarregarServers, ApagarServer, RenomearServer, EntrarServer, RegistrarNoServer, VerificaOperador, ObterEstadoServidor, AtivarServidor, LigarDesligarServidor, ResetarServidor
 from Codigo.Modulos.TelasGénericas import TelaEntradaDeTexto, TelaDeCerteza
 from Codigo.Modulos.Config import TelaConfigurações, aplicar_claridade
 from Codigo.Modulos.Outros import Clarear, Escurecer

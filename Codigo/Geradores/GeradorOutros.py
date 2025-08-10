@@ -22,10 +22,12 @@ class Projetil:
 
         # Imagem e colisão
         self.imagem = pygame.transform.scale(imagem, (35, 35))
-        self.mascara = pygame.mask.from_surface(self.imagem)
+        self.mask = pygame.mask.from_surface(self.imagem)
         self.rect = self.imagem.get_rect(center=(int(self.pos.x), int(self.pos.y)))
 
         self.alvo_reached = False
+
+        self.Alvos = alvos
 
     def atualizar(self, tela, cords_atuais, player):
         if self.alvo_reached:
@@ -51,6 +53,28 @@ class Projetil:
         
         player.Mirando = True
 
+        self.VerificaColisão(player, tela)
+
         # Checa distância máxima
         if self.distancia_percorrida >= self.distancia_total:
             self.alvo_reached = True
+    
+    def VerificaColisão(self, player, tela):
+        
+        for alvo in self.Alvos.values():
+            # Calcula offset entre o projétil e o alvo
+            offset_x = alvo.Rect.left - self.rect.left
+            offset_y = alvo.Rect.top - self.rect.top
+            offset = (offset_x, offset_y)
+
+            # Guarda último offset calculado (pode ser útil para debug)
+            self.Offset = offset
+
+            # Verifica colisão de bounding box primeiro (rápido)
+            if self.rect.colliderect(alvo.Rect):
+                # Colisão pixel-perfect
+                if self.mask.overlap(alvo.Mask, offset):
+                    alvo.Capturar(player)
+                    self.alvo_reached = True
+                    break  # Para no primeiro alvo atingido
+
