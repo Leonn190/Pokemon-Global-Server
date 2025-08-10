@@ -3,11 +3,7 @@ import random
 import time
 import pandas as pd
 
-from Codigo.Prefabs.Mensagens import adicionar_mensagem_item
-from Codigo.Modulos.ServerMundo import RemoverBau
-
 df = pd.read_csv("Dados/Itens.csv")
-ConsumiveisIMG = None
 
 def GridToDic(grid_numerica):
 
@@ -60,7 +56,7 @@ class Estrutura:
         pygame.draw.rect(tela, (255, 0, 0), self.rect, 2)
 
 class Bau:
-    RARIDADES = ["Comum", "Incomum", "Raro", "Épico", "Mítico", "Lendário"]
+    RARIDADES = ["Comum", "Incomum", "Raro", "Epico", "Mitico", "Lendario"]
 
     def __init__(self, raridade, ID, Loc):
         self.raridade = self.traduzir_raridade(raridade)
@@ -102,8 +98,8 @@ class Bau:
         tela.blit(img, pos_img)
 
         # Calcular rect de colisão 30% maior (15% extra para cada lado)
-        aumento_w = int(largura * 0.9)
-        aumento_h = int(altura * 0.9)
+        aumento_w = int(largura * 1.2)
+        aumento_h = int(altura * 1.2)
 
         novo_w = largura + aumento_w
         novo_h = altura + aumento_h
@@ -156,36 +152,15 @@ class Bau:
             valor = item_sorteado['Valor']
             raridade = int(item_sorteado['Raridade'])  # raridade original
             estilo = item_sorteado['Estilo']
+            descriçao = item_sorteado['Descrição']
+
+            if estilo in ["bola", "fruta"]:
+                M1 = "Lançar"
+                M2 = "Mirar"
+            else:
+                M1 = "Tapa"
+                M2 = "Nada"
 
             # 5. Adicionar ao inventário do player
-            self.AdicionarAoInventario(player, nome, valor, raridade, estilo)
-
-    def AdicionarAoInventario(self, player, nome, valor, raridade, estilo):
-        global ConsumiveisIMG
-
-        if ConsumiveisIMG is None:
-            from Codigo.Cenas.Mundo import Consumiveis
-            ConsumiveisIMG = Consumiveis
-
-        inventario = player.Inventario
-
-        # Tenta empilhar primeiro
-        for slot in inventario:
-            if slot is not None and slot["nome"] == nome:
-                slot["numero"] += 1
-                adicionar_mensagem_item(nome, ConsumiveisIMG)
-                return
-
-        # Caso não empilhe, adiciona no primeiro espaço None
-        for i in range(len(inventario)):
-            if inventario[i] is None:
-                inventario[i] = {
-                    "nome": nome,
-                    "valor": valor,
-                    "raridade": raridade,
-                    "estilo": estilo,
-                    "numero": 1
-                }
-                adicionar_mensagem_item(nome, ConsumiveisIMG)
-                return
+            player.AdicionarAoInventario(player, nome, valor, raridade, estilo, descriçao, M1, M2)
 

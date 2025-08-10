@@ -305,4 +305,18 @@ def Botao_Tecla(tecla, acao):
             for a in acao:
                 if callable(a):
                     a()
-    
+
+def Botao_invisivel(espaco, acao):
+    mouse = pygame.mouse.get_pos()
+    clique = pygame.mouse.get_pressed()
+
+    # Convertendo a tupla em um Rect
+    rect = pygame.Rect(espaco)
+
+    if rect.collidepoint(mouse) and clique[0]:
+        if callable(acao):
+            acao()
+        elif isinstance(acao, list):
+            for func in acao:
+                if callable(func):
+                    func()

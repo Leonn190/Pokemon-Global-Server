@@ -6,6 +6,7 @@ from Codigo.Modulos.Outros import Clarear, Escurecer
 from Codigo.Modulos.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, SalvarConta, SairConta, RemoverBau
 from Codigo.Modulos.Config import TelaConfigurações
 from Codigo.Modulos.Inventario import TelaInventario
+from Codigo.Modulos.Paineis import BarraDeItens
 from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Tecla
 from Codigo.Prefabs.Sonoridade import Musica
@@ -38,17 +39,22 @@ def AtualizarColisaoProxima(mapa, player, parametros):
     while parametros["Running"]:
         px, py = player.Loc  # posição do player em coordenadas de tile
 
-        # Define os limites do raio (8 tiles em todas as direções)
-        raio = 8
-        x_min, x_max = px - raio, px + raio
-        y_min, y_max = py - raio, py + raio
+        # Raio geral (para objetos e baús)
+        raio_geral = 5
+        x_min, x_max = px - raio_geral, px + raio_geral
+        y_min, y_max = py - raio_geral, py + raio_geral
+
+        # Raio especial para pokémons (dobro do geral)
+        raio_pokemon = raio_geral * 2
+        pkm_x_min, pkm_x_max = px - raio_pokemon, px + raio_pokemon
+        pkm_y_min, pkm_y_max = py - raio_pokemon, py + raio_pokemon
 
         # Limpar colisões anteriores
         mapa.ObjetosColisão = {}
         mapa.PokemonsColisão = {}
         mapa.BausColisão = {}
 
-        # Atualizar Objetos (baseado na posição fixa)
+        # Atualizar Objetos
         for (x, y), obj in mapa.DicObjetos.items():
             if x_min <= x <= x_max and y_min <= y <= y_max:
                 mapa.ObjetosColisão[(x, y)] = obj
@@ -56,7 +62,7 @@ def AtualizarColisaoProxima(mapa, player, parametros):
         # Atualizar Pokémons
         for pokemon in mapa.PokemonsAtivos.values():
             x, y = pokemon.Loc
-            if x_min <= x <= x_max and y_min <= y <= y_max:
+            if pkm_x_min <= x <= pkm_x_max and pkm_y_min <= y <= pkm_y_max:
                 mapa.PokemonsColisão[(x, y)] = pokemon
 
         # Atualizar Baús
@@ -162,12 +168,13 @@ def MundoTelaOpçoes(tela, estados, eventos, parametros):
 
 def MundoTelaPadrao(tela, estados, eventos, parametros):
     
-    camera.desenhar(tela,player.Loc,mapa,Estruturas,Outros["Baus"])
+    camera.desenhar(tela,player.Loc,mapa,player,Estruturas,Outros["Baus"])
 
     if parametros["InventarioAtivo"]:
         TelaInventario(tela, player, eventos, parametros)
     else:
         player.Atualizar(tela, parametros["delta_time"], mapa, Fontes[20], parametros, Consumiveis)
+        BarraDeItens(tela, player, eventos)
 
     Botao_Tecla("esc",lambda: parametros.update({"Tela": MundoTelaOpçoes}))
     Botao_Tecla("E",lambda: parametros.update({"InventarioAtivo": True}))
@@ -191,7 +198,9 @@ def MundoLoop(tela, relogio, estados, config, info):
         "BausRemover": [],
         "InventarioAtivo": False,
         "Inventario": {
-            "Setor": None
+            "Setor": None,
+            "ItemSelecionado": None,
+            "PokemonSelecionado": None
         }
     }
 
@@ -200,7 +209,7 @@ def MundoLoop(tela, relogio, estados, config, info):
 
     player = Player(info["Server"]["Player"]["dados"],Outros["Skins"])
     mapa = Mapa(parametros["GridBiomas"],GridToDic(parametros["GridObjetos"]))
-    camera = Camera(16)
+    camera = Camera(18)
 
     parametros.update({"Player": player})
 

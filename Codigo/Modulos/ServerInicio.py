@@ -1,6 +1,21 @@
 import requests
 import os
 from Codigo.Prefabs.Mensagens import adicionar_mensagem_passageira
+from Codigo.Geradores.GeradorPokemon import criar_pokemon_especifico, desserializar_pokemon
+
+import math
+
+def limpar_nans(obj):
+    if isinstance(obj, dict):
+        return {k: limpar_nans(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [limpar_nans(v) for v in obj]
+    elif isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return 0  # ou outro valor padrão
+        return obj
+    else:
+        return obj
 
 def AdicionaServer(Nome, Link, Limite=7):
     os.makedirs("Servers", exist_ok=True)
@@ -152,6 +167,8 @@ def RegistrarNoServer(Code, Personagem, Parametros):
         # Monta o JSON com os dados que quer salvar — aqui estou incluindo 'codigo' e 'personagem'
 
         Personagem["Skin"] = round(Personagem["Skin"])
+        Personagem["Pokemons"][0] = limpar_nans(desserializar_pokemon(criar_pokemon_especifico(Personagem["Inicial"])))
+        del Personagem["Inicial"]
 
         payload = {
             'codigo': Code,

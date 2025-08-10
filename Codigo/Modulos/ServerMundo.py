@@ -2,12 +2,21 @@ import requests
 import json
 import math
 
-def limpar_nans(d):
-    for k, v in d.items():
-        if isinstance(v, dict):
-            limpar_nans(v)
-        elif isinstance(v, float) and math.isnan(v):
-            d[k] = None
+def sanitizar_dados(d):
+    if isinstance(d, dict):
+        return {k: sanitizar_dados(v) for k, v in d.items()}
+    elif isinstance(d, list):
+        return [sanitizar_dados(item) for item in d]
+    elif isinstance(d, float):
+        if math.isnan(d) or math.isinf(d):
+            return str(d)  # transforma NaN, inf, -inf em string
+        return d
+    elif isinstance(d, (int, str)):
+        return d
+    elif d is None:
+        return "None"
+    else:
+        return str(d)
 
 def VerificaçãoSimplesServer(Parametros):
     try:
@@ -65,7 +74,8 @@ def SalvarConta(Parametros):
         url = f'{Parametros["Link"]}/salvar'
 
         envio = player.ToDicTotal()
-        limpar_nans(envio)
+        sanitizar_dados(envio)
+        print(envio["Inventario"])
 
         dados_para_enviar = {
             "codigo": Parametros["Code"],

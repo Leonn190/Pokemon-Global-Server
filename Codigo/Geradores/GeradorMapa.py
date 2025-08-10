@@ -56,7 +56,7 @@ class Camera:
         self.largura_em_tiles = 2 * raio_em_tiles + 1
         self.altura_em_tiles = 2 * raio_em_tiles + 1
 
-    def desenhar(self, tela, jogador_pos, mapa, EstruturasIMG, BausIMG):
+    def desenhar(self, tela, jogador_pos, mapa, player, EstruturasIMG, BausIMG):
         tile = mapa.Tile
         grid = mapa.GridBiomas
         objetos = mapa.DicObjetos
@@ -109,7 +109,7 @@ class Camera:
                 pos_x = centro_tela_x + (coluna - self.raio) * tile - offset_x
                 pos_y = centro_tela_y + (linha - self.raio) * tile - offset_y
 
-                pokemon.Atualizar(tela, (pos_x + tile // 2, pos_y + tile // 2))
+                pokemon.Atualizar(tela, (pos_x + tile // 2, pos_y + tile // 2), player)
 
         baus_para_remover = []
 
@@ -140,7 +140,7 @@ class Camera:
                         bau.Animando += 0.2
                     else:
                         bau.TempoAposAbrir += 1
-                        if bau.TempoAposAbrir >= 180:
+                        if bau.TempoAposAbrir >= 160:
                             baus_para_remover.append(bau_id)
                 else:
                     img = BausIMG[bau.raridade][0]

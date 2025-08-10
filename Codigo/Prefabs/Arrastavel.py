@@ -1,7 +1,7 @@
 import pygame
 
 class Arrastavel:
-    def __init__(self, imagem, pos, dados=None, interno=None, funcao_execucao=None):
+    def __init__(self, imagem, pos, dados=None, interno=None, funcao_execucao=None, infoExtra1=None):
         self.imagem = imagem
         self.rect = self.imagem.get_rect(topleft=pos)
 
@@ -12,6 +12,8 @@ class Arrastavel:
         self.esta_arrastando = False
         self.offset_x = 0
         self.offset_y = 0
+
+        self.infoExtra1 = infoExtra1
 
         self.posicao_original = self.rect.topleft  # nova linha
 
@@ -37,8 +39,9 @@ class Arrastavel:
                 if self.esta_arrastando:
                     self.esta_arrastando = False
                     sucesso = True
+                    self.pos = mouse_pos
                     if self.funcao_execucao:
-                        sucesso = self.funcao_execucao(mouse_pos, self.dados, self.interno)
+                        sucesso = self.funcao_execucao(self)
 
                     # Se não deu certo, volta pra posição original
                     if sucesso is False:

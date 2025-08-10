@@ -2,6 +2,10 @@ import math
 import pygame
 
 from Codigo.Prefabs.FunçõesPrefabs import extrair_cor_predominante, escurecer_cor, texto_com_borda, Fluxo
+from Codigo.Prefabs.Mensagens import adicionar_mensagem_item
+from Codigo.Geradores.GeradorOutros import Projetil
+
+ConsumiveisIMG = None
 
 class Player:
     def __init__(self, Informações, Skins):
@@ -22,25 +26,34 @@ class Player:
         self.Velocidade = Informações["Velocidade"]
         self.Maestria = Informações["Maestria"]
 
+        self.Equipes = Informações["Equipes"]
+
+        self.MaxItens = 100 * (self.Mochila + 1)
+        self.Itens = sum([k["numero"] if k is not None else 0 for k in self.Inventario])
+
         self.Loc = Informações["Loc"]
 
-        self.MaoEsquerda = Informações.get("Esquerda",None)
-        self.MaoDireita = Informações.get("Direita",None)
+        self.Selecionado = Informações.get("Selecionado",65)
         self.Angulo = 90
 
-        self.estado_tapa = {
-            "esquerdo": {"tapando": False, "inicio_tapa": 0, "tempo_ultimo_tapa": 0},
-            "direito": {"tapando": False, "inicio_tapa": 0, "tempo_ultimo_tapa": 0}
-        }
+        self.estado_tapa = {"tapando": False, "inicio_tapa": 0, "tempo_ultimo_tapa": 0}
 
         self.rect = pygame.Rect(0, 0, 83, 66)
         self.rect.center = (self.Loc[0], self.Loc[1])  # Pos inicial
+
+        self.mouse_anterior = pygame.mouse.get_pressed()
+        self.Mirando = False
+
+        self.Projeteis = []
 
         self.tile = 70
 
     def Atualizar(self, tela, delta_time, mapa, fonte, parametros, ItensIMG):
 
         self.mover(delta_time, mapa, parametros)
+
+        for projetil in self.Projeteis:
+            projetil.atualizar(tela, self.Loc, self)
 
         largura_tela, altura_tela = tela.get_size()
         x_centro = largura_tela // 2
@@ -62,7 +75,7 @@ class Player:
         tela.blit(corpo_rotacionado, corpo_rect)
 
         # Novo: desenha braços
-        self.desenhar_bracos(tela, (x_centro, y_centro), cor_braco, math.radians(angulo), ItensIMG)
+        self.desenhar_bracos(tela, (x_centro, y_centro), cor_braco, math.radians(angulo), ItensIMG, mapa.PokemonsColisão)
 
         pygame.draw.rect(tela, (0, 255, 0), self.rect, 2)
 
@@ -72,13 +85,13 @@ class Player:
         texto_rect = texto_surface.get_rect(center=(x_centro, y_centro - 80 + flutuacao))
         texto_com_borda(tela, self.Nome, fonte, texto_rect.topleft, (255, 255, 255), (0, 0, 0))
 
-    def desenhar_bracos(self, tela, centro, cor_braco, angulo_rad, ItensIMG):
+    def desenhar_bracos(self, tela, centro, cor_braco, angulo_rad, ItensIMG, PokemonsColisão):
         x_centro, y_centro = centro
         tempo = pygame.time.get_ticks()
 
-        distancia_braco = 58
-        ciclo_tapa_ms = 900
-        tapa_amplitude = 35
+        distancia_braco = 60
+        ciclo_tapa_ms = 700
+        tapa_amplitude = 60
         profundidade_amplitude = 4
 
         def calcular_respiração():
@@ -87,115 +100,182 @@ class Player:
             dy = math.sin(angulo_rad) * profundidade
             return dx, dy
 
-        def calcular_base_braco(lado):
-            direcao = 1 if lado == "direito" else -1
-            offset_x = math.cos(angulo_rad + direcao * math.pi / 2) * distancia_braco
-            offset_y = math.sin(angulo_rad + direcao * math.pi / 2) * distancia_braco
+        def calcular_base_braco(offset_lado=1):
+            offset_x = math.cos(angulo_rad + offset_lado * math.pi / 2) * distancia_braco
+            offset_y = math.sin(angulo_rad + offset_lado * math.pi / 2) * distancia_braco
             return x_centro + offset_x, y_centro + offset_y
 
         def aplicar_respiração(base, depth):
             return base[0] + depth[0], base[1] + depth[1]
 
-        def calcular_movimento_mao(lado, base):
-            estado = self.estado_tapa[lado]
+        def calcular_movimento_mao(base):
+            estado = self.estado_tapa
             mouse = pygame.mouse.get_pressed()
             tempo_atual = pygame.time.get_ticks()
 
-            mao = self.MaoEsquerda if lado == "esquerdo" else self.MaoDireita
-            botao_pressionado = (lado == "esquerdo" and mouse[0]) or (lado == "direito" and mouse[2])
+            mao = self.Inventario[self.Selecionado] if self.Selecionado < len(self.Inventario) else None
+            m1_pressionado = mouse[0]
+            m2_pressionado = mouse[2]
 
-            # 📐 Calcular ângulo em radianos automaticamente (base → mouse)
             mx, my = pygame.mouse.get_pos()
             dx_mouse = mx - base[0]
             dy_mouse = my - base[1]
-            angulo_rad = math.atan2(dy_mouse, dx_mouse)
+            angulo_mouse = math.atan2(dy_mouse, dx_mouse)
 
-            if mao:  # 🟢 COM ITEM → MIRAR
-                if botao_pressionado:
-                    # Normalizar direção
-                    dist = math.hypot(dx_mouse, dy_mouse)
-                    if dist == 0:
-                        dist = 0.001
-                    dir_x = dx_mouse / dist
-                    dir_y = dy_mouse / dist
+            m1_click = m1_pressionado and not self.mouse_anterior[0]
+            m2_click = m2_pressionado and not self.mouse_anterior[2]
 
-                    # Desenhar fluxo animado
-                    alcance = 500
-                    destino_x = int(base[0] + dir_x * alcance)
-                    destino_y = int(base[1] + dir_y * alcance)
-                    Fluxo(tela, base[0], base[1], destino_x, destino_y, cor_base=(150, 150, 255))
+            # Parâmetros ajustáveis
+            cooldown_tapa = 150   # ms
+            cooldown_lancar = 1000 # ms
 
-                    # Mão vai para trás
-                    movimento = 0.5 + 0.5 * math.sin((tempo_atual % 1000) / 1000 * math.pi)
-                    offset = -20 * movimento
-                    dx = math.cos(angulo_rad) * offset
-                    dy = math.sin(angulo_rad) * offset
-
-                    return base[0] + dx, base[1] + dy
-
-                return base  # parado se não estiver pressionando
-
-            else:  # 🔴 SEM ITEM → TAPA
-                if botao_pressionado and not estado["tapando"]:
-                    estado["tapando"] = True
-                    estado["inicio_tapa"] = tempo_atual
-                    estado["tempo_ultimo_tapa"] = tempo_atual
+            def acao_tapa():
+                if not estado["tapando"]:
+                    if m1_pressionado:
+                        if tempo_atual - estado["tempo_ultimo_tapa"] >= cooldown_tapa:
+                            estado["tapando"] = True
+                            estado["inicio_tapa"] = tempo_atual
+                            estado["tempo_ultimo_tapa"] = tempo_atual
 
                 if estado["tapando"]:
                     t = (tempo_atual - estado["inicio_tapa"]) / ciclo_tapa_ms
                     if t >= 1:
                         estado["tapando"] = False
                         t = 1
-                        if botao_pressionado and tempo_atual - estado["tempo_ultimo_tapa"] >= ciclo_tapa_ms:
-                            estado["tapando"] = True
-                            estado["inicio_tapa"] = tempo_atual
-                            estado["tempo_ultimo_tapa"] = tempo_atual
-                            t = 0
 
                     movimento = math.sin(t * math.pi)
-                    angulo_offset = math.pi / 18 if lado == "esquerdo" else -math.pi / 18
-                    angulo_tapa = angulo_rad + angulo_offset
+                    angulo_tapa = angulo_mouse - math.pi / 18
                     dx = math.cos(angulo_tapa) * movimento * tapa_amplitude
                     dy = math.sin(angulo_tapa) * movimento * tapa_amplitude
                     return base[0] + dx, base[1] + dy
 
                 return base
 
-        def desenhar_item_na_mao(lado, pos_mao):
-            item = self.MaoEsquerda if lado == "esquerdo" else self.MaoDireita
-            if item:
+            def acao_mirar():
+                dist = math.hypot(dx_mouse, dy_mouse) or 1
+                dir_x = dx_mouse / dist
+                dir_y = dy_mouse / dist
+
+                alcance = 500
+                destino_x = int(base[0] + dir_x * alcance)
+                destino_y = int(base[1] + dir_y * alcance)
+                Fluxo(tela, base[0], base[1], destino_x, destino_y, cor_base=(180, 150, 255))
+
+                movimento = 0.5 + 0.5 * math.sin((tempo_atual % 1000) / 1000 * math.pi)
+                offset = -20 * movimento
+                dx = math.cos(angulo_mouse) * offset
+                dy = math.sin(angulo_mouse) * offset
+                self.Mirando = True
+
+                return base[0] + dx, base[1] + dy
+
+            def acao_lancar():
+                # Inicializa variáveis que precisam persistir
+                if "t_anterior" not in estado:
+                    estado["t_anterior"] = 0
+
+                # Início do arremesso
+                if not estado["tapando"]:
+                    if m1_pressionado:
+                        if tempo_atual - estado["tempo_ultimo_tapa"] >= cooldown_lancar:
+                            estado["tapando"] = True
+                            estado["inicio_tapa"] = tempo_atual
+                            estado["tempo_ultimo_tapa"] = tempo_atual
+
+                # Enquanto arremessa
+                if estado["tapando"]:
+                    t = (tempo_atual - estado["inicio_tapa"]) / (ciclo_tapa_ms // 2)
+                    if t >= 1:
+                        estado["tapando"] = False
+                        t = 1
+
+                    movimento = math.sin(t * math.pi)
+                    angulo_lancar = angulo_mouse - math.pi / 18
+                    dx = math.cos(angulo_lancar) * movimento * tapa_amplitude
+                    dy = math.sin(angulo_lancar) * movimento * tapa_amplitude
+
+                    # Detectar ponto máximo (t cruza 0.5)
+                    if estado["t_anterior"] < 0.5 <= t:
+                        self.Projeteis.append(Projetil((base[0] + dx, base[1] + dy), self.Loc, self.Inventario[self.Selecionado], ItensIMG[self.Inventario[self.Selecionado]["nome"]], PokemonsColisão))
+
+                    estado["t_anterior"] = t
+
+                    return base[0] + dx, base[1] + dy
+
+                # Se não está arremessando, está mirando
+                self.Mirando = True
+                return base
+
+           # ======= Lógica principal =======
+            if mao:
+                m1_acao = mao.get("M1")
+                m2_acao = mao.get("M2")
+                self.Mirando = False
+
+                # MOUSE 1
+                if m1_acao == "Tapa":
+                    if m1_pressionado or self.estado_tapa["tapando"]:
+                        return acao_tapa()
+                elif m1_acao == "Mirar":
+                    if m1_pressionado:
+                        return acao_mirar()
+                elif m1_acao == "Lançar":
+                    if m1_pressionado or self.estado_tapa["tapando"]:
+                        return acao_lancar()
+
+                # MOUSE 2
+                if m2_acao == "Tapa":
+                    if m2_pressionado or self.estado_tapa["tapando"]:
+                        return acao_tapa()
+                elif m2_acao == "Mirar":
+                    if m2_pressionado:
+                        return acao_mirar()
+                elif m2_acao == "Lançar":
+                    if m2_pressionado or self.estado_tapa["tapando"]:
+                        return acao_lancar()
+
+                return base
+            else:
+                # sem item na mão
+                if m1_pressionado or self.estado_tapa["tapando"]:
+                        return acao_tapa()
+                else:
+                    return base
+
+        def desenhar_item_na_mao(pos_mao):
+            item = self.Inventario[self.Selecionado]
+            if item != None:
                 nome_item = item.get("nome")
                 imagem_item = ItensIMG.get(nome_item)
                 if imagem_item:
-                    imagem_ajustada = pygame.transform.scale(imagem_item, (30, 30))  # tamanho adequado à mão
+                    imagem_ajustada = pygame.transform.scale(imagem_item, (35, 35))
                     rect_img = imagem_ajustada.get_rect(center=(int(pos_mao[0]), int(pos_mao[1])))
                     tela.blit(imagem_ajustada, rect_img.topleft)
 
-        # Fluxo principal
+        # ===== APLICAÇÃO =====
         depth = calcular_respiração()
 
-        base_esq = aplicar_respiração(calcular_base_braco("esquerdo"), depth)
-        base_dir = aplicar_respiração(calcular_base_braco("direito"), depth)
+        # MÃO DIREITA
+        base_dir = aplicar_respiração(calcular_base_braco(offset_lado=1), depth)
+        pos_braco_direito = calcular_movimento_mao(base_dir)
 
-        pos_braco_esquerdo = calcular_movimento_mao("esquerdo", base_esq)
-        pos_braco_direito = calcular_movimento_mao("direito", base_dir)
+        # MÃO ESQUERDA (apenas visual + respiração)
+        base_esq = aplicar_respiração(calcular_base_braco(offset_lado=-1), depth)
 
-        # Desenhar os braços
-        pygame.draw.circle(tela, cor_braco, (int(pos_braco_esquerdo[0]), int(pos_braco_esquerdo[1])), 10)
-        pygame.draw.circle(tela, cor_braco, (int(pos_braco_direito[0]), int(pos_braco_direito[1])), 10)
-
-        # Desenhar a borda dos braços
+        # Desenhar braço esquerdo (sem ação)
+        pygame.draw.circle(tela, cor_braco, (int(base_esq[0]), int(base_esq[1])), 10)
         cor_borda = escurecer_cor(cor_braco)
-        raio = 10
-        raio_borda = 13
+        pygame.draw.circle(tela, cor_borda, base_esq, 13)
+        pygame.draw.circle(tela, cor_braco, base_esq, 10)
 
-        for pos in [pos_braco_esquerdo, pos_braco_direito]:
-            pygame.draw.circle(tela, cor_borda, pos, raio_borda)
-            pygame.draw.circle(tela, cor_braco, pos, raio)
+        # Desenhar braço direito
+        pygame.draw.circle(tela, cor_braco, (int(pos_braco_direito[0]), int(pos_braco_direito[1])), 10)
+        pygame.draw.circle(tela, cor_borda, pos_braco_direito, 13)
+        pygame.draw.circle(tela, cor_braco, pos_braco_direito, 10)
 
-        # ✅ Desenhar os itens nas mãos, se houver
-        desenhar_item_na_mao("esquerdo", pos_braco_esquerdo)
-        desenhar_item_na_mao("direito", pos_braco_direito)
+        # Item na mão direita
+        desenhar_item_na_mao(pos_braco_direito)
+        self.mouse_anterior = pygame.mouse.get_pressed()
 
     def mover(self, delta_time, mapa, parametros):
 
@@ -256,14 +336,52 @@ class Player:
                 if Bau.Aberto is False:
                     Bau.AbrirBau(self, parametros)
 
+    def AdicionarAoInventario(self, player, nome, valor, raridade, estilo, descriçao, M1, M2):
+        global ConsumiveisIMG
+
+        if ConsumiveisIMG is None:
+            from Codigo.Cenas.Mundo import Consumiveis
+            ConsumiveisIMG = Consumiveis
+
+        # Verifica se há espaço no inventário
+        if self.Itens >= self.MaxItens:
+            pass  # Você pode tratar o caso de inventário cheio aqui (mensagem, descarte, etc.)
+            return
+
+        inventario = player.Inventario
+
+        # Tenta empilhar primeiro
+        for slot in inventario:
+            if slot is not None and slot["nome"] == nome:
+                slot["numero"] += 1
+                self.Itens += 1  # Atualiza a contagem total de itens
+                adicionar_mensagem_item(nome, ConsumiveisIMG)
+                return
+
+        # Caso não empilhe, adiciona no primeiro espaço None
+        for i in range(len(inventario)):
+            if inventario[i] is None:
+                inventario[i] = {
+                    "nome": nome,
+                    "valor": valor,
+                    "raridade": raridade,
+                    "estilo": estilo,
+                    "descrição": descriçao,
+                    "numero": 1,
+                    "M1": M1,
+                    "M2": M2
+                }
+                self.Itens += 1  # Atualiza a contagem total de itens
+                adicionar_mensagem_item(nome, ConsumiveisIMG)
+                return
+
     def ToDicParcial(self):
         return {
             "Nome": self.Nome,
             "Skin": self.SkinNumero,
             "Nivel": self.Nivel,
             "Loc": self.Loc,
-            "Esquerda": self.MaoEsquerda,
-            "Direita": self.MaoDireita,
+            "Selecionado": self.Selecionado,
             "Angulo": self.Angulo
         }
     
@@ -281,7 +399,6 @@ class Player:
             "Mochila": self.Mochila,
             "Maestria": self.Maestria,
             "Loc": self.Loc,
-            "Esquerda": self.MaoEsquerda,
-            "Direita": self.MaoDireita,
+            "Selecionado": self.Selecionado,
         }
     

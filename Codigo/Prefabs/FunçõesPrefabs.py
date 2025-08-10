@@ -355,7 +355,7 @@ def texto_com_borda(tela, texto, fonte, pos, cor_texto, cor_borda, espessura=2):
 
     tela.blit(texto_surface, (x, y))
 
-def Fluxo(tela, x1, y1, x2, y2, num_pontos=30, frequencia=4, velocidade=3, cor_base=(0, 255, 0), raio=3):
+def Fluxo(tela, x1, y1, x2, y2, num_pontos=30, frequencia=4, velocidade=3, cor_base=(0, 255, 0), raio=4):
 
     dx = x2 - x1
     dy = y2 - y1

@@ -16,7 +16,7 @@ pygame.init()
 pygame.mixer.init()
 
 # Iniciar tela
-tela = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
+tela = pygame.display.set_mode((1920, 1080), pygame.NOFRAME)
 pygame.display.set_caption("Pokemon Global Server")
 
 # Ícone da janela (funciona com PNG)

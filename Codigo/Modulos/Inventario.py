@@ -1,7 +1,8 @@
 import pygame
 
-from Codigo.Prefabs.BotoesPrefab import Botao
+from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel
 from Codigo.Prefabs.Arrastavel import Arrastavel
+from Codigo.Modulos.Paineis import PainelItem
 
 cores = None
 fontes = None
@@ -21,61 +22,248 @@ B_Sitens = {}
 # Configurações da grade do inventário
 SLOTS_LARGURA = 10
 SLOTS_ALTURA = 7
-TAMANHO_SLOT = 70
-ESPACO = 12
+TAMANHO_SLOT = 72
+ESPACO = 15
 
 # Lista global para manter referência aos arrastáveis
 arrastaveis_inventario = []
 inventario_cache = []
-
 areas_inventario = []  # Lista de rects dos slots
 
-def desenhar_inventario(tela, player, pos_inicial=(230, 270), eventos=None):
+arrastaveis_pokemons = []
+pokemons_cache = []
+areas_pokemons = []
+areas_pokemons_times = []
 
-    def executar_inventario(pos, dados, interno):
-        global areas_inventario
+pos_grid=(230, 274)
+
+def SetorPlayer(tela, player, eventos, parametros):
+    pass
+
+def SetorPokemons(tela, player, eventos, parametros):
+    global areas_pokemons, pokemons_cache, arrastaveis_pokemons
+
+    def executar_pokemon(arr):
+        global pokemons_cache
+
+        interno = arr.interno
+        pos = arr.pos
+        dados = arr.dados
+        timeOrigem = arr.infoExtra1
 
         if interno:
-            origem = player.Inventario.index(dados)
-
-            if RectDireito.collidepoint(pos):
-                player.Inventario[origem], player.MaoDireita = player.MaoDireita, player.Inventario[origem]
-                return True
-            elif RectEsquerdo.collidepoint(pos):
-                player.Inventario[origem], player.MaoEsquerda = player.MaoEsquerda, player.Inventario[origem]
-                return True
-            
-            for i, area in enumerate(areas_inventario):
+            for i, area in enumerate(areas_pokemons):
                 if area.collidepoint(pos):
-                    player.Inventario[origem], player.Inventario[i] = player.Inventario[i], player.Inventario[origem]
-                    return True
-        else:
-            if dados == player.MaoEsquerda:
-                if RectDireito.collidepoint(pos):
-                    player.MaoEsquerda, player.MaoDireita = player.MaoDireita, player.MaoEsquerda
-                    return True
-                
-                for i, area in enumerate(areas_inventario):
-                    if area.collidepoint(pos):
-                        player.MaoEsquerda, player.Inventario[i] = player.Inventario[i], player.MaoEsquerda
-                        return True 
-
-            elif dados == player.MaoDireita:
-                if RectEsquerdo.collidepoint(pos):
-                    player.MaoEsquerda, player.MaoDireita = player.MaoDireita, player.MaoEsquerda
-                    return True
-                
-                for i, area in enumerate(areas_inventario):
-                    if area.collidepoint(pos):
-                        player.MaoDireita, player.Inventario[i] = player.Inventario[i], player.MaoDireita
+                    origem = player.Pokemons.index(dados)
+                    if player.Pokemons[origem] == player.Pokemons[i]:
+                        return False
+                    else:
+                        player.Pokemons[origem], player.Pokemons[i] = player.Pokemons[i], player.Pokemons[origem]
                         return True
                     
-        return False
+            for i, area in enumerate(areas_pokemons_times):
+                if area.collidepoint(pos):
+                    origem = player.Pokemons.index(dados)
+                    time = i // 6
+                    if dados in player.Equipes[time]:
+                        return False
+                    else:
+                        player.Equipes[time][i - (time * 6)] = player.Pokemons[origem]
+                        pokemons_cache = []
+                        return True
+            return False
+        
+        else:
+            for i, area in enumerate(areas_pokemons_times):
+                if area.collidepoint(pos):
+                    origem = player.Equipes[timeOrigem].index(dados)
+                    timeAlvo = i // 6
+                    if player.Equipes[timeOrigem][origem] == player.Equipes[timeAlvo][i - (timeAlvo * 6)]:
+                        return False
+                    else:
+                        if timeAlvo != timeOrigem:
+                            if dados in player.Equipes[timeAlvo]:
+                                return False
+                        player.Equipes[timeOrigem][origem], player.Equipes[timeAlvo][i - (timeAlvo * 6)] = player.Equipes[timeAlvo][i - (timeAlvo * 6)], player.Equipes[timeOrigem][origem]
+                        pokemons_cache = []
+                        return True
+            
+            origem = player.Equipes[timeOrigem].index(dados)
+            player.Equipes[timeOrigem][origem] = None
+            pokemons_cache = []                       
 
+    # --- layout geral (mantive suas contas) ---
+    linhas_total = (len(player.Pokemons) + SLOTS_LARGURA - 1) // SLOTS_LARGURA
+    largura_total = SLOTS_LARGURA * TAMANHO_SLOT + (SLOTS_LARGURA - 1) * ESPACO
+    altura_total = linhas_total * TAMANHO_SLOT + (linhas_total - 1) * ESPACO
+
+    # fundo da área principal de slots
+    fundo_rect = pygame.Rect(pos_grid[0] - 14, pos_grid[1] - 14, largura_total + 28, altura_total + 28)
+    pygame.draw.rect(tela, (139, 69, 19), fundo_rect, border_radius=6)
+
+    fundo_slot = pygame.transform.scale(fundos["FundoSlots"], (TAMANHO_SLOT, TAMANHO_SLOT))
+
+    # limpar/renovar arrays que representam áreas (sempre)
+    areas_pokemons.clear()
+    areas_pokemons_times.clear()
+
+    # === 1) OBRIGATÓRIO: desenhar grade principal (sempre) ===
+    for index in range(len(player.Pokemons)):
+        col = index % SLOTS_LARGURA
+        lin = index // SLOTS_LARGURA
+        x = pos_grid[0] + col * (TAMANHO_SLOT + ESPACO)
+        y = pos_grid[1] + lin * (TAMANHO_SLOT + ESPACO)
+
+        rect = pygame.Rect(x, y, TAMANHO_SLOT, TAMANHO_SLOT)
+        areas_pokemons.append(rect)
+        tela.blit(fundo_slot, rect.topleft)
+
+        poke = player.Pokemons[index]
+
+        # botão invisível para seleção (sempre)
+        Botao_invisivel((x, y, TAMANHO_SLOT, TAMANHO_SLOT), lambda p=poke: parametros.update({"PokemonSelecionado": p}))
+
+    # === 2) OBRIGATÓRIO: desenhar área dos TIMES (fundo + títulos + poderes + slots + imagens/níveis) ===
+    equipes_cache = getattr(player, "Equipes", [])
+    num_times = min(5, max(1, len(equipes_cache)))  # garante pelo menos 1 na conta visual
+    pos_equipes_x = pos_grid[0] + largura_total + 100
+    pos_equipes_y = pos_grid[1]
+    fonte_equipes = fontes[20]  # ajuste se quiser maior/menor
+
+    header_h = fonte_equipes.get_height()
+    # altura por time: header + espaço + slot
+    altura_por_time = header_h + 4 + TAMANHO_SLOT
+    # espaçamento entre times (o seu código usava +24)
+    espacamento_times = 24
+    altura_total_times = num_times * altura_por_time + (num_times - 1) * espacamento_times
+
+    largura_times = 6 * TAMANHO_SLOT + (6 - 1) * ESPACO
+    padding = 12
+    # fundo que engloba todos os times (um único fundo atrás da seção dos times)
+    fundo_times_rect = pygame.Rect(
+        pos_equipes_x - padding,
+        pos_equipes_y - padding,
+        largura_times + padding * 2,
+        altura_total_times + padding * 2
+    )
+    pygame.draw.rect(tela, (139, 69, 19), fundo_times_rect, border_radius=6)
+
+    # agora desenha cada time (título, poder, slots, imagens, níveis) — sempre
+    cur_y = pos_equipes_y
+    for idx, equipe in enumerate(equipes_cache[:5]):
+        # calcula poder do time (soma de poke["Total"] dos pokes presentes)
+        poder_total = sum((p.get("Total", 0) for p in equipe if p))
+        texto_poder = fonte_equipes.render(f"Poder: {poder_total}", True, (255, 255, 0))
+        texto_time = fonte_equipes.render(f"Time {idx + 1}", True, (255, 255, 255))
+
+        # desenha poder à esquerda e "Time X" à direita (dentro da área dos times)
+        tela.blit(texto_poder, (pos_equipes_x + texto_poder.get_width() - 10, cur_y))
+        tela.blit(texto_time, (pos_equipes_x + largura_times - texto_time.get_width(), cur_y))
+
+        y_slots = cur_y + header_h + 4
+        for slot_idx in range(6):
+            x = pos_equipes_x + slot_idx * (TAMANHO_SLOT + ESPACO)
+            y = y_slots
+            rect = pygame.Rect(x, y, TAMANHO_SLOT, TAMANHO_SLOT)
+            pygame.draw.rect(tela, (139, 69, 19), rect, border_radius=4)
+            tela.blit(fundo_slot, rect.topleft)
+
+            areas_pokemons_times.append(rect)
+
+        cur_y += altura_por_time + espacamento_times
+
+    # === 3) SOMENTE QUANDO player.Pokemons mudou: (re)criar Arrastaveis ===
+    if pokemons_cache != player.Pokemons:
+        pokemons_cache = list(player.Pokemons)
+        arrastaveis_pokemons.clear()
+
+        # arrastaveis para grade principal
+        for index, poke in enumerate(player.Pokemons):
+            if not poke:
+                continue
+            col = index % SLOTS_LARGURA
+            lin = index // SLOTS_LARGURA
+            x = pos_grid[0] + col * (TAMANHO_SLOT + ESPACO)
+            y = pos_grid[1] + lin * (TAMANHO_SLOT + ESPACO)
+
+            nome = poke["Nome"]
+            imagem = pokemons.get(nome.lower())
+            if imagem:
+                imagem_ajustada = pygame.transform.scale(imagem, (TAMANHO_SLOT + 2, TAMANHO_SLOT + 2))
+                arr = Arrastavel(
+                    imagem_ajustada,
+                    (x - 1, y - 1),
+                    dados=poke,
+                    interno=True,
+                    funcao_execucao=executar_pokemon
+                )
+                arrastaveis_pokemons.append(arr)
+
+        # arrastaveis para os times (mantendo infoExtra1 = indice do time)
+        cur_y = pos_equipes_y
+        for idx, equipe in enumerate(equipes_cache[:5]):
+            y_slots = cur_y + header_h + 4
+            for slot_idx in range(6):
+                x = pos_equipes_x + slot_idx * (TAMANHO_SLOT + ESPACO)
+                y = y_slots
+                poke = equipe[slot_idx] if slot_idx < len(equipe) else None
+                if poke:
+                    nome = poke["Nome"]
+                    imagem = pokemons.get(nome.lower())
+                    if imagem:
+                        imagem_ajustada = pygame.transform.scale(imagem, (TAMANHO_SLOT + 2, TAMANHO_SLOT + 2))
+                        arr = Arrastavel(
+                            imagem_ajustada,
+                            (x - 1, y - 1),
+                            dados=poke,
+                            interno=False,
+                            infoExtra1=idx,
+                            funcao_execucao=executar_pokemon
+                        )
+                        arrastaveis_pokemons.append(arr)
+            cur_y += altura_por_time + espacamento_times
+
+        # Atualizar e desenhar arrastáveis
+    for arr in arrastaveis_pokemons:
+        arr.atualizar(eventos)
+        arr.arrastar(pygame.mouse.get_pos())
+
+    for arr in arrastaveis_pokemons:
+        if not arr.esta_arrastando:
+            arr.desenhar(tela)
+    for arr in arrastaveis_pokemons:
+        if arr.esta_arrastando:
+            arr.desenhar(tela)
+
+def SetorItens(tela, player, eventos, parametros):
     global arrastaveis_inventario, inventario_cache, areas_inventario
+
+    def executar_inventario(arr):
+        interno = arr.interno
+        pos = arr.pos
+        dados = arr.dados
+
+        if interno:
+            for i, area in enumerate(areas_pokemons):
+                if area.collidepoint(pos):
+                    origem = player.Inventario.index(dados)
+                    if player.Inventario[origem] == player.Inventario[i]:
+                        return False
+                    else:
+                        player.Inventario[origem], player.Inventario[i] = player.Inventario[i], player.Inventario[origem]
+                        return True
+    
+        # === Desenhar fundo marrom da área do inventário ===
+    linhas_total = (len(player.Inventario) + SLOTS_LARGURA - 1) // SLOTS_LARGURA
+    largura_total = SLOTS_LARGURA * TAMANHO_SLOT + (SLOTS_LARGURA - 1) * ESPACO
+    altura_total = linhas_total * TAMANHO_SLOT + (linhas_total - 1) * ESPACO
+
+    fundo_rect = pygame.Rect(pos_grid[0] - 14, pos_grid[1] - 14, largura_total + 28, altura_total + 28)
+    pygame.draw.rect(tela, (139, 69, 19), fundo_rect, border_radius=6)  # marrom com cantos arredondados
 
     fundo_slot = pygame.transform.scale(fundos["FundoSlots"], (TAMANHO_SLOT, TAMANHO_SLOT))
     areas_inventario = []  # Lista de rects dos slots
+    fonte = fontes[20]
 
     if inventario_cache != player.Inventario:
         inventario_cache = list(player.Inventario)
@@ -84,17 +272,16 @@ def desenhar_inventario(tela, player, pos_inicial=(230, 270), eventos=None):
         for index, item in enumerate(player.Inventario):
             col = index % SLOTS_LARGURA
             lin = index // SLOTS_LARGURA
-            x = pos_inicial[0] + col * (TAMANHO_SLOT + ESPACO)
-            y = pos_inicial[1] + lin * (TAMANHO_SLOT + ESPACO)
+            x = pos_grid[0] + col * (TAMANHO_SLOT + ESPACO)
+            y = pos_grid[1] + lin * (TAMANHO_SLOT + ESPACO)
 
             rect = pygame.Rect(x, y, TAMANHO_SLOT, TAMANHO_SLOT)
             areas_inventario.append(rect)
             tela.blit(fundo_slot, rect.topleft)
-            fonte = fontes[20]
 
             if item:
                 nome = item["nome"]
-                numero = item["numero"]
+                numero = item.get("numero", 1)
                 imagem = consumiveis.get(nome)
 
                 if imagem:
@@ -102,51 +289,37 @@ def desenhar_inventario(tela, player, pos_inicial=(230, 270), eventos=None):
                     arr = Arrastavel(
                         imagem_ajustada,
                         (x + 8, y + 8),
-                        dados=item,  # agora é o próprio item
+                        dados=item,
                         interno=True,
                         funcao_execucao=executar_inventario
                     )
                     arrastaveis_inventario.append(arr)
-                
-                # Renderiza a quantidade do item
-                texto_numero = fonte.render(str(numero), True, (0, 0, 0))  # Cor branca
-                texto_rect = texto_numero.get_rect(bottomright=(x + TAMANHO_SLOT - 4, y + TAMANHO_SLOT - 4))
-                tela.blit(texto_numero, texto_rect)
 
-        RectDireito = pygame.Rect(1300,750, TAMANHO_SLOT, TAMANHO_SLOT)
-        RectEsquerdo = pygame.Rect(1380,750, TAMANHO_SLOT, TAMANHO_SLOT)
+                # ➕ Desenhar número no canto inferior direito
+                texto = fonte.render(str(numero), True, (0, 0, 0))
+                texto_rect = texto.get_rect(bottomright=(x + TAMANHO_SLOT - 4, y + TAMANHO_SLOT - 4))
+                tela.blit(texto, texto_rect)
 
-        tela.blit(fundo_slot,(1300,750))
-        tela.blit(fundo_slot,(1380,750))
+    else:
+        for index in range(len(player.Inventario)):
+            col = index % SLOTS_LARGURA
+            lin = index // SLOTS_LARGURA
+            x = pos_grid[0] + col * (TAMANHO_SLOT + ESPACO)
+            y = pos_grid[1] + lin * (TAMANHO_SLOT + ESPACO)
 
-        if player.MaoDireita is not None:
-            imagem = pygame.transform.scale(consumiveis[player.MaoDireita["nome"]], (TAMANHO_SLOT - 16, TAMANHO_SLOT - 16))
-            ArrDir = Arrastavel(imagem, (1300 + 8, 750 + 8), dados=player.MaoDireita, interno=False, funcao_execucao=executar_inventario)
-            arrastaveis_inventario.append(ArrDir)
-        if player.MaoEsquerda is not None:
-            imagem = pygame.transform.scale(consumiveis[player.MaoEsquerda["nome"]], (TAMANHO_SLOT - 16, TAMANHO_SLOT - 16))
-            ArrEsq = Arrastavel(imagem, (1380 + 8, 750 + 8), dados=player.MaoEsquerda, interno=False, funcao_execucao=executar_inventario)
-            arrastaveis_inventario.append(ArrEsq)
-    
-    for index, item in enumerate(player.Inventario):
+            rect = pygame.Rect(x, y, TAMANHO_SLOT, TAMANHO_SLOT)
+            areas_inventario.append(rect)
+            tela.blit(fundo_slot, rect.topleft)
+
+            item = player.Inventario[index]
             if item:
-                col = index % SLOTS_LARGURA
-                lin = index // SLOTS_LARGURA
-                x = pos_inicial[0] + col * (TAMANHO_SLOT + ESPACO)
-                y = pos_inicial[1] + lin * (TAMANHO_SLOT + ESPACO)
-
                 numero = item.get("numero", 1)
-                fonte = fontes[20]
-                texto_numero = fonte.render(str(numero), True, (0, 0, 0))
-                texto_rect = texto_numero.get_rect(bottomright=(x + TAMANHO_SLOT - 4, y + TAMANHO_SLOT - 4))
-                tela.blit(texto_numero, texto_rect)
-                
-                RectDireito = pygame.Rect(1300,750, TAMANHO_SLOT, TAMANHO_SLOT)
-                RectEsquerdo = pygame.Rect(1380,750, TAMANHO_SLOT, TAMANHO_SLOT)
+                texto = fonte.render(str(numero), True, (0, 0, 0))
+                texto_rect = texto.get_rect(bottomright=(x + TAMANHO_SLOT - 4, y + TAMANHO_SLOT - 4))
+                Botao_invisivel((x, y, TAMANHO_SLOT, TAMANHO_SLOT),lambda i=item: parametros.update({"ItemSelecionado": i}))
+                tela.blit(texto, texto_rect)
 
-                tela.blit(fundo_slot,(1300,750))
-                tela.blit(fundo_slot,(1380,750))
-
+    # Atualizar e desenhar arrastáveis
     for arr in arrastaveis_inventario:
         arr.atualizar(eventos)
         arr.arrastar(pygame.mouse.get_pos())
@@ -157,16 +330,24 @@ def desenhar_inventario(tela, player, pos_inicial=(230, 270), eventos=None):
     for arr in arrastaveis_inventario:
         if arr.esta_arrastando:
             arr.desenhar(tela)
-            
-def SetorPlayer(tela, player, eventos):
-    pass
 
-def SetorPokemons(tela, player, eventos):
-    pass
+        # ==== Mostrar contagem de itens ====
+    fonte_info = fontes[40]
+    texto_info = f"{player.Itens} / {player.MaxItens}"
+    texto_renderizado = fonte_info.render(texto_info, True, (0, 0, 0))
 
-def SetorItens(tela, player, eventos):
+    # Calcular a posição X central em relação à grade
+    largura_total = SLOTS_LARGURA * TAMANHO_SLOT + (SLOTS_LARGURA - 1) * ESPACO
+    centro_x = pos_grid[0] + largura_total // 2
 
-    desenhar_inventario(tela, player, eventos=eventos)
+    # Calcular posição Y abaixo da última linha
+    linhas_total = (len(player.Inventario) + SLOTS_LARGURA - 1) // SLOTS_LARGURA
+    y_ultimo = pos_grid[1] + linhas_total * (TAMANHO_SLOT + ESPACO) + 25
+
+    texto_rect = texto_renderizado.get_rect(center=(centro_x, y_ultimo))
+    tela.blit(texto_renderizado, texto_rect)
+
+    PainelItem(tela, (1320,270), parametros["ItemSelecionado"])
 
 def TelaInventario(tela, player, eventos, parametros):
     from Codigo.Cenas.Mundo import Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes
@@ -244,4 +425,4 @@ def TelaInventario(tela, player, eventos, parametros):
         som="Clique", cor_texto=Cores["branco"], aumento=1.05
     )
     
-    parametros["Inventario"]["Setor"](tela, player, eventos)
+    parametros["Inventario"]["Setor"](tela, player, eventos, parametros["Inventario"])
