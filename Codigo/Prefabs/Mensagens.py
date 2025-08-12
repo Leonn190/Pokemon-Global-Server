@@ -68,6 +68,7 @@ class MensagemItemGanho:
     PADDING = 10
     DURAÇÃO = 300  # frames
     ESPAÇO_ENTRE_MENSAGENS = 5
+    ANIM_FRAMES = 30  # frames da animação de entrada
 
     def __init__(self, nome_item, imagem_item):
         self.nome = nome_item
@@ -75,7 +76,7 @@ class MensagemItemGanho:
         self.frame_atual = 0
         self.ativa = True
 
-        self.imagem = pygame.transform.scale(self.imagem, (40, 40))
+        self.imagem = pygame.transform.scale(self.imagem, (45, 45))
         self.fonte = pygame.font.Font(None, 28)
 
     def atualizar(self):
@@ -90,10 +91,21 @@ class MensagemItemGanho:
         altura = self.ALTURA
         padding = self.PADDING
 
-        # posição: canto inferior direito, empilhando acima conforme índice
-        x = tela.get_width() - largura - 20
         y_base = tela.get_height() - altura - 20
         y = y_base - (indice * (altura + self.ESPAÇO_ENTRE_MENSAGENS))
+
+        # posição X fixa final
+        x_final = tela.get_width() - largura - 20
+
+        # animação de entrada: deslizando da direita para x_final
+        if self.frame_atual < self.ANIM_FRAMES:
+            # começa fora da tela à direita (largura da tela)
+            x_inicial = tela.get_width()
+            # interpola linearmente a posição X do início ao fim durante os frames da animação
+            progresso = self.frame_atual / self.ANIM_FRAMES
+            x = x_inicial + (x_final - x_inicial) * progresso
+        else:
+            x = x_final
 
         # fundo com borda arredondada
         fundo = pygame.Surface((largura, altura), pygame.SRCALPHA)
@@ -113,9 +125,9 @@ class MensagemItemGanho:
         imagem_alpha.set_alpha(alpha)
 
         # desenhar na tela
-        tela.blit(fundo, (x, y))
-        tela.blit(imagem_alpha, (x + padding, y + (altura - self.imagem.get_height()) // 2))
-        tela.blit(texto_surface, (x + padding + 50, y + (altura - texto_surface.get_height()) // 2))
+        tela.blit(fundo, (int(x), y))
+        tela.blit(imagem_alpha, (int(x) + padding, y + (altura - self.imagem.get_height()) // 2))
+        tela.blit(texto_surface, (int(x) + padding + 50, y + (altura - texto_surface.get_height()) // 2))
 
 def adicionar_mensagem_item(nome_item, imagens_dict):
     if nome_item not in imagens_dict:

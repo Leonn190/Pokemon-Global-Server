@@ -29,6 +29,10 @@ class Projetil:
 
         self.Alvos = alvos
 
+        self.imagem_original = self.imagem  # mantém a imagem original para evitar perda de qualidade
+        self.angulo = 0  # ângulo inicial
+        self.velocidade_rotacao = 10  # graus por frame, ajuste como quiser
+
     def atualizar(self, tela, cords_atuais, player):
         if self.alvo_reached:
             return
@@ -38,18 +42,23 @@ class Projetil:
         self.pos += deslocamento
         self.distancia_percorrida += self.velocidade
 
+        # Faz o projétil girar
+        self.angulo = (self.angulo + self.velocidade_rotacao) % 360
+        imagem_rotacionada = pygame.transform.rotate(self.imagem_original, self.angulo)
+        rect_rotacionado = imagem_rotacionada.get_rect(center=self.rect.center)
+
         # Calcula diferença de tiles que o cenário se moveu desde o disparo
         diferenca_tiles = pygame.math.Vector2(cords_atuais) - self.cords_iniciais
         diferenca_pixels = diferenca_tiles * 70  # conversão para pixels
 
         # Posição final de renderização é a posição do projétil ajustada pelo movimento do cenário
         render_pos = self.pos - diferenca_pixels
+        rect_rotacionado.center = (int(render_pos.x), int(render_pos.y))
 
-        # Atualiza rect
-        self.rect.center = (int(render_pos.x), int(render_pos.y))
+        self.rect = rect_rotacionado
 
         # Desenha
-        tela.blit(self.imagem, self.rect)
+        tela.blit(imagem_rotacionada, rect_rotacionado)
         
         player.Mirando = True
 
@@ -60,21 +69,24 @@ class Projetil:
             self.alvo_reached = True
     
     def VerificaColisão(self, player, tela):
-        
-        for alvo in self.Alvos.values():
-            # Calcula offset entre o projétil e o alvo
+        for alvo_nome, alvo in self.Alvos.items():
             offset_x = alvo.Rect.left - self.rect.left
             offset_y = alvo.Rect.top - self.rect.top
             offset = (offset_x, offset_y)
-
-            # Guarda último offset calculado (pode ser útil para debug)
             self.Offset = offset
 
-            # Verifica colisão de bounding box primeiro (rápido)
             if self.rect.colliderect(alvo.Rect):
-                # Colisão pixel-perfect
-                if self.mask.overlap(alvo.Mask, offset):
-                    alvo.Capturar(player)
+                overlap = self.mask.overlap(alvo.Mask, offset)
+
+                if overlap:
+                    if self.dados["estilo"] == "bola":
+                        overlap_mirando = self.mask.overlap(alvo.MaskMirando, offset)
+                        critico = bool(overlap_mirando)
+                        alvo.Capturar(self.dados, player, critico)
+
+                    elif self.dados["estilo"] == "fruta":
+                        alvo.Frutificar(self.dados, player)
+
                     self.alvo_reached = True
-                    break  # Para no primeiro alvo atingido
+                    break
 

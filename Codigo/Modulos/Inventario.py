@@ -152,7 +152,7 @@ def SetorPokemons(tela, player, eventos, parametros):
     cur_y = pos_equipes_y
     for idx, equipe in enumerate(equipes_cache[:5]):
         # calcula poder do time (soma de poke["Total"] dos pokes presentes)
-        poder_total = sum((p.get("Total", 0) for p in equipe if p))
+        poder_total = round(sum((p.get("Total", 0) for p in equipe if p)))
         texto_poder = fonte_equipes.render(f"Poder: {poder_total}", True, (255, 255, 0))
         texto_time = fonte_equipes.render(f"Time {idx + 1}", True, (255, 255, 255))
 

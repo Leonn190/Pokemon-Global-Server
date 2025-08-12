@@ -1,5 +1,4 @@
 import os
-import pygame
 from Codigo.Prefabs.FunçõesPrefabs import Carregar_Imagem, Carregar_Frames
 
 def CarregarPokemons():
@@ -95,9 +94,8 @@ def CarregamentoAvançado(info,Pré):
 
     if Pré:
         Animações = CarregarAnimações()
-        print(1)
     else:
-        Animações = None
+        Animações = {}
 
     Cores, Fontes, Texturas, Fundos, Outros = info["Conteudo"]
 

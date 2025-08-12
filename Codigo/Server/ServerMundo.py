@@ -23,7 +23,7 @@ def VerificaçãoSimplesServer(Parametros):
         url = Parametros["Link"].rstrip('/') + "/Verificar"
 
         payload = {
-            "Raio": Parametros.get("Raio", 18),
+            "Raio": Parametros.get("Raio", 18) + 4,
             "X": Parametros["Player"].Loc[0],
             "Y": Parametros["Player"].Loc[1],
             "Code": Parametros["Code"],
@@ -145,4 +145,25 @@ def RemoverPokemon(Parametros, pokemon_id):
 
     except Exception as e:
         print(f'[✘] Erro ao tentar remover Pokémon: {e}')
-        
+
+def AtualizarPokemon(Parametros, pokemon_dados):
+    """
+    pokemon_dados é um dicionário com pelo menos as chaves:
+        - "id" (int ou str)
+        - "Dados" (string compactada)
+        - "extra" (dicionário com os extras a atualizar)
+    """
+
+    try:
+        url = f'{Parametros["Link"]}/atualizar-pokemon'
+        resposta = requests.post(url, json=pokemon_dados)
+
+        if resposta.status_code == 200:
+            print(f'[✔] Pokémon atualizado com sucesso: {resposta.json().get("mensagem","")}')
+        elif resposta.status_code == 404:
+            print(f'[⚠] Pokémon não encontrado: {resposta.json().get("erro","")}')
+        else:
+            print(f'[⚠] Erro ao atualizar Pokémon: {resposta.status_code} - {resposta.text}')
+
+    except Exception as e:
+        print(f'[✘] Erro ao tentar atualizar Pokémon: {e}')

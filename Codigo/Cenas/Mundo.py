@@ -3,7 +3,7 @@ import threading
 import time
 
 from Codigo.Modulos.Outros import Clarear, Escurecer
-from Server.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, SalvarConta, SairConta, RemoverBau, RemoverPokemon
+from Codigo.Server.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, SalvarConta, SairConta, RemoverBau, RemoverPokemon, AtualizarPokemon
 from Codigo.Modulos.Config import TelaConfigurações
 from Codigo.Modulos.Inventario import TelaInventario
 from Codigo.Modulos.Paineis import BarraDeItens
@@ -40,12 +40,12 @@ def AtualizarColisaoProxima(mapa, player, parametros):
         px, py = player.Loc  # posição do player em coordenadas de tile
 
         # Raio geral (para objetos e baús)
-        raio_geral = 5
+        raio_geral = 3
         x_min, x_max = px - raio_geral, px + raio_geral
         y_min, y_max = py - raio_geral, py + raio_geral
 
         # Raio especial para pokémons (dobro do geral)
-        raio_pokemon = raio_geral * 2
+        raio_pokemon = raio_geral * 3
         pkm_x_min, pkm_x_max = px - raio_pokemon, px + raio_pokemon
         pkm_y_min, pkm_y_max = py - raio_pokemon, py + raio_pokemon
 
@@ -88,13 +88,19 @@ def GerenciadorDePokemonsProximos(Parametros, Mapa):
     while Parametros["Running"]:
         # ====== POKÉMONS ======
         pokemons_novos = {}
+
+        # Marca todos os pokémons atuais como potenciais "fora de alcance"
+        pokemons_antigos = dict(Mapa.PokemonsAtivos)
+
         for pkm_info in Parametros["PokemonsProximos"]:
             id_ = pkm_info["id"]
+
             if id_ not in Mapa.PokemonsAtivos:
                 # Criar novo Pokémon
                 novo_pokemon = Pokemon(
                     Loc=pkm_info["loc"],
                     string_dados=pkm_info["info"],
+                    extra=pkm_info["extra"],
                     Imagens=Pokemons,
                     Animaçoes=Animaçoes,
                     Parametros=Parametros
@@ -102,18 +108,48 @@ def GerenciadorDePokemonsProximos(Parametros, Mapa):
                 pokemons_novos[id_] = novo_pokemon
             else:
                 # Atualiza o Pokémon existente
-                pokemons_novos[id_] = Mapa.PokemonsAtivos[id_]
-                pokemons_novos[id_].Loc = pkm_info["loc"]
+                pkm_existente = Mapa.PokemonsAtivos[id_]
+                pkm_existente.LocAlvo = pkm_info["loc"]
+                pkm_existente.TamanhoMirando = pkm_info["extra"]["TamanhoMirando"]
+                pkm_existente.VelocidadeMirando = pkm_info["extra"]["VelocidadeMirando"]
+                pkm_existente.Dificuldade = pkm_info["extra"]["Dificuldade"]
+                pkm_existente.Frutas = pkm_info["extra"]["Frutas"]
 
-        Mapa.PokemonsAtivos = pokemons_novos
+                if "Tentativas" in pkm_info["extra"]:
+                    pkm_existente.Tentativas = pkm_info["extra"]["Tentativas"]
+
+                if "MaxFrutas" in pkm_info["extra"]:
+                    pkm_existente.MaxFrutas = pkm_info["extra"]["MaxFrutas"]
+
+                if "DocesExtras" in pkm_info["extra"]:
+                    pkm_existente.DocesExtras = pkm_info["extra"]["DocesExtras"]
+                
+                if "Irritado" in pkm_info["extra"]:
+                    pkm_existente.Irritado = pkm_info["extra"]["Irritado"]
+
+                if "Batalhando" in pkm_info["extra"]:
+                    pkm_existente.Batalhando = pkm_info["extra"]["Batalhando"]
+                
+                if "Capturado" in pkm_info["extra"]:
+                    pkm_existente.Capturado = pkm_info["extra"]["Capturado"]
+
+                pokemons_novos[id_] = pkm_existente
+
+            # Como esse pokémon ainda existe, removemos da lista de antigos
+            if id_ in pokemons_antigos:
+                del pokemons_antigos[id_]
+
+        for pkm_removido in pokemons_antigos.values():
+            pkm_removido.Apagar = True
+            pokemons_novos[pkm_removido.Dados["ID"]] = pkm_removido
+
+        # Remove efetivamente apenas os que têm Apagar=True
+        Mapa.PokemonsAtivos = {k: v for k, v in pokemons_novos.items() if not getattr(v, "Apagar", False)}
 
         # ====== BAÚS ======
         baus_novos = {}
-
-        # Marca todos os baús atuais como potencialmente "desaparecidos"
         baus_antigos = dict(Mapa.BausAtivos)
 
-        # Percorre os baús próximos
         for bau_info in Parametros.get("BausProximos", []):
             id_ = bau_info["ID"]
             loc = (bau_info["X"], bau_info["Y"])
@@ -124,21 +160,21 @@ def GerenciadorDePokemonsProximos(Parametros, Mapa):
                 baus_novos[id_] = novo_bau
             else:
                 bau_existente = Mapa.BausAtivos[id_]
-                bau_existente.Loc = loc  # atualiza a posição
+                bau_existente.Loc = loc
                 baus_novos[id_] = bau_existente
 
-            # Como esse baú ainda existe, removemos da lista de antigos
             if id_ in baus_antigos:
                 del baus_antigos[id_]
 
-        # Todos os baús que *não* estão mais em BausProximos devem ser marcados como abertos
+        # Baús que sumiram → marcar como abertos
         for bau_removido in baus_antigos.values():
             bau_removido.Aberto = True
-            baus_novos[bau_removido.ID] = bau_removido  # Mantém o baú nos ativos
+            baus_novos[bau_removido.ID] = bau_removido
 
-        Mapa.BausAtivos = baus_novos
+        # Remove efetivamente apenas os baús com Apagar=True
+        Mapa.BausAtivos = {k: v for k, v in baus_novos.items() if not getattr(v, "Apagar", False)}
 
-        time.sleep(0.75)
+        time.sleep(0.5)
 
 def LoopRemoveBaus(parametros):
     while parametros["Running"]:
@@ -146,9 +182,13 @@ def LoopRemoveBaus(parametros):
             RemoverBau(parametros, bauID)
         for PokemonID in parametros["PokemonsRemover"]:
             RemoverPokemon(parametros, PokemonID)
+        for PokemonInfo in parametros["PokemonsAtualizar"]:
+            AtualizarPokemon(parametros, PokemonInfo)
+
         parametros["BausRemover"] = []
         parametros["PokemonsRemover"] = []
-        time.sleep(1.25)
+        parametros["PokemonsAtualizar"] = []
+        time.sleep(1)
 
 def MundoTelaOpçoes(tela, estados, eventos, parametros):
 
@@ -172,7 +212,7 @@ def MundoTelaOpçoes(tela, estados, eventos, parametros):
 
 def MundoTelaPadrao(tela, estados, eventos, parametros):
     
-    camera.desenhar(tela,player.Loc,mapa,player,Estruturas,Outros["Baus"])
+    camera.desenhar(tela,player.Loc,mapa,player,Estruturas,parametros["delta_time"],Outros["Baus"])
 
     if parametros["InventarioAtivo"]:
         TelaInventario(tela, player, eventos, parametros)
@@ -198,6 +238,7 @@ def MundoLoop(tela, relogio, estados, config, info):
         "Config": config,
         "PokemonsProximos": [],
         "PokemonsRemover": [],
+        "PokemonsAtualizar": [],
         "PlayersProximos": [],
         "BausProximos": [],
         "BausRemover": [],
@@ -227,7 +268,7 @@ def MundoLoop(tela, relogio, estados, config, info):
     # tela = pygame.display.set_mode(camera.Resolucao, pygame.FULLSCREEN)
 
     while estados["Mundo"]:
-        parametros["delta_time"] = relogio.tick(200) / 1000  # Em segundos
+        parametros["delta_time"] = relogio.tick(config["FPS"]) / 1000  # Em segundos
         tela.blit(Fundos["FundoMundo"],(0,0))
 
         eventos = pygame.event.get()
@@ -269,7 +310,6 @@ def MundoLoop(tela, relogio, estados, config, info):
 
         Clarear(tela, info)
         pygame.display.update()
-        relogio.tick(config["FPS"])
 
     parametros["Running"] = False  # garante que a thread pare ao sair do loop
     Escurecer(tela, info)

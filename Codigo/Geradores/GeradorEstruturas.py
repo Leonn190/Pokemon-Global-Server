@@ -67,6 +67,7 @@ class Bau:
         self.Animando = False
         self.TempoAposAbrir = 0
         self.rect = None
+        self.Apagar = False
 
         self.tabela_probabilidades = [
             [55, 30, 10,  4, 1, 0],

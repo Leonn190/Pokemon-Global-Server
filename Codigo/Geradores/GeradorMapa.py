@@ -56,7 +56,7 @@ class Camera:
         self.largura_em_tiles = 2 * raio_em_tiles + 1
         self.altura_em_tiles = 2 * raio_em_tiles + 1
 
-    def desenhar(self, tela, jogador_pos, mapa, player, EstruturasIMG, BausIMG):
+    def desenhar(self, tela, jogador_pos, mapa, player, EstruturasIMG, delta_time, BausIMG):
         tile = mapa.Tile
         grid = mapa.GridBiomas
         objetos = mapa.DicObjetos
@@ -109,9 +109,7 @@ class Camera:
                 pos_x = centro_tela_x + (coluna - self.raio) * tile - offset_x
                 pos_y = centro_tela_y + (linha - self.raio) * tile - offset_y
 
-                pokemon.Atualizar(tela, (pos_x + tile // 2, pos_y + tile // 2), player)
-
-        baus_para_remover = []
+                pokemon.Atualizar(tela, (pos_x + tile // 2, pos_y + tile // 2), player, delta_time)
 
         for bau_id, bau in BausAtivos.items():
             x, y = bau.Loc
@@ -140,15 +138,11 @@ class Camera:
                         bau.Animando += 0.2
                     else:
                         bau.TempoAposAbrir += 1
-                        if bau.TempoAposAbrir >= 160:
-                            baus_para_remover.append(bau_id)
+                        if bau.TempoAposAbrir >= 150:
+                            bau.Apagar = True
                 else:
                     img = BausIMG[bau.raridade][0]
                     bau.desenhar(tela, centro_pos, img)
-
-        # Remover após o loop
-        for bau_id in baus_para_remover:
-            del mapa.BausAtivos[bau_id]
 
     def pegar_cor_bioma(self, bioma):
         # Dicionário simples de cor por tipo de bioma
