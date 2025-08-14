@@ -4,10 +4,26 @@ import math
 import os
 import pandas as pd
 
-from Codigo.Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem
+from Codigo.Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem, adicionar_mensagem_terminal
 from Codigo.Funções.FunçõesConsumiveis import ConsumiveisDic
 
 df = pd.read_csv("Dados/Pokemons.csv")
+
+berries = [
+    "Caxi Berry",
+    "Frambo Berry",
+    "Simp Berry",
+    "Secret Berry",
+    "Lum Berry",
+    "Tomper Berry",
+    "Abbajuur Berry",
+    "Jujuca Berry",
+    "Jungle Berry",
+    "Desert Berry",
+    "Frozen Berry",
+    "Field Berry",
+    "Water Berry"
+]
 
 CAMPOS_POKEMON = [
     "Nome",
@@ -23,18 +39,20 @@ CAMPOS_POKEMON = [
     "IV_Mag", "IV_Per", "IV_Ene", "IV_EnR", "IV_CrD", "IV_CrC", "ID"
 ]
 
-def CarregarPokemon(nome_pokemon):
-    """Carrega a imagem de um Pokémon específico e retorna a superfície."""
+def CarregarPokemon(nome_pokemon, dic):
+    """Carrega a imagem de um Pokémon específico, salva no dicionário e retorna a superfície."""
     caminho_relativo = os.path.join("Pokemons", "Imagens", f"{nome_pokemon}.png")
     imagem = Carregar_Imagem(caminho_relativo)
+    dic[nome_pokemon] = imagem  # Armazena no dicionário
     return imagem  # Pode retornar None se não encontrar
 
-def CarregarAnimacaoPokemon(nome_pokemon):
-    """Carrega a lista de frames de um Pokémon específico e retorna."""
+def CarregarAnimacaoPokemon(nome_pokemon, dic):
+    """Carrega a lista de frames de um Pokémon específico, salva no dicionário e retorna."""
     caminho_relativo = os.path.join("Pokemons", "Animação", nome_pokemon)
     frames = Carregar_Frames(caminho_relativo)
+    dic[nome_pokemon] = frames  # Armazena no dicionário
     return frames  # Pode retornar None se não encontrar
-
+    
 def desserializar_pokemon(string):
     partes = string.split(",")
     info = {}
@@ -157,6 +175,19 @@ def MaterializarPokemon(Dados):
     pokemon["Nivel"] = 0
     for i in range(nivel):
         SubirNivel(pokemon)
+
+    if "Amizade" in pokemon:
+        pokemon["Amizade"] += max(0,random.randint(0,30) - random.randint(0,pokemon["Nivel"]))
+    else:
+        pokemon["Amizade"] = max(0,random.randint(0,30) - random.randint(0,pokemon["Nivel"]))
+
+    pokemon["Fruta Favorita"] = random.choice(berries)
+
+    nivel = pokemon.get("Nivel", 0)
+    if nivel > 0:
+        pokemon["XP"] = random.randint(0, nivel * 10 - 1)
+    else:
+        pokemon["XP"] = 0
     
     soma_atributos = sum([
             pokemon["Atk"],
@@ -219,8 +250,8 @@ class Pokemon:
         self.Parametros = Parametros
         self.Apagar = False
 
-        self.imagem = Imagens.get(self.Dados["Nome"].lower(), CarregarPokemon(self.Dados["Nome"].lower()))
-        self.animação = Animaçoes.get(self.Dados["Nome"].lower(), Carregar_Frames(self.Dados["Nome"].lower()))
+        self.animação = Animaçoes.get(self.Dados["Nome"].lower(), CarregarAnimacaoPokemon(self.Dados["Nome"].lower(), Animaçoes))
+        self.imagem = self.animação[0]
         self.indice_anim = 0
         self.contador_anim = 0
 
@@ -234,6 +265,7 @@ class Pokemon:
         self.Irritado = extra.get("Irritado", False)
         self.Batalhando = extra.get("Batalhando", False)
         self.Capturado = extra.get("Capturado", False)
+        self.Fugiu = extra.get("Fugiu", False)
 
         # Criar máscara circular só da borda
         ret = self.imagem.get_rect()
@@ -268,12 +300,28 @@ class Pokemon:
         self.Rect = pygame.Rect(0, 0, diam_max, diam_max)
         self.Rect.center = (int(self.Loc[0] * 70), int(self.Loc[1] * 70))
 
+        self.iniciou_fuga = False
+        self.alpha = 255
+        self.progress_irritado = 0.0
+        self.captura_cobriu = False
+        self.sumiu_de_vez = False
+        self.FimCaptura = False
+
     def Atualizar(self, tela, pos, player, delta_time):
         VELOCIDADE_ANIMACAO = 3
+        VELOCIDADE_FADE = 220  # alpha/seg para fugir
+        VELOCIDADE_COR = 1.5   # velocidade da transição da cor
 
+        if self.sumiu_de_vez or self.FimCaptura:
+            return
+
+        if self.LocAlvo != self.Loc:
+            self.mover_para_alvo(delta_time)
+
+        # ===== estado base / posição =====
         self.Rect.center = pos
 
-        # Atualiza índice com base no contador
+        # ===== animação do sprite =====
         self.contador_anim += 1
         if self.contador_anim >= VELOCIDADE_ANIMACAO:
             self.indice_anim = (self.indice_anim + 1) % len(self.animação)
@@ -282,45 +330,76 @@ class Pokemon:
         quadro = self.animação[self.indice_anim]
         ret = quadro.get_rect(center=pos)
 
-        # ==== LÓGICA DE COR POR IRRITAÇÃO ====
-        cor_azul = (173, 216, 230)   # cor normal
-        cor_vermelho = (255, 160, 160)  # cor irritado (vermelho claro)
+        # ===== estados derivados =====
+        capturado_ativo = (self.Capturado != False)
 
-        if not hasattr(self, "progress_irritado"):
-            self.progress_irritado = 0.0  # 0 = azul, 1 = vermelho
+        # Fugiu: inicia fade só quando muda de False -> diferente de False
+        if not self.iniciou_fuga and self.Fugiu != False:
+            self.iniciou_fuga = True
 
-        velocidade_cor = 1.5  # quanto maior, mais rápido muda
-        if getattr(self, "Irritado", False):
-            self.progress_irritado = min(1.0, self.progress_irritado + velocidade_cor * delta_time)
+        # Fade em andamento
+        if self.iniciou_fuga and not self.sumiu_de_vez:
+            self.alpha -= VELOCIDADE_FADE * delta_time
+            if self.alpha <= 0:
+                self.alpha = 0
+                self.sumiu_de_vez = True
+
+        # ===== cor por irritação (interpolação azul -> vermelho) =====
+        if self.Irritado:
+            self.progress_irritado += VELOCIDADE_COR * delta_time
+            if self.progress_irritado > 1.0:
+                self.progress_irritado = 1.0
         else:
-            self.progress_irritado = max(0.0, self.progress_irritado - velocidade_cor * delta_time)
+            self.progress_irritado -= VELOCIDADE_COR * delta_time
+            if self.progress_irritado < 0.0:
+                self.progress_irritado = 0.0
 
-        # Interpola entre as duas cores
+        cor_azul = (173, 216, 230)
+        cor_vermelho = (255, 160, 160)
+        t = self.progress_irritado
         cor_fundo = (
-            int(cor_azul[0] + (cor_vermelho[0] - cor_azul[0]) * self.progress_irritado),
-            int(cor_azul[1] + (cor_vermelho[1] - cor_azul[1]) * self.progress_irritado),
-            int(cor_azul[2] + (cor_vermelho[2] - cor_azul[2]) * self.progress_irritado),
+            int(cor_azul[0] + (cor_vermelho[0] - cor_azul[0]) * t),
+            int(cor_azul[1] + (cor_vermelho[1] - cor_azul[1]) * t),
+            int(cor_azul[2] + (cor_vermelho[2] - cor_azul[2]) * t),
         )
-        cor_borda = (100, 149, 237)  # azul borda
+        cor_borda = (100, 149, 237)
 
-        # Desenha círculo de fundo com cor interpolada
-        pygame.draw.circle(tela, cor_fundo, pos, self.raio)
-        pygame.draw.circle(tela, cor_borda, pos, self.raio, 3)
+        # ===== fundo (respeita alpha e captura_cobriu) =====
+        if not (capturado_ativo and self.captura_cobriu):
+            surf_circ = pygame.Surface((self.raio * 2 + 6, self.raio * 2 + 6), pygame.SRCALPHA)
+            centro_local = (surf_circ.get_width() // 2, surf_circ.get_height() // 2)
 
-        # ==== MIRANDO ====
-        if getattr(player, "Mirando", False):
+            pygame.draw.circle(surf_circ, cor_fundo, centro_local, self.raio)
+            pygame.draw.circle(surf_circ, cor_borda, centro_local, self.raio, 3)
+
+            if self.alpha < 255:
+                surf_circ.set_alpha(int(self.alpha))
+
+            rect_circ = surf_circ.get_rect(center=pos)
+            tela.blit(surf_circ, rect_circ)
+
+        # ===== mirando (respeita alpha) =====
+        if player.Mirando:
             self.angulo_mirando = (self.angulo_mirando + self.VelocidadeMirando * delta_time) % 360
             surf_rotacionada = pygame.transform.rotate(self.surf_mirando, self.angulo_mirando)
+            if self.alpha < 255:
+                surf_rotacionada = surf_rotacionada.copy()
+                surf_rotacionada.set_alpha(int(self.alpha))
             rot_rect = surf_rotacionada.get_rect(center=pos)
             tela.blit(surf_rotacionada, rot_rect)
             self.MaskMirando = pygame.mask.from_surface(surf_rotacionada)
 
-        # Desenha o Pokémon apenas se NÃO estiver coberto pela animação de captura
-        if not (getattr(self, "Capturado", False) and getattr(self, "captura_cobriu", False)):
-            tela.blit(quadro, ret)
+        # ===== sprite do pokémon (respeita captura_cobriu e alpha) =====
+        if not (capturado_ativo and self.captura_cobriu):
+            if self.alpha < 255:
+                quadro_to_blit = quadro.copy()
+                quadro_to_blit.set_alpha(int(self.alpha))
+            else:
+                quadro_to_blit = quadro
+            tela.blit(quadro_to_blit, ret)
 
-        # Se estiver no estado de captura, desenha a animação (por cima do sprite)
-        if getattr(self, "Capturado", False):
+        # ===== animação de captura por cima =====
+        if capturado_ativo:
             self.AnimacaoCapturar(tela, pos, delta_time)
 
     def AnimacaoCapturar(self, tela, pos, delta_time):
@@ -344,9 +423,7 @@ class Pokemon:
             if self.captura_progress <= 0.0:
                 # Fim da animação
                 self.captura_progress = 0.0
-                self.captura_expandindo = True
-                self.captura_cobriu = False
-                self.Apagar = True  # <- Marca para remoção no gerenciador
+                self.FimCaptura = True
                 return
 
         cor = (
@@ -367,6 +444,7 @@ class Pokemon:
         pos_atual = pygame.math.Vector2(self.Loc)
         pos_alvo = pygame.math.Vector2(self.LocAlvo)
 
+        print("movendo")
         delta = pos_alvo - pos_atual
         distancia = delta.length()
 
@@ -409,16 +487,19 @@ class Pokemon:
         Capturou = random.random() < chance_final
 
         if Capturou:
-            self.Capturado = True
+            self.Capturado = 1
             for i, pokemon in enumerate(player.Pokemons):
                 if pokemon == None:
                     player.Pokemons[i] = MaterializarPokemon(self.Dados)
                     self.Parametros["PokemonsAtualizar"].append(self.Todic())
+                    adicionar_mensagem_terminal(f"Capturou o pokemon com dificuldade de {round(dificuldade)} e chance de {round(chance_final * 100)}%", (0,200,0))
+                    player.PokemonsCapturados += 1
                     break
         else:
             self.Dados = DadosIniciais
             self.DocesExtras = DocesIniciais
             self.Parametros["PokemonsAtualizar"].append(self.Todic())
+            adicionar_mensagem_terminal(f"Falhou em capturar o pokemon com dificuldade de {round(dificuldade)} e chance de {round(chance_final * 100)}%", (200,0,0))
             
     def Todic(self):
         return {

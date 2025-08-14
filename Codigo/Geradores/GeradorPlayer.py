@@ -1,8 +1,9 @@
 import math
 import pygame
 
-from Codigo.Prefabs.FunçõesPrefabs import extrair_cor_predominante, escurecer_cor, texto_com_borda, Fluxo
+from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda, Fluxo
 from Codigo.Prefabs.Mensagens import adicionar_mensagem_item
+from Codigo.Modulos.DesenhoPlayer import PegarRotaçao, CacheExtrairCor, escurecer_cor
 from Codigo.Geradores.GeradorOutros import Projetil
 
 ConsumiveisIMG = None
@@ -19,8 +20,14 @@ class Player:
         self.SkinNumero = Informações["Skin"]
         self.Skin = Skins[self.SkinNumero]
         self.SkinRedimensionada = pygame.transform.scale(self.Skin, (83, 66))
+        self.SkinsLiberadas = Informações.get("SkinsLiberadas", [1,2,3,4,5,6,7,8,9,10,11,12])
         self.Nivel = Informações["Nivel"]
         self.Xp = Informações["XP"]
+
+        self.BatalhasVencidasPVP = Informações.get("BatalhasVencidasPVP", 0)
+        self.BatalhasVencidasBOT = Informações.get("BatalhasVencidasBOT", 0)
+        self.BausAbertos = Informações.get("BausAbertos", 0)
+        self.PokemonsCapturados = Informações.get("PokemonsCapturados", 0)
         
         self.Mochila = Informações["Mochila"]
         self.Velocidade = Informações["Velocidade"]
@@ -49,41 +56,53 @@ class Player:
         self.tile = 70
 
     def Atualizar(self, tela, delta_time, mapa, fonte, parametros, ItensIMG):
-
+        # Movimento e projéteis
         self.mover(delta_time, mapa, parametros)
-
         for projetil in self.Projeteis:
             projetil.atualizar(tela, self.Loc, self)
 
+        # Centro da tela
         largura_tela, altura_tela = tela.get_size()
         x_centro = largura_tela // 2
         y_centro = altura_tela // 2
-        self.rect.center = (x_centro, y_centro)
+        mouse_x, mouse_y = pygame.mouse.get_pos()
 
-        imagem_corpo = self.SkinRedimensionada
-        cor_braco = extrair_cor_predominante(imagem_corpo)
-
-        # Calcula ângulo entre centro da tela e mouse
-        mouse_pos = pygame.mouse.get_pos()
-        dx, dy = mouse_pos[0] - x_centro, mouse_pos[1] - y_centro
+        # Ângulo (em graus e radianos)
+        dx, dy = mouse_x - x_centro, mouse_y - y_centro
         angulo = math.degrees(math.atan2(dy, dx))
         angulo_correcao = angulo - 90
+        angulo_rad = math.radians(angulo)
         self.angulo = angulo
 
-        corpo_rotacionado = pygame.transform.rotate(imagem_corpo, -angulo_correcao)
+        # Imagem e cor do corpo (cacheadas)
+        imagem_corpo = self.SkinRedimensionada
+        cor_braco = CacheExtrairCor(imagem_corpo)         # <<< cache de cor
+        corpo_rotacionado = PegarRotaçao(imagem_corpo, angulo_correcao)  # <<< cache de rotação
+
+        # Blit do corpo
         corpo_rect = corpo_rotacionado.get_rect(center=(x_centro, y_centro))
         tela.blit(corpo_rotacionado, corpo_rect)
 
-        # Novo: desenha braços
-        self.desenhar_bracos(tela, (x_centro, y_centro), cor_braco, math.radians(angulo), ItensIMG, mapa.PokemonsColisão)
+        # Atualiza o rect do player (reaproveita o mesmo rect do corpo)
+        self.rect = corpo_rect
 
+        # Braços (usa cor cacheada e ângulo em rad)
+        self.desenhar_bracos(
+            tela,
+            (x_centro, y_centro),
+            cor_braco,
+            angulo_rad,
+            ItensIMG,
+            mapa.PokemonsColisão
+        )
+
+        # (Opcional) Debug do rect
         pygame.draw.rect(tela, (0, 255, 0), self.rect, 2)
 
-        # Nome flutuante
-        texto_surface = fonte.render(self.Nome, True, (255, 255, 255))
+        # Nome flutuante (sem render desperdiçado)
         flutuacao = math.sin(pygame.time.get_ticks() / 200) * 5
-        texto_rect = texto_surface.get_rect(center=(x_centro, y_centro - 80 + flutuacao))
-        texto_com_borda(tela, self.Nome, fonte, texto_rect.topleft, (255, 255, 255), (0, 0, 0))
+        pos_texto = (x_centro, y_centro - 80 + flutuacao)
+        texto_com_borda(tela, self.Nome, fonte, pos_texto, (255, 255, 255), (0, 0, 0))
 
     def desenhar_bracos(self, tela, centro, cor_braco, angulo_rad, ItensIMG, PokemonsColisão):
         x_centro, y_centro = centro
@@ -200,10 +219,9 @@ class Player:
 
                     estado["t_anterior"] = t
 
+                    self.Mirando = True
                     return base[0] + dx, base[1] + dy
 
-                # Se não está arremessando, está mirando
-                self.Mirando = True
                 return base
 
            # ======= Lógica principal =======
@@ -300,7 +318,7 @@ class Player:
         if magnitude > 0:
             direcao_x /= magnitude
             direcao_y /= magnitude
-            velocidade = self.Velocidade + 6
+            velocidade = self.Velocidade + 3
             dx = direcao_x * velocidade * delta_time
             dy = direcao_y * velocidade * delta_time
 
@@ -336,7 +354,7 @@ class Player:
                 if Bau.Aberto is False:
                     Bau.AbrirBau(self, parametros)
 
-    def AdicionarAoInventario(self, player, nome, valor, raridade, estilo, descriçao, M1, M2):
+    def AdicionarAoInventario(self, player, nome, raridade, estilo, descriçao, M1, M2):
         global ConsumiveisIMG
 
         if ConsumiveisIMG is None:
@@ -363,7 +381,6 @@ class Player:
             if inventario[i] is None:
                 inventario[i] = {
                     "nome": nome,
-                    "valor": valor,
                     "raridade": raridade,
                     "estilo": estilo,
                     "descrição": descriçao,
@@ -400,5 +417,11 @@ class Player:
             "Maestria": self.Maestria,
             "Loc": self.Loc,
             "Selecionado": self.Selecionado,
+            "SkinsLiberadas": self.SkinsLiberadas,
+            "BatalhasVencidasPVP": self.BatalhasVencidasPVP,
+            "BatalhasVencidasBOT": self.BatalhasVencidasBOT,
+            "BausAbertos": self.BausAbertos,
+            "PokemonsCapturados": self.PokemonsCapturados
+
         }
     

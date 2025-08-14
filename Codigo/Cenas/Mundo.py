@@ -1,13 +1,14 @@
 import pygame
 import threading
 import time
+import traceback
 
 from Codigo.Modulos.Outros import Clarear, Escurecer
 from Codigo.Server.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, SalvarConta, SairConta, RemoverBau, RemoverPokemon, AtualizarPokemon
 from Codigo.Modulos.Config import TelaConfigurações
 from Codigo.Modulos.Inventario import TelaInventario
 from Codigo.Modulos.Paineis import BarraDeItens
-from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda
+from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda, terminal
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Tecla
 from Codigo.Prefabs.Sonoridade import Musica
 from Codigo.Prefabs.Mensagens import atualizar_e_desenhar_mensagens_itens
@@ -83,98 +84,114 @@ def thread_verificacao_continua(parametros):
         else:
             time.sleep(3)
 
-def GerenciadorDePokemonsProximos(Parametros, Mapa):
+def GerenciadorDePokemonsProximos(Parametros, Mapa): 
+    Parametros.setdefault("IDsPokemonsRemovidos", [])
 
     while Parametros["Running"]:
-        # ====== POKÉMONS ======
-        pokemons_novos = {}
+        try:
+            # ====== POKÉMONS ======
+            pokemons_novos = {}
+            pokemons_antigos = dict(Mapa.PokemonsAtivos)
 
-        # Marca todos os pokémons atuais como potenciais "fora de alcance"
-        pokemons_antigos = dict(Mapa.PokemonsAtivos)
+            for pkm_info in Parametros["PokemonsProximos"]:
+                id_ = pkm_info["id"]
 
-        for pkm_info in Parametros["PokemonsProximos"]:
-            id_ = pkm_info["id"]
+                if id_ not in Parametros["IDsPokemonsRemovidos"]:
 
-            if id_ not in Mapa.PokemonsAtivos:
-                # Criar novo Pokémon
-                novo_pokemon = Pokemon(
-                    Loc=pkm_info["loc"],
-                    string_dados=pkm_info["info"],
-                    extra=pkm_info["extra"],
-                    Imagens=Pokemons,
-                    Animaçoes=Animaçoes,
-                    Parametros=Parametros
-                )
-                pokemons_novos[id_] = novo_pokemon
-            else:
-                # Atualiza o Pokémon existente
-                pkm_existente = Mapa.PokemonsAtivos[id_]
-                pkm_existente.LocAlvo = pkm_info["loc"]
-                pkm_existente.TamanhoMirando = pkm_info["extra"]["TamanhoMirando"]
-                pkm_existente.VelocidadeMirando = pkm_info["extra"]["VelocidadeMirando"]
-                pkm_existente.Dificuldade = pkm_info["extra"]["Dificuldade"]
-                pkm_existente.Frutas = pkm_info["extra"]["Frutas"]
+                    if id_ not in Mapa.PokemonsAtivos and "Fugiu" not in pkm_info["extra"]:
+                        novo_pokemon = Pokemon(
+                            Loc=pkm_info["loc"],
+                            string_dados=pkm_info["info"],
+                            extra=pkm_info["extra"],
+                            Imagens=Pokemons,
+                            Animaçoes=Animaçoes,
+                            Parametros=Parametros
+                        )
+                        pokemons_novos[id_] = novo_pokemon
+                    else:
+                        if id_ in Mapa.PokemonsAtivos:
+                            pkm_existente = Mapa.PokemonsAtivos[id_]
+                            pkm_existente.LocAlvo = pkm_info["loc"]
+                            pkm_existente.TamanhoMirando = pkm_info["extra"]["TamanhoMirando"]
+                            pkm_existente.VelocidadeMirando = pkm_info["extra"]["VelocidadeMirando"]
+                            pkm_existente.Dificuldade = pkm_info["extra"]["Dificuldade"]
+                            pkm_existente.Frutas = pkm_info["extra"]["Frutas"]
 
-                if "Tentativas" in pkm_info["extra"]:
-                    pkm_existente.Tentativas = pkm_info["extra"]["Tentativas"]
+                            if "Tentativas" in pkm_info["extra"]:
+                                pkm_existente.Tentativas = pkm_info["extra"]["Tentativas"]
+                            if "MaxFrutas" in pkm_info["extra"]:
+                                pkm_existente.MaxFrutas = pkm_info["extra"]["MaxFrutas"]
+                            if "DocesExtras" in pkm_info["extra"]:
+                                pkm_existente.DocesExtras = pkm_info["extra"]["DocesExtras"]
+                            if "Irritado" in pkm_info["extra"]:
+                                pkm_existente.Irritado = pkm_info["extra"]["Irritado"]
+                            if "Batalhando" in pkm_info["extra"]:
+                                pkm_existente.Batalhando = pkm_info["extra"]["Batalhando"]
+                            if "Capturado" in pkm_info["extra"]:
+                                pkm_existente.Capturado = pkm_info["extra"]["Capturado"]
+                            if "Fugiu" in pkm_info["extra"]:
+                                pkm_existente.Fugiu = pkm_info["extra"]["Fugiu"]
 
-                if "MaxFrutas" in pkm_info["extra"]:
-                    pkm_existente.MaxFrutas = pkm_info["extra"]["MaxFrutas"]
+                            pokemons_novos[id_] = pkm_existente
 
-                if "DocesExtras" in pkm_info["extra"]:
-                    pkm_existente.DocesExtras = pkm_info["extra"]["DocesExtras"]
-                
-                if "Irritado" in pkm_info["extra"]:
-                    pkm_existente.Irritado = pkm_info["extra"]["Irritado"]
+                # Se tiver Fugiu == 1 ou Capturado == 1, marcar como removido
+                if pkm_info.get("Fugiu", False) != False or pkm_info.get("Capturado", False) != False:
+                    print(1)
+                    if id_ not in Parametros["IDsPokemonsRemovidos"]:
+                        Parametros["IDsPokemonsRemovidos"].append(id_)
 
-                if "Batalhando" in pkm_info["extra"]:
-                    pkm_existente.Batalhando = pkm_info["extra"]["Batalhando"]
-                
-                if "Capturado" in pkm_info["extra"]:
-                    pkm_existente.Capturado = pkm_info["extra"]["Capturado"]
+                if id_ in pokemons_antigos:
+                    del pokemons_antigos[id_]
 
-                pokemons_novos[id_] = pkm_existente
+            # Marcar como Apagar pokémons que não estão mais próximos
+            for pkm_removido in pokemons_antigos.values():
+                pkm_removido.Apagar = True
+                pokemons_novos[pkm_removido.Dados["ID"]] = pkm_removido
 
-            # Como esse pokémon ainda existe, removemos da lista de antigos
-            if id_ in pokemons_antigos:
-                del pokemons_antigos[id_]
+            # IDs removidos
+            for id_, pkm in list(pokemons_novos.items()):
+                if getattr(pkm, "Apagar", False):
+                    if id_ not in Parametros["IDsPokemonsRemovidos"]:
+                        Parametros["IDsPokemonsRemovidos"].append(id_)
 
-        for pkm_removido in pokemons_antigos.values():
-            pkm_removido.Apagar = True
-            pokemons_novos[pkm_removido.Dados["ID"]] = pkm_removido
+            # Remove efetivamente
+            Mapa.PokemonsAtivos = {
+                k: v for k, v in pokemons_novos.items()
+                if not getattr(v, "Apagar", False)
+            }
 
-        # Remove efetivamente apenas os que têm Apagar=True
-        Mapa.PokemonsAtivos = {k: v for k, v in pokemons_novos.items() if not getattr(v, "Apagar", False)}
+            # ====== BAÚS ======
+            baus_novos = {}
+            baus_antigos = dict(Mapa.BausAtivos)
 
-        # ====== BAÚS ======
-        baus_novos = {}
-        baus_antigos = dict(Mapa.BausAtivos)
+            for bau_info in Parametros.get("BausProximos", []):
+                id_ = bau_info["ID"]
+                loc = (bau_info["X"], bau_info["Y"])
+                raridade = bau_info["Raridade"]
 
-        for bau_info in Parametros.get("BausProximos", []):
-            id_ = bau_info["ID"]
-            loc = (bau_info["X"], bau_info["Y"])
-            raridade = bau_info["Raridade"]
+                if id_ not in Mapa.BausAtivos:
+                    novo_bau = Bau(raridade=raridade, ID=id_, Loc=loc)
+                    baus_novos[id_] = novo_bau
+                else:
+                    bau_existente = Mapa.BausAtivos[id_]
+                    bau_existente.Loc = loc
+                    baus_novos[id_] = bau_existente
 
-            if id_ not in Mapa.BausAtivos:
-                novo_bau = Bau(raridade=raridade, ID=id_, Loc=loc)
-                baus_novos[id_] = novo_bau
-            else:
-                bau_existente = Mapa.BausAtivos[id_]
-                bau_existente.Loc = loc
-                baus_novos[id_] = bau_existente
+                if id_ in baus_antigos:
+                    del baus_antigos[id_]
 
-            if id_ in baus_antigos:
-                del baus_antigos[id_]
+            for bau_removido in baus_antigos.values():
+                bau_removido.Aberto = True
+                baus_novos[bau_removido.ID] = bau_removido
 
-        # Baús que sumiram → marcar como abertos
-        for bau_removido in baus_antigos.values():
-            bau_removido.Aberto = True
-            baus_novos[bau_removido.ID] = bau_removido
+            Mapa.BausAtivos = {k: v for k, v in baus_novos.items() if not getattr(v, "Apagar", False)}
 
-        # Remove efetivamente apenas os baús com Apagar=True
-        Mapa.BausAtivos = {k: v for k, v in baus_novos.items() if not getattr(v, "Apagar", False)}
+            time.sleep(0.5)
 
-        time.sleep(0.5)
+        except Exception as e:
+            print(f"[ERRO] {e}")
+            traceback.print_exc()
+            continue
 
 def LoopRemoveBaus(parametros):
     while parametros["Running"]:
@@ -219,6 +236,7 @@ def MundoTelaPadrao(tela, estados, eventos, parametros):
     else:
         player.Atualizar(tela, parametros["delta_time"], mapa, Fontes[20], parametros, Consumiveis)
         BarraDeItens(tela, player, eventos)
+        terminal(tela,Fontes[16])
 
     Botao_Tecla("esc",lambda: parametros.update({"Tela": MundoTelaOpçoes}))
     Botao_Tecla("E",lambda: parametros.update({"InventarioAtivo": True}))
@@ -253,7 +271,7 @@ def MundoLoop(tela, relogio, estados, config, info):
     VerificaMapa(parametros)
     Musica("MundoTema")
 
-    player = Player(info["Server"]["Player"]["dados"],Outros["Skins"])
+    player = Player(info["Server"]["Player"]["dados"],Outros["SkinsTodas"])
     mapa = Mapa(parametros["GridBiomas"],GridToDic(parametros["GridObjetos"]))
     camera = Camera(18)
 

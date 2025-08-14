@@ -1,8 +1,8 @@
 import pygame
 import pyperclip
 import os
+import time
 import math
-from collections import Counter
 import re
 import sys
 
@@ -232,87 +232,7 @@ def Slider(tela, nome, x, y, largura, valor, min_val, max_val, cor_base, cor_bot
 # Atributo estático para controlar arraste
 Slider.arrastando = None
 
-def extrair_cor_predominante(imagem):
-    largura, altura = imagem.get_size()
-    contador_cores = Counter()
-
-    for y in range(altura):
-        for x in range(largura):
-            cor = imagem.get_at((x, y))
-            if cor.a > 20:  # Ignora pixels transparentes
-                contador_cores[(cor.r, cor.g, cor.b)] += 1
-
-    if contador_cores:
-        cor_mais_comum = contador_cores.most_common(1)[0][0]
-        return pygame.Color(*cor_mais_comum)
-    else:
-        return pygame.Color("white")
-
-def escurecer_cor(cor, fator=0.8):
-    """Retorna uma cor mais escura baseada em um fator."""
-    return pygame.Color(int(cor.r * fator), int(cor.g * fator), int(cor.b * fator))
-
-def DesenharPlayer(tela, imagem_corpo, posicao):
-    x, y = posicao
-
-    # Extrair uma cor confiável do corpo
-    cor_braco = extrair_cor_predominante(imagem_corpo)
-    mouse_pos = pygame.mouse.get_pos()
-
-    # Ângulo entre boneco e mouse
-    dx, dy = mouse_pos[0] - x, mouse_pos[1] - y
-    angulo = math.degrees(math.atan2(dy, dx))
-    angulo_correcao = angulo - 90
-    angulo_rad = math.radians(angulo)
-
-    # Rotacionar o corpo
-    corpo_rotacionado = pygame.transform.rotate(imagem_corpo, -angulo_correcao)
-    corpo_rect = corpo_rotacionado.get_rect(center=posicao)
-    tela.blit(corpo_rotacionado, corpo_rect)
-
-    # Respiração: movimento para frente e para trás
-    t = pygame.time.get_ticks() / 200
-    respiracao = math.sin(t) * 4  # amplitude de 3 pixels
-
-    distancia_braco_base = 58
-    distancia_braco = distancia_braco_base
-    profundidade = respiracao  # movimento ao longo do eixo do ângulo
-
-    # Base dos braços (posição lateral)
-    offset_x = math.cos(angulo_rad + math.pi / 2) * distancia_braco
-    offset_y = math.sin(angulo_rad + math.pi / 2) * distancia_braco
-
-    # Movimento respiratório (ao longo do corpo)
-    depth_x = math.cos(angulo_rad) * profundidade
-    depth_y = math.sin(angulo_rad) * profundidade
-
-    pos_braco_esquerdo = (x - offset_x + depth_x, y - offset_y + depth_y)
-    pos_braco_direito = (x + offset_x + depth_x, y + offset_y + depth_y)
-
-    cor_borda = escurecer_cor(cor_braco)
-
-    raio = 10
-    raio_borda = 13  # ligeiramente maior para formar a borda
-
-    # Desenha os braços com borda
-    for pos in [pos_braco_esquerdo, pos_braco_direito]:
-        pygame.draw.circle(tela, cor_borda, pos, raio_borda)  # borda
-        pygame.draw.circle(tela, cor_braco, pos, raio)        # centro
-
-def Barra(tela, posicao, tamanho, valor_atual, valor_maximo, cor, estado_barra, chave):
-    """
-    Desenha uma barra com animação suave.
-
-    Args:
-        tela: superfície pygame.
-        posicao: (x, y) da barra.
-        tamanho: (largura, altura).
-        valor_atual: valor alvo atual da barra.
-        valor_maximo: valor máximo da barra.
-        cor: cor principal da barra.
-        estado_barra: dicionário para guardar o valor visível atual.
-        chave: identificador único da barra (ex: nome ou id).
-    """
+def Barra(tela, posicao, tamanho, valor_atual, valor_maximo, cor, estado_barra, chave, vertical=False):
     x, y = posicao
     largura, altura = tamanho
 
@@ -330,16 +250,32 @@ def Barra(tela, posicao, tamanho, valor_atual, valor_maximo, cor, estado_barra, 
 
     # Calcula a proporção da barra preenchida
     proporcao = visivel / valor_maximo if valor_maximo else 0
-    largura_preenchida = int(largura * proporcao)
 
-    # Desenha o fundo da barra
-    pygame.draw.rect(tela, (50, 50, 50), (x, y, largura, altura))  # fundo cinza escuro
+    if not vertical:
+        # Barra horizontal: largura proporcional, altura fixa
+        largura_preenchida = int(largura * proporcao)
 
-    # Desenha a parte preenchida
-    pygame.draw.rect(tela, cor, (x, y, largura_preenchida, altura))
+        # Desenha o fundo da barra
+        pygame.draw.rect(tela, (50, 50, 50), (x, y, largura, altura))  # fundo cinza escuro
 
-    # Desenha a borda da barra
-    pygame.draw.rect(tela, (0, 0, 0), (x, y, largura, altura), 2)
+        # Desenha a parte preenchida
+        pygame.draw.rect(tela, cor, (x, y, largura_preenchida, altura))
+
+        # Desenha a borda da barra
+        pygame.draw.rect(tela, (0, 0, 0), (x, y, largura, altura), 2)
+    else:
+        # Barra vertical: altura proporcional, largura fixa
+        altura_preenchida = int(altura * proporcao)
+        y_preenchida = y + (altura - altura_preenchida)  # desenha preenchido de baixo para cima
+
+        # Desenha o fundo da barra
+        pygame.draw.rect(tela, (50, 50, 50), (x, y, largura, altura))  # fundo cinza escuro
+
+        # Desenha a parte preenchida
+        pygame.draw.rect(tela, cor, (x, y_preenchida, largura, altura_preenchida))
+
+        # Desenha a borda da barra
+        pygame.draw.rect(tela, (0, 0, 0), (x, y, largura, altura), 2)
 
 def texto_com_borda(tela, texto, fonte, pos, cor_texto, cor_borda, espessura=2):
 
@@ -355,7 +291,7 @@ def texto_com_borda(tela, texto, fonte, pos, cor_texto, cor_borda, espessura=2):
 
     tela.blit(texto_surface, (x, y))
 
-def Fluxo(tela, x1, y1, x2, y2, num_pontos=30, frequencia=4, velocidade=3, cor_base=(0, 255, 0), raio=4):
+def Fluxo(tela, x1, y1, x2, y2, num_pontos=30, frequencia=4, velocidade=3, cor_base=(0, 255, 0), raio=5):
 
     dx = x2 - x1
     dy = y2 - y1
@@ -387,3 +323,192 @@ def Fluxo(tela, x1, y1, x2, y2, num_pontos=30, frequencia=4, velocidade=3, cor_b
         superficie = pygame.Surface((raio * 2, raio * 2), pygame.SRCALPHA)
         pygame.draw.circle(superficie, cor, (raio, raio), raio)
         tela.blit(superficie, (px - raio, py - raio))
+
+def Scrolavel(
+    rect,
+    eventos,
+    lista,
+    trechos=False,
+    intervalo=1,
+    loop=True,
+    indice_atual=0,
+    sensibilidade=1
+):
+    n = len(lista)
+    if n == 0:
+        return ([], 0) if trechos else (None, 0)
+
+    if not isinstance(rect, pygame.Rect):
+        rect = pygame.Rect(rect)
+    intervalo = max(1, int(intervalo))
+    sensibilidade = max(1, int(sensibilidade))
+    eff_sens = sensibilidade if trechos else 1  # só aplica sensibilidade em trechos
+
+    mouse_dentro = rect.collidepoint(pygame.mouse.get_pos())
+
+    delta_base = 0
+    wheel_seen = False
+
+    if mouse_dentro:
+        # pygame 2: MOUSEWHEEL (ev.y: +1=up, -1=down)
+        dy = 0
+        for ev in eventos:
+            if ev.type == pygame.MOUSEWHEEL:
+                dy += ev.y
+                wheel_seen = True
+
+        if wheel_seen:
+            delta_base = -dy  # down(-1) -> +1 (avança)
+        else:
+            # fallback: buttons 4/5
+            for ev in eventos:
+                if ev.type == pygame.MOUSEBUTTONDOWN:
+                    if ev.button == 4:   # up
+                        delta_base -= 1
+                    elif ev.button == 5: # down
+                        delta_base += 1
+
+    delta = delta_base * eff_sens
+
+    if delta != 0:
+        novo = indice_atual + delta
+        if loop:
+            indice_atual = novo % n
+        else:
+            if trechos:
+                # impede passar do último trecho completo
+                max_start = max(0, n - intervalo)
+                indice_atual = max(0, min(max_start, novo))
+            else:
+                indice_atual = max(0, min(n - 1, novo))
+
+    if not trechos:
+        return (lista[indice_atual], indice_atual)
+
+    if not loop:
+        # slice clamped; tamanho pode ser < intervalo se n < intervalo
+        start = indice_atual
+        end = min(n, start + intervalo)
+        return (lista[start:end], indice_atual)
+    else:
+        trecho = [lista[(indice_atual + k) % n] for k in range(intervalo)]
+        return (trecho, indice_atual)
+
+# ---------------- Estado do terminal ----------------
+mensagens_terminal = []   # cada item: (texto, cor, timestamp)
+ultimo_tempo_msg = 0.0
+
+# Configurações
+TERMINAL_LARGURA = 720
+TERMINAL_ALTURA  = 300
+TERMINO_VISIVEL  = 10.0   # segundos "cheio" de visibilidade
+FADE_IN_DUR      = 0.4    # segundos
+FADE_OUT_DUR     = 0.6    # segundos
+ALPHA_MAX        = 190    # opacidade máxima do fundo (0-255)
+MARGEM           = 10
+
+def quebrar_linhas(texto, fonte, largura_max):
+    """
+    Quebra 'texto' em linhas para caber em 'largura_max' (px), usando 'fonte'.
+    Retorna lista de linhas (strings).
+    """
+    palavras = str(texto).split()
+    linhas = []
+    atual = ""
+
+    for p in palavras:
+        tentativa = p if not atual else (atual + " " + p)
+        if fonte.size(tentativa)[0] <= largura_max:
+            atual = tentativa
+        else:
+            if atual:
+                linhas.append(atual)
+            # Se a palavra sozinha não cabe, quebra forçando
+            while fonte.size(p)[0] > largura_max and len(p) > 1:
+                # encontra maior prefixo que caiba
+                i = len(p)
+                while i > 0 and fonte.size(p[:i])[0] > largura_max:
+                    i -= 1
+                if i <= 0:
+                    break
+                linhas.append(p[:i])
+                p = p[i:]
+            atual = p
+    if atual:
+        linhas.append(atual)
+    return linhas
+
+def _alpha_terminal():
+ 
+    if ultimo_tempo_msg <= 0:
+        return 0
+    t = time.time() - ultimo_tempo_msg
+    total = FADE_IN_DUR + TERMINO_VISIVEL + FADE_OUT_DUR
+
+    if t < 0:
+        return 0
+    if t <= FADE_IN_DUR:  # fade in
+        k = t / FADE_IN_DUR
+        return int(ALPHA_MAX * k)
+    elif t <= FADE_IN_DUR + TERMINO_VISIVEL:  # cheio
+        return ALPHA_MAX
+    elif t <= total:  # fade out
+        k = 1.0 - (t - FADE_IN_DUR - TERMINO_VISIVEL) / FADE_OUT_DUR
+        return int(ALPHA_MAX * max(0.0, min(1.0, k)))
+    else:
+        return 0
+
+def adicionar_mensagem_terminal(msg, cor=(255, 255, 255)):
+    """
+    Adiciona uma mensagem ao terminal (mantém no máximo 10).
+    """
+    global ultimo_tempo_msg, mensagens_terminal
+    agora = time.time()
+    mensagens_terminal.append((str(msg), cor, agora))
+    # guarda só as 10 últimas (antigas no topo, novas no fim)
+    if len(mensagens_terminal) > 10:
+        mensagens_terminal = mensagens_terminal[-10:]
+    ultimo_tempo_msg = agora
+
+def terminal(tela, fonte):
+    """
+    Desenha o terminal em (0,0), 720x300, com fade in/out e quebra de linha.
+    Primeira mensagem começa embaixo e sobe conforme novas chegam.
+    """
+    if not mensagens_terminal:
+        return
+
+    alpha_bg = _alpha_terminal()
+    if alpha_bg <= 0:
+        return
+
+    # Fundo translúcido
+    fundo = pygame.Surface((TERMINAL_LARGURA, TERMINAL_ALTURA), pygame.SRCALPHA)
+    fundo.fill((0, 0, 0, alpha_bg))
+    tela.blit(fundo, (0, 0))
+
+    # Preparar linhas quebradas
+    area_texto_w = TERMINAL_LARGURA - 2 * MARGEM
+    linha_altura = fonte.get_height() + 4
+    max_linhas_visiveis = max(1, (TERMINAL_ALTURA - 2 * MARGEM) // linha_altura)
+
+    # Gera todas as linhas (na ordem das mensagens)
+    linhas = []
+    for texto, cor, ts in mensagens_terminal:
+        for l in quebrar_linhas(texto, fonte, area_texto_w):
+            linhas.append((l, cor, ts))
+
+    # Mantém as ÚLTIMAS linhas que cabem (para garantir novas embaixo)
+    if len(linhas) > max_linhas_visiveis:
+        linhas = linhas[-max_linhas_visiveis:]
+
+    # Alpha também no texto
+    alpha_txt = alpha_bg
+
+    # Começa de baixo para cima
+    y = TERMINAL_ALTURA - MARGEM - (len(linhas) * linha_altura)
+    for l, cor, _ in linhas:
+        surf = fonte.render(l, True, cor)
+        surf.set_alpha(alpha_txt)
+        tela.blit(surf, (MARGEM, y))
+        y += linha_altura

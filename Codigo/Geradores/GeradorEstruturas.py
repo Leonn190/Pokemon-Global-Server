@@ -116,6 +116,7 @@ class Bau:
     def AbrirBau(self, player, parametros):
 
         self.Aberto = True
+        player.BausAbertos += 1
         parametros["BausRemover"].append(self.ID)
         
         # 1. Quantidade de itens a adicionar
@@ -150,7 +151,6 @@ class Bau:
             item_sorteado = itens_filtrados.sample().iloc[0]
 
             nome = item_sorteado['Nome']
-            valor = item_sorteado['Valor']
             raridade = int(item_sorteado['Raridade'])  # raridade original
             estilo = item_sorteado['Estilo']
             descriçao = item_sorteado['Descrição']
@@ -163,5 +163,5 @@ class Bau:
                 M2 = "Nada"
 
             # 5. Adicionar ao inventário do player
-            player.AdicionarAoInventario(player, nome, valor, raridade, estilo, descriçao, M1, M2)
+            player.AdicionarAoInventario(player, nome, raridade, estilo, descriçao, M1, M2)
 

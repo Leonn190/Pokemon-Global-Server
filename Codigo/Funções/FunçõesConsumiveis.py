@@ -69,7 +69,7 @@ def Secretball(pokemon, player, dados, crit):
 
 def Fastball(pokemon, player, dados, crit):
     velocidade = pokemon.Dados.get("Vel", 1)
-    return min(1.0 + (int(velocidade) / 60), 2.5)
+    return min(1.0 + (float(velocidade) / 60), 2.5)
 
 def Fruitball(pokemon, player, dados, crit):
     frutas_dadas = pokemon.Frutas

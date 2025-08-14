@@ -306,17 +306,62 @@ def Botao_Tecla(tecla, acao):
                 if callable(a):
                     a()
 
-def Botao_invisivel(espaco, acao):
+def Botao_invisivel(espaco, acao, clique_duplo=False, intervalo_duplo=300):
+    """
+    espaco: rect (x,y,l,a) do botão
+    acao: função ou lista de funções para executar
+    clique_duplo: bool, se True requer clique duplo para ativar
+    intervalo_duplo: tempo em ms entre cliques para considerar duplo
+    """
+
     mouse = pygame.mouse.get_pos()
     clique = pygame.mouse.get_pressed()
 
-    # Convertendo a tupla em um Rect
     rect = pygame.Rect(espaco)
 
+    # Estado interno para clique duplo guardado em atributo da função (static)
+    if not hasattr(Botao_invisivel, "_ultimo_click"):
+        Botao_invisivel._ultimo_click = {}
+    
+    agora = pygame.time.get_ticks()  # tempo em ms desde o pygame.init()
+
+    # Usamos a posição do botão como chave para diferenciar botões
+    chave = (rect.x, rect.y, rect.w, rect.h)
+
     if rect.collidepoint(mouse) and clique[0]:
-        if callable(acao):
-            acao()
-        elif isinstance(acao, list):
-            for func in acao:
-                if callable(func):
-                    func()
+        # Evitar múltiplas execuções no mesmo clique (esperar mouse soltar)
+        if not hasattr(Botao_invisivel, "_clicado"):
+            Botao_invisivel._clicado = {}
+        if Botao_invisivel._clicado.get(chave, False):
+            # já foi clicado e ainda está pressionado, ignora
+            return
+        Botao_invisivel._clicado[chave] = True
+
+        if clique_duplo:
+            ultimo = Botao_invisivel._ultimo_click.get(chave, 0)
+            if agora - ultimo <= intervalo_duplo:
+                # Clique duplo detectado, executa ação
+                if callable(acao):
+                    acao()
+                elif isinstance(acao, list):
+                    for func in acao:
+                        if callable(func):
+                            func()
+                # Resetar tempo para evitar triplo clique confuso
+                Botao_invisivel._ultimo_click[chave] = 0
+            else:
+                # Primeiro clique, registra o tempo
+                Botao_invisivel._ultimo_click[chave] = agora
+        else:
+            # Clique simples, executa direto
+            if callable(acao):
+                acao()
+            elif isinstance(acao, list):
+                for func in acao:
+                    if callable(func):
+                        func()
+
+    elif not clique[0]:
+        # Quando o botão do mouse soltar, marca que pode aceitar novo clique
+        if hasattr(Botao_invisivel, "_clicado"):
+            Botao_invisivel._clicado[chave] = False

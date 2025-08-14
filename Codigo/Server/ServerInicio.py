@@ -1,7 +1,7 @@
 import requests
 import os
 from Codigo.Prefabs.Mensagens import adicionar_mensagem_passageira
-from Codigo.Geradores.GeradorPokemon import criar_pokemon_especifico, desserializar_pokemon
+from Codigo.Geradores.GeradorPokemon import criar_pokemon_especifico, desserializar_pokemon, MaterializarPokemon
 
 import math
 
@@ -167,7 +167,7 @@ def RegistrarNoServer(Code, Personagem, Parametros):
         # Monta o JSON com os dados que quer salvar — aqui estou incluindo 'codigo' e 'personagem'
 
         Personagem["Skin"] = round(Personagem["Skin"])
-        Personagem["Pokemons"][0] = limpar_nans(desserializar_pokemon(criar_pokemon_especifico(Personagem["Inicial"])))
+        Personagem["Pokemons"][0] = limpar_nans(MaterializarPokemon(desserializar_pokemon(criar_pokemon_especifico(Personagem["Inicial"]))))
         del Personagem["Inicial"]
 
         payload = {

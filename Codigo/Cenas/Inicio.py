@@ -4,7 +4,7 @@ import requests
 import time
 
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Selecao, Botao_Alavanca
-from Codigo.Prefabs.FunçõesPrefabs import Barra_De_Texto, DesenharPlayer, Slider, texto_com_borda
+from Codigo.Prefabs.FunçõesPrefabs import Barra_De_Texto, Slider, texto_com_borda
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Sonoridade import Musica
 from Codigo.Prefabs.Mensagens import adicionar_mensagem_passageira, mensagens_passageiras
@@ -12,6 +12,7 @@ from Codigo.Server.ServerInicio import AdicionaServer, CarregarServers, ApagarSe
 from Codigo.Modulos.TelasGénericas import TelaEntradaDeTexto, TelaDeCerteza
 from Codigo.Modulos.Config import TelaConfigurações, aplicar_claridade
 from Codigo.Modulos.Outros import Clarear, Escurecer
+from Codigo.Modulos.DesenhoPlayer import DesenharPlayer
 from Codigo.Carregar.CarregamentoAvançado import CarregamentoAvançado
 
 B1 = {}

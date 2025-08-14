@@ -1,41 +1,36 @@
-Nome,Descrição,Valor,Raridade,Estilo,Code
-Poção,cura,,1,poção,1
-Super Poção,cura +,,2,poção,2
-Hiper Poção,cura ++,,4,poção,3
-Mega Poção,cura +++,,5,poção,4
-Poção Máxima,Maximo de vida,,6,poção,5
-Revive,Revive o pokemon com 25% da vida,,3,poção,6
-Revive Maximo,Revive o pokemon com 100% da vida,,6,poção,7
-Elixir,Xp,,1,poção,8
-Super Elixir,Xp +,,2,poção,9
-Hiper Elixir,Xp ++,,4,poção,10
-Mega Elixir,Xp +++,,6,poção,11
-Pokeball,Captura,,1,bola,12
-Greatball,Captura +,,2,bola,13
-Hiperball,Captura ++,,5,bola,14
-Levelball,Aumenta 5 niveis do pokemon e aumenta o poder de captura com base no nivel,,3,bola,16
-Furyball,Consegue capturar pokemons irritados direto,,4,bola,17
-Heavyball,Escala com o peso,,3,bola,18
-Aquaball,mais chances de capturar pokemons na agua,,2,bola,19
-Attemptball,mais chances conforme o numero de tentativas de capturar o pokemon,,4,bola,20
-Premierball,mais chances de capturar pokemons em batalhas,,5,bola,21
-Candyball,dropa o triplo de doces na captura,,3,bola,22
-Loveball,aumenta a amizade do pokemon ao capturar,,3,bola,23
-Secretball,aumenta 10% de IV do pokemon ao capturar,,6,bola,24
-Fastball,escala com velocidade e a pokebola é mais rapida,,3,bola,25
-Fruitball,Aumenta as chances conforme o numero de frutas dadas ao pokemon,,3,bola,26
-Tallball,Mais chances de captura se o pokemon estiver encima de algo,,2,bola,27
-Sniperball,"pokebola mais rapida e vai mais longe, escala com distancia",,4,bola,28
-Beastball,mais chances de capturar pokemons não spawnaveis,,4,bola,29
-Caxi Berry,dobra o numero de doces,,3,fruta,30
-Frambo Berry,mais chances de capturar o pokemon,,1,fruta,31
-Super Frambo Berry,mais chances de capturar o pokemon +,,4,fruta,32
-Simp Berry,aumenta a amizade do pokemon ao capturar,,1,fruta,33
-Secret Berry,Aumenta 5% o IV ao capturar,,6,fruta,34
-Lum Berry,Aumenta 3 niveis do pokemon,,3,fruta,35
-Jujuca Berry,Aumenta o numero de frutas que um pokemon pode consumir,,2,fruta,36
-Jungle Berry,Aumenta as chances de captura se estiver numa floresta,,2,fruta,37
-Desert Berry,Aumenta as chances de captura se estiver num deserto,,2,fruta,38
-Frozen Berry,Aumenta as chances de captura se estiver na neve,,2,fruta,39
-Field Berry,Aumenta as chances de captura se estiver num campo,,2,fruta,40
-Water Berry,Aumenta as chances de captura se estiver na agua,,2,fruta,41
+Nome,Descrição,Raridade,Estilo,Code
+Elixir,Pequeno frasco que concede experiência extra ao seu Pokémon.,1,poção,1
+Super Elixir,Uma dose reforçada de experiência para acelerar o treino.,2,poção,2
+Hiper Elixir,Um concentrado de experiência que impulsiona rapidamente o nível.,4,poção,3
+Mega Elixir,A carga máxima de experiência em uma única dose.,6,poção,4
+Pokeball,A esfera clássica para capturar Pokémon comuns.,1,bola,5
+Greatball,Esfera aprimorada com maior taxa de captura.,2,bola,6
+Ultraball,Esfera de alta performance para capturas difíceis.,5,bola,7
+Levelball,Aumenta 5 níveis do Pokémon e melhora a captura com base no nível.,3,bola,9
+Furyball,Especializada para capturar Pokémon irritados instantaneamente.,4,bola,10
+Heavyball,Melhora a captura quanto mais pesado for o Pokémon.,3,bola,11
+Aquaball,Maior eficiência na captura de Pokémon aquáticos.,2,bola,12
+Attemptball,Aumenta a chance de captura a cada tentativa falha anterior.,4,bola,13
+Premierball,Melhora a captura durante batalhas ativas.,5,bola,14
+Candyball,Faz o Pokémon capturado dropar o triplo de doces.,3,bola,15
+Loveball,Aumenta a amizade do Pokémon após a captura.,3,bola,16
+Secretball,Aumenta 10% do IV do Pokémon ao capturar.,6,bola,17
+Fastball,Mais rápida e eficiente quanto maior a velocidade do Pokémon.,3,bola,18
+Fruitball,Aumenta as chances conforme a quantidade de frutas oferecidas.,3,bola,19
+Tallball,Melhora a captura se o Pokémon estiver em altura elevada.,2,bola,20
+Sniperball,Arremessa mais longe e captura melhor à distância.,4,bola,21
+Beastball,Especializada para capturar Pokémon raros e não spawnáveis.,4,bola,22
+Caxi Berry,Dobra a quantidade de doces obtidos.,3,fruta,23
+Frambo Berry,Melhora levemente a chance de captura.,1,fruta,24
+Super Frambo Berry,Melhora muito a chance de captura.,4,fruta,25
+Simp Berry,Aumenta a amizade do Pokémon ao capturar.,1,fruta,26
+Secret Berry,Aumenta 5% o IV do Pokémon ao capturar.,6,fruta,27
+Lum Berry,Aumenta 3 níveis do Pokémon.,3,fruta,28
+Tomper Berry,Amplia a barra de captura crítica do Pokémon.,2,fruta,29
+Abbajuur Berry,Reduz a velocidade da barra de captura crítica.,2,fruta,30
+Jujuca Berry,Aumenta o número de frutas que um Pokémon pode consumir.,2,fruta,31
+Jungle Berry,Melhora a captura em áreas de floresta.,2,fruta,32
+Desert Berry,Melhora a captura em áreas desérticas.,2,fruta,33
+Frozen Berry,Melhora a captura em regiões geladas.,2,fruta,34
+Field Berry,Melhora a captura em campos abertos.,2,fruta,35
+Water Berry,Melhora a captura em ambientes aquáticos.,2,fruta,36

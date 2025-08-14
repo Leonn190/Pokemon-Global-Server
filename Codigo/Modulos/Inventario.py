@@ -2,7 +2,7 @@ import pygame
 
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel
 from Codigo.Prefabs.Arrastavel import Arrastavel
-from Codigo.Modulos.Paineis import PainelItem
+from Codigo.Modulos.Paineis import PainelItem, PainelPokemon, PainelPokemonAuxiliar, PainelPlayer
 
 cores = None
 fontes = None
@@ -18,6 +18,8 @@ animaçoes = None
 B_Splayer = {}
 B_Spokemons = {}
 B_Sitens = {}
+
+Barras_Controle = {}
 
 # Configurações da grade do inventário
 SLOTS_LARGURA = 10
@@ -38,9 +40,9 @@ areas_pokemons_times = []
 pos_grid=(230, 274)
 
 def SetorPlayer(tela, player, eventos, parametros):
-    pass
+    PainelPlayer(tela, (175,250), player, eventos, parametros)
 
-def SetorPokemons(tela, player, eventos, parametros):
+def SetorPokemonsPadrao(tela, player, eventos, parametros):
     global areas_pokemons, pokemons_cache, arrastaveis_pokemons
 
     def executar_pokemon(arr):
@@ -121,7 +123,7 @@ def SetorPokemons(tela, player, eventos, parametros):
         poke = player.Pokemons[index]
 
         # botão invisível para seleção (sempre)
-        Botao_invisivel((x, y, TAMANHO_SLOT, TAMANHO_SLOT), lambda p=poke: parametros.update({"PokemonSelecionado": p}))
+        Botao_invisivel((x, y, TAMANHO_SLOT, TAMANHO_SLOT), lambda p=poke: parametros.update({"PokemonSelecionado": p}), clique_duplo=True)
 
     # === 2) OBRIGATÓRIO: desenhar área dos TIMES (fundo + títulos + poderes + slots + imagens/níveis) ===
     equipes_cache = getattr(player, "Equipes", [])
@@ -234,6 +236,15 @@ def SetorPokemons(tela, player, eventos, parametros):
     for arr in arrastaveis_pokemons:
         if arr.esta_arrastando:
             arr.desenhar(tela)
+
+def SetorPokemons(tela, player, eventos, parametros):
+
+    if parametros["PokemonSelecionado"] is not None:
+        PainelPokemon(tela,(175,250),parametros["PokemonSelecionado"], Barras_Controle, eventos, parametros)
+        PainelPokemonAuxiliar(tela, (1500,250), player, eventos, parametros)
+        
+    else:
+        SetorPokemonsPadrao(tela, player, eventos, parametros)
 
 def SetorItens(tela, player, eventos, parametros):
     global arrastaveis_inventario, inventario_cache, areas_inventario
@@ -398,31 +409,37 @@ def TelaInventario(tela, player, eventos, parametros):
     # Linha divisória preta após os botões
     pygame.draw.line(tela, (0, 0, 0), (x_fundo, y_fundo + altura_topo), (x_fundo + largura_fundo, y_fundo + altura_topo), 3)
 
-    # Botão PLAYER
+    cor_branca = Cores["branco"]
+    cor_amarela = Cores["amarelo"]  # amarelo puro, pode ajustar se quiser
+
     Botao(
         tela, "PLAYER", (x1, y_botoes, largura_botao, altura_botao), 
         Texturas["Madeira"], Cores["preto"], Cores["branco"],
         lambda: parametros["Inventario"].update({"Setor": SetorPlayer}),
         Fontes[40], B_Splayer, eventos, 
-        som="Clique", cor_texto=Cores["branco"], aumento=1.05
+        som="Clique", 
+        cor_texto=cor_amarela if parametros["Inventario"]["Setor"] == SetorPlayer else cor_branca,
+        aumento=1.05
     )
 
-    # Botão POKÉMONS
     Botao(
         tela, "POKÉMONS", (x2, y_botoes, largura_botao, altura_botao),
         Texturas["Madeira"], Cores["preto"], Cores["branco"],
         lambda: parametros["Inventario"].update({"Setor": SetorPokemons}),
         Fontes[40], B_Spokemons, eventos,
-        som="Clique", cor_texto=Cores["branco"], aumento=1.05
+        som="Clique",
+        cor_texto=cor_amarela if parametros["Inventario"]["Setor"] == SetorPokemons else cor_branca,
+        aumento=1.05
     )
 
-    # Botão ITENS
     Botao(
         tela, "ITENS", (x3, y_botoes, largura_botao, altura_botao),
         Texturas["Madeira"], Cores["preto"], Cores["branco"],
         lambda: parametros["Inventario"].update({"Setor": SetorItens}),
         Fontes[40], B_Sitens, eventos,
-        som="Clique", cor_texto=Cores["branco"], aumento=1.05
+        som="Clique",
+        cor_texto=cor_amarela if parametros["Inventario"]["Setor"] == SetorItens else cor_branca,
+        aumento=1.05
     )
     
     parametros["Inventario"]["Setor"](tela, player, eventos, parametros["Inventario"])
