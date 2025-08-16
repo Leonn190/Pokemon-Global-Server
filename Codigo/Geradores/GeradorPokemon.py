@@ -4,7 +4,8 @@ import math
 import os
 import pandas as pd
 
-from Codigo.Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem, adicionar_mensagem_terminal
+from Codigo.Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem
+from Codigo.Prefabs.Terminal import adicionar_mensagem_terminal
 from Codigo.Funções.FunçõesConsumiveis import ConsumiveisDic
 
 df = pd.read_csv("Dados/Pokemons.csv")
@@ -259,7 +260,7 @@ class Pokemon:
         self.VelocidadeMirando = extra["VelocidadeMirando"]  # graus por frame
         self.Dificuldade = extra["Dificuldade"]
         self.Frutas = extra["Frutas"]
-        self.MaxFrutas = extra.get("MaxFrutas", 3)
+        self.MaxFrutas = extra.get("MaxFrutas", 2)
         self.Tentativas = extra.get("Tentativas", 0)
         self.DocesExtras = extra.get("DocesExtras", 0)
         self.Irritado = extra.get("Irritado", False)
@@ -444,7 +445,6 @@ class Pokemon:
         pos_atual = pygame.math.Vector2(self.Loc)
         pos_alvo = pygame.math.Vector2(self.LocAlvo)
 
-        print("movendo")
         delta = pos_alvo - pos_atual
         distancia = delta.length()
 

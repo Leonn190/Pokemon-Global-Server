@@ -28,6 +28,8 @@ class Player:
         self.BatalhasVencidasBOT = Informações.get("BatalhasVencidasBOT", 0)
         self.BausAbertos = Informações.get("BausAbertos", 0)
         self.PokemonsCapturados = Informações.get("PokemonsCapturados", 0)
+        self.Passos = Informações.get("Passos", 0)
+        self.TempoDeJogo = Informações.get("TempoDeJogo", 0)
         
         self.Mochila = Informações["Mochila"]
         self.Velocidade = Informações["Velocidade"]
@@ -58,6 +60,9 @@ class Player:
     def Atualizar(self, tela, delta_time, mapa, fonte, parametros, ItensIMG):
         # Movimento e projéteis
         self.mover(delta_time, mapa, parametros)
+
+        self.TempoDeJogo += delta_time
+
         for projetil in self.Projeteis:
             projetil.atualizar(tela, self.Loc, self)
 
@@ -99,10 +104,17 @@ class Player:
         # (Opcional) Debug do rect
         pygame.draw.rect(tela, (0, 255, 0), self.rect, 2)
 
-        # Nome flutuante (sem render desperdiçado)
         flutuacao = math.sin(pygame.time.get_ticks() / 200) * 5
-        pos_texto = (x_centro, y_centro - 80 + flutuacao)
-        texto_com_borda(tela, self.Nome, fonte, pos_texto, (255, 255, 255), (0, 0, 0))
+
+        # mede o texto
+        txt_surf = fonte.render(self.Nome, True, (255, 255, 255))
+        txt_w, txt_h = txt_surf.get_size()
+
+        # ancora o apelido no centro do player e 8px acima da cabeça
+        x_txt = int(corpo_rect.centerx - txt_w // 2)
+        y_txt = int(corpo_rect.top - 8 - txt_h + flutuacao)
+
+        texto_com_borda(tela, self.Nome, fonte, (x_txt, y_txt), (255, 255, 255), (0, 0, 0))
 
     def desenhar_bracos(self, tela, centro, cor_braco, angulo_rad, ItensIMG, PokemonsColisão):
         x_centro, y_centro = centro
@@ -297,6 +309,9 @@ class Player:
 
     def mover(self, delta_time, mapa, parametros):
 
+        if parametros["ModoTeclado"]:
+            return
+
         ObjetosColisão = mapa.ObjetosColisão
         BausColisão = mapa.BausColisão
 
@@ -330,6 +345,7 @@ class Player:
             self.ColideComBaus(novo_rect_x, BausColisão, parametros)
             if not self.ColideComEstruturas(novo_rect_x, ObjetosColisão):
                 self.Loc[0] += dx  # atualiza a posição do jogador no mundo
+                self.Passos += 0.1
 
             nova_pos_tela_y = self.rect.centery + dy * self.tile
             novo_rect_y = self.rect.copy()
@@ -338,6 +354,7 @@ class Player:
             self.ColideComBaus(novo_rect_y, BausColisão, parametros)
             if not self.ColideComEstruturas(novo_rect_y, ObjetosColisão):
                 self.Loc[1] += dy
+                self.Passos += 0.1
 
             # Atualiza a posição do rect do player com base na posição real
             self.rect.center = (self.rect.centerx, self.rect.centery)
@@ -415,13 +432,15 @@ class Player:
             "Velocidade": self.Velocidade,
             "Mochila": self.Mochila,
             "Maestria": self.Maestria,
+            "Equipes": self.Equipes,
             "Loc": self.Loc,
             "Selecionado": self.Selecionado,
             "SkinsLiberadas": self.SkinsLiberadas,
             "BatalhasVencidasPVP": self.BatalhasVencidasPVP,
             "BatalhasVencidasBOT": self.BatalhasVencidasBOT,
             "BausAbertos": self.BausAbertos,
-            "PokemonsCapturados": self.PokemonsCapturados
-
+            "PokemonsCapturados": self.PokemonsCapturados,
+            "TempoDeJogo": self.TempoDeJogo,
+            "Passos": self.Passos
         }
     

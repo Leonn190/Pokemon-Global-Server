@@ -8,7 +8,9 @@ from Codigo.Server.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, 
 from Codigo.Modulos.Config import TelaConfigurações
 from Codigo.Modulos.Inventario import TelaInventario
 from Codigo.Modulos.Paineis import BarraDeItens
-from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda, terminal
+from Codigo.Modulos.Comandos import ComandosMundo
+from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda
+from Codigo.Prefabs.Terminal import terminal
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Tecla
 from Codigo.Prefabs.Sonoridade import Musica
 from Codigo.Prefabs.Mensagens import atualizar_e_desenhar_mensagens_itens
@@ -231,15 +233,16 @@ def MundoTelaPadrao(tela, estados, eventos, parametros):
     
     camera.desenhar(tela,player.Loc,mapa,player,Estruturas,parametros["delta_time"],Outros["Baus"])
 
+    if parametros["ModoTeclado"] == False:
+        Botao_Tecla("esc",lambda: parametros.update({"Tela": MundoTelaOpçoes}))
+        Botao_Tecla("E",lambda: parametros.update({"InventarioAtivo": True}))
+
     if parametros["InventarioAtivo"]:
         TelaInventario(tela, player, eventos, parametros)
     else:
         player.Atualizar(tela, parametros["delta_time"], mapa, Fontes[20], parametros, Consumiveis)
         BarraDeItens(tela, player, eventos)
-        terminal(tela,Fontes[16])
-
-    Botao_Tecla("esc",lambda: parametros.update({"Tela": MundoTelaOpçoes}))
-    Botao_Tecla("E",lambda: parametros.update({"InventarioAtivo": True}))
+        terminal(tela,Fontes[16],player.Nome,pygame.K_TAB,eventos,parametros,ComandosMundo,parametros)
 
 def MundoLoop(tela, relogio, estados, config, info):
     global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, player, mapa, camera
@@ -260,6 +263,8 @@ def MundoLoop(tela, relogio, estados, config, info):
         "PlayersProximos": [],
         "BausProximos": [],
         "BausRemover": [],
+        "MensagemOnline": None,
+        "ModoTeclado": False,
         "InventarioAtivo": False,
         "Inventario": {
             "Setor": None,

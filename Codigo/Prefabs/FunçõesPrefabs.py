@@ -1,10 +1,10 @@
 import pygame
 import pyperclip
 import os
-import time
 import math
 import re
 import sys
+import numpy as np
 
 def resource_path(relative_path):
     """Garante o caminho correto mesmo quando empacotado em .exe com PyInstaller."""
@@ -394,121 +394,134 @@ def Scrolavel(
         trecho = [lista[(indice_atual + k) % n] for k in range(intervalo)]
         return (trecho, indice_atual)
 
-# ---------------- Estado do terminal ----------------
-mensagens_terminal = []   # cada item: (texto, cor, timestamp)
-ultimo_tempo_msg = 0.0
-
-# Configurações
-TERMINAL_LARGURA = 720
-TERMINAL_ALTURA  = 300
-TERMINO_VISIVEL  = 10.0   # segundos "cheio" de visibilidade
-FADE_IN_DUR      = 0.4    # segundos
-FADE_OUT_DUR     = 0.6    # segundos
-ALPHA_MAX        = 190    # opacidade máxima do fundo (0-255)
-MARGEM           = 10
-
-def quebrar_linhas(texto, fonte, largura_max):
+def BarraMovel(
+    tela, pos, lista, idx, tamanho,
+    orientacao="vertical",
+    tempo_sem_mudar_ms=3000,
+    fade_ms=350
+):
     """
-    Quebra 'texto' em linhas para caber em 'largura_max' (px), usando 'fonte'.
-    Retorna lista de linhas (strings).
+    Barra de progresso/rolagem apenas visual.
+    - tela: Surface destino.
+    - pos: pygame.Rect ou (x, y, largura, altura_inicial). A espessura vem daqui.
+    - lista: sequência usada para calcular a posição relativa.
+    - idx: índice atual (0..len(lista)-1).
+    - tamanho: comprimento da barra (altura se vertical, largura se horizontal).
+    - orientacao: "vertical" (padrão) ou "horizontal".
+    - tempo_sem_mudar_ms: após esse tempo sem mudar idx, faz fade out.
+    - fade_ms: duração do fade in/out.
     """
-    palavras = str(texto).split()
-    linhas = []
-    atual = ""
+    if not isinstance(pos, pygame.Rect):
+        pos = pygame.Rect(pos)
 
-    for p in palavras:
-        tentativa = p if not atual else (atual + " " + p)
-        if fonte.size(tentativa)[0] <= largura_max:
-            atual = tentativa
-        else:
-            if atual:
-                linhas.append(atual)
-            # Se a palavra sozinha não cabe, quebra forçando
-            while fonte.size(p)[0] > largura_max and len(p) > 1:
-                # encontra maior prefixo que caiba
-                i = len(p)
-                while i > 0 and fonte.size(p[:i])[0] > largura_max:
-                    i -= 1
-                if i <= 0:
-                    break
-                linhas.append(p[:i])
-                p = p[i:]
-            atual = p
-    if atual:
-        linhas.append(atual)
-    return linhas
-
-def _alpha_terminal():
- 
-    if ultimo_tempo_msg <= 0:
-        return 0
-    t = time.time() - ultimo_tempo_msg
-    total = FADE_IN_DUR + TERMINO_VISIVEL + FADE_OUT_DUR
-
-    if t < 0:
-        return 0
-    if t <= FADE_IN_DUR:  # fade in
-        k = t / FADE_IN_DUR
-        return int(ALPHA_MAX * k)
-    elif t <= FADE_IN_DUR + TERMINO_VISIVEL:  # cheio
-        return ALPHA_MAX
-    elif t <= total:  # fade out
-        k = 1.0 - (t - FADE_IN_DUR - TERMINO_VISIVEL) / FADE_OUT_DUR
-        return int(ALPHA_MAX * max(0.0, min(1.0, k)))
+    # Ajusta apenas o comprimento (grossura permanece a do pos original)
+    if orientacao == "vertical":
+        pos.height = int(max(1, tamanho))
     else:
-        return 0
+        pos.width  = int(max(1, tamanho))
 
-def adicionar_mensagem_terminal(msg, cor=(255, 255, 255)):
+    # --- estado por barra (chaveada por posição + orientação) ---
+    now = pygame.time.get_ticks()
+    key = (pos.x, pos.y, orientacao)
+    states = getattr(BarraMovel, "_states", {})
+    st = states.get(key)
+    if st is None:
+        st = {"last_idx": idx, "last_change": now, "alpha": 0, "last_tick": now}
+        states[key] = st
+        setattr(BarraMovel, "_states", states)
+
+    # Mudança de índice => fade in
+    if idx != st["last_idx"]:
+        st["last_idx"] = idx
+        st["last_change"] = now
+
+    # Alvo de alpha: 255 se mexeu nos últimos X ms, senão 0
+    ativo = (now - st["last_change"]) < tempo_sem_mudar_ms
+    alpha_target = 255 if ativo else 0
+
+    # Suavização
+    dt = max(0, now - st["last_tick"])
+    st["last_tick"] = now
+    if fade_ms <= 0:
+        st["alpha"] = alpha_target
+    else:
+        passo = int(255 * (dt / float(fade_ms)))
+        if st["alpha"] < alpha_target:
+            st["alpha"] = min(255, st["alpha"] + passo)
+        elif st["alpha"] > alpha_target:
+            st["alpha"] = max(0, st["alpha"] - passo)
+
+    alpha = st["alpha"]
+    if alpha <= 0:
+        return  # invisível, nada a desenhar
+
+    # --- posição do knob conforme idx ---
+    n = max(1, len(lista))
+    idx = max(0, min(idx, n - 1))
+    progresso = 0.0 if n == 1 else (idx / float(n - 1))
+
+    # Estilo
+    cor_trilho = (255, 255, 255, 70)
+    cor_knob   = (255, 255, 255, 180)
+    track_radius = max(2, min(pos.width, pos.height) // 2)
+
+    # Trilho
+    trilho = pygame.Surface((pos.width, pos.height), pygame.SRCALPHA)
+    pygame.draw.rect(trilho, cor_trilho, trilho.get_rect(), border_radius=track_radius)
+    trilho.set_alpha(alpha)
+    tela.blit(trilho, pos.topleft)
+
+    # Knob com tamanho proporcional (comprimento varia, grossura fixa)
+    if orientacao == "vertical":
+        knob_len_min = 20
+        knob_len = max(knob_len_min, int(pos.height / max(3, n)))
+        desloc = int((pos.height - knob_len) * progresso)
+        knob_rect = pygame.Rect(pos.x, pos.y + desloc, pos.width, knob_len)
+    else:
+        knob_len_min = 20
+        knob_len = max(knob_len_min, int(pos.width / max(3, n)))
+        desloc = int((pos.width - knob_len) * progresso)
+        knob_rect = pygame.Rect(pos.x + desloc, pos.y, knob_len, pos.height)
+
+    knob = pygame.Surface((knob_rect.width, knob_rect.height), pygame.SRCALPHA)
+    pygame.draw.rect(knob, cor_knob, knob.get_rect(), border_radius=track_radius)
+    knob.set_alpha(alpha)
+    tela.blit(knob, knob_rect.topleft)
+
+def cria_fundo_degrade(cor1, cor2, tamanho, arredondada=False, raio=0):
     """
-    Adiciona uma mensagem ao terminal (mantém no máximo 10).
+    Gera uma Surface com gradiente diagonal de cor1 (sup. esquerda) para cor2 (inf. direita).
+
+    :param cor1: tuple RGB inicial
+    :param cor2: tuple RGB final
+    :param tamanho: (largura, altura)
+    :param arredondada: bool, se True aplica bordas arredondadas
+    :param raio: raio das bordas arredondadas
+    :return: pygame.Surface com gradiente
     """
-    global ultimo_tempo_msg, mensagens_terminal
-    agora = time.time()
-    mensagens_terminal.append((str(msg), cor, agora))
-    # guarda só as 10 últimas (antigas no topo, novas no fim)
-    if len(mensagens_terminal) > 10:
-        mensagens_terminal = mensagens_terminal[-10:]
-    ultimo_tempo_msg = agora
+    w, h = tamanho
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
 
-def terminal(tela, fonte):
-    """
-    Desenha o terminal em (0,0), 720x300, com fade in/out e quebra de linha.
-    Primeira mensagem começa embaixo e sobe conforme novas chegam.
-    """
-    if not mensagens_terminal:
-        return
+    # cria matriz de interpolação diagonal
+    xs = np.linspace(0, 1, w)
+    ys = np.linspace(0, 1, h)
+    xx, yy = np.meshgrid(xs, ys)
+    fator = (xx + yy) / 2  # média dos dois eixos
 
-    alpha_bg = _alpha_terminal()
-    if alpha_bg <= 0:
-        return
+    # converte cores para array
+    cor1 = np.array(cor1, dtype=np.float32)
+    cor2 = np.array(cor2, dtype=np.float32)
 
-    # Fundo translúcido
-    fundo = pygame.Surface((TERMINAL_LARGURA, TERMINAL_ALTURA), pygame.SRCALPHA)
-    fundo.fill((0, 0, 0, alpha_bg))
-    tela.blit(fundo, (0, 0))
+    # interpolação
+    grad = (cor1 + (cor2 - cor1) * fator[..., None]).astype(np.uint8)
 
-    # Preparar linhas quebradas
-    area_texto_w = TERMINAL_LARGURA - 2 * MARGEM
-    linha_altura = fonte.get_height() + 4
-    max_linhas_visiveis = max(1, (TERMINAL_ALTURA - 2 * MARGEM) // linha_altura)
+    # transfere para surface
+    pygame.surfarray.blit_array(surf, grad.swapaxes(0, 1))
 
-    # Gera todas as linhas (na ordem das mensagens)
-    linhas = []
-    for texto, cor, ts in mensagens_terminal:
-        for l in quebrar_linhas(texto, fonte, area_texto_w):
-            linhas.append((l, cor, ts))
+    # aplica máscara arredondada se necessário
+    if arredondada and raio > 0:
+        mask = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(mask, (255, 255, 255), (0, 0, w, h), border_radius=raio)
+        surf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-    # Mantém as ÚLTIMAS linhas que cabem (para garantir novas embaixo)
-    if len(linhas) > max_linhas_visiveis:
-        linhas = linhas[-max_linhas_visiveis:]
-
-    # Alpha também no texto
-    alpha_txt = alpha_bg
-
-    # Começa de baixo para cima
-    y = TERMINAL_ALTURA - MARGEM - (len(linhas) * linha_altura)
-    for l, cor, _ in linhas:
-        surf = fonte.render(l, True, cor)
-        surf.set_alpha(alpha_txt)
-        tela.blit(surf, (MARGEM, y))
-        y += linha_altura
+    return surf

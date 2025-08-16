@@ -32,7 +32,18 @@ def VerificaçãoSimplesServer(Parametros):
 
         payload_json = json.dumps(payload)
 
-        resposta = requests.post(url, data=payload_json, headers={'Content-Type': 'application/json'}, timeout=5)
+        resposta = requests.post(
+            url,
+            data=payload_json,
+            headers={'Content-Type': 'application/json'},
+            timeout=5
+        )
+
+        # Se servidor respondeu 204 No Content → para execução
+        if resposta.status_code == 204:
+            Parametros["Running"] = False
+            return
+
         resposta.raise_for_status()
 
         dados = resposta.json()
@@ -41,13 +52,13 @@ def VerificaçãoSimplesServer(Parametros):
         Parametros["PokemonsProximos"] = dados.get("pokemons", [])
         Parametros["BausProximos"] = dados.get("baus", [])
 
-        if Parametros["BausProximos"] == []:
+        if not Parametros["BausProximos"]:
             Parametros["BausProximos"].append({
-                    "ID": 111,
-                    "X": 510,
-                    "Y": 520,
-                    "Raridade": 1
-                })
+                "ID": 111,
+                "X": 510,
+                "Y": 520,
+                "Raridade": 1
+            })
 
     except requests.exceptions.RequestException as e:
         print(f"Erro na requisição: {e}")
@@ -100,7 +111,7 @@ def SairConta(Parametros):
 
         resposta = requests.post(url, json=dados_para_enviar)
         if resposta.status_code == 200:
-            print(f'[✔] Conta desconectada com sucesso: {resposta.json()["mensagem"]}')
+            print(f'[✔] Conta desconectada com sucesso: {resposta.json()["ativos"]}')
         elif resposta.status_code == 202:
             print(f'[ℹ] Conta já não estava ativa: {resposta.json()["mensagem"]}')
         else:

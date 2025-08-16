@@ -600,6 +600,7 @@ def InicioLoop(tela, relogio, estados, config, info):
     })
         
     except KeyError:
+        Escurecer(tela,info)
         return
     
     if config["Pré-Carregamento"]:

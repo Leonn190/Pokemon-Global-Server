@@ -32,6 +32,10 @@ def main():
             print("Contas registradas no servidor:")
             for i, conta in enumerate(contas, 1):
                 print(f"{i}. {conta}")
+            ativas = dados.get("ativos", [])
+            print (ativas)
+            print(dados["worker_pid"])
+            print(dados["worker_host"])
 
         elif escolha == "3":
             rotas = dados.get("rotas", [])

@@ -15,7 +15,7 @@ def Masterball(pokemon, player, dados, crit):
     return 5.0
 
 def Levelball(pokemon, player, dados, crit):
-    pokemon.Dados["Nivel"] = min(pokemon.Dados.get("Nivel", 1) + 5, 100)
+    pokemon.Dados["Nivel"] = min(pokemon.Dados.get("Nivel", 1) + 8, 100)
     nivel_pokemon = pokemon.Dados.get("Nivel", 1)
     return 1 + nivel_pokemon / 90
 
@@ -112,4 +112,78 @@ ConsumiveisDic["Fruitball"] = Fruitball
 ConsumiveisDic["Tallball"] = Tallball
 ConsumiveisDic["Sniperball"] = Sniperball
 ConsumiveisDic["Beastball"] = Beastball
+
+def Caxi_Berry(pokemon, player, dados):
+    pokemon.DocesExtras += 6
+
+def Frambo_Berry(pokemon, player, dados):
+    pokemon.Dificuldade *= 0.85
+
+def Super_Frambo_Berry(pokemon, player, dados):
+    pokemon.Dificuldade *= 0.7
+
+def Simp_Berry(pokemon, player, dados):
+    pokemon.Dados["Amizade"] = pokemon.Dados.get("Amizade", 0) + 10
+
+def Secret_Berry(pokemon, player, dados):
+    atributos = ["Vida", "Atk", "Def", "SpA", "SpD", "Vel", "Mag", "Per", "Ene", "EnR", "CrD", "CrC"]
+    ivs = []
+    for atributo in atributos:
+        chave_iv = f"IV_{atributo}"
+        iv_atual = pokemon.Dados.get(chave_iv, 0)
+        aumento = iv_atual * (random.uniform(0.04, 0.12))
+        novo_iv = min(iv_atual + aumento, 100)
+        pokemon.Dados[chave_iv] = round(novo_iv, 2)
+        ivs.append(novo_iv)
+    novo_iv_total = round(sum(ivs) / len(ivs), 2)
+    pokemon.Dados["IV"] = novo_iv_total
+    return 1.0
+
+def Lum_Berry(pokemon, player, dados):
+    pokemon.Dados["Nivel"] = min(pokemon.Dados.get("Nivel", 1) + 4, 100)
+
+def Tomper_Berry(pokemon, player, dados):
+    pokemon.TamanhoMirando *= 1.2
+
+def Abbajuur_Berry(pokemon, player, dados):
+    pokemon.VelocidadeMirando *= 0.8
+
+def Jujuca_Berry(pokemon, player, dados):
+    pokemon.MaxFrutas += 2
+
+def Jungle_Berry(pokemon, player, dados):
+    """Melhora a captura em áreas de floresta (+15%)."""
+    try:
+        pokemon.BonusCapturaPorBioma["floresta"] = pokemon.BonusCapturaPorBioma.get("floresta", 0) + 0.15
+    except Exception:
+        pokemon.BonusCapturaPorBioma = {"floresta": 0.15}
+
+def Desert_Berry(pokemon, player, dados):
+    """Melhora a captura em áreas desérticas (+15%)."""
+    try:
+        pokemon.BonusCapturaPorBioma["deserto"] = pokemon.BonusCapturaPorBioma.get("deserto", 0) + 0.15
+    except Exception:
+        pokemon.BonusCapturaPorBioma = {"deserto": 0.15}
+
+def Frozen_Berry(pokemon, player, dados):
+    """Melhora a captura em regiões geladas (+15%)."""
+    try:
+        pokemon.BonusCapturaPorBioma["gelo"] = pokemon.BonusCapturaPorBioma.get("gelo", 0) + 0.15
+    except Exception:
+        pokemon.BonusCapturaPorBioma = {"gelo": 0.15}
+
+def Field_Berry(pokemon, player, dados):
+    """Melhora a captura em campos abertos (+15%)."""
+    try:
+        pokemon.BonusCapturaPorBioma["campo"] = pokemon.BonusCapturaPorBioma.get("campo", 0) + 0.15
+    except Exception:
+        pokemon.BonusCapturaPorBioma = {"campo": 0.15}
+
+def Water_Berry(pokemon, player, dados):
+    """Melhora a captura em ambientes aquáticos (+15%)."""
+    try:
+        pokemon.BonusCapturaPorBioma["aquatico"] = pokemon.BonusCapturaPorBioma.get("aquatico", 0) + 0.15
+    except Exception:
+        pokemon.BonusCapturaPorBioma = {"aquatico": 0.15}
+
 

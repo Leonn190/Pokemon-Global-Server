@@ -113,53 +113,120 @@ def RenomearServer(NomeNovo, Link):
                 pass
 
 def EntrarServer(Code, Parametros):
-    try:
-        url = f"{Parametros['ServerSelecionado']['link']}/acessar"
-        response = requests.post(url, json={'codigo': Code}, timeout=5)
-        rjson = response.json() if response.content else {}
+    import time
+    import requests
 
-        if response.status_code == 201:
-            Parametros["EstadoServidor"] = {
-                "status": 201,
-                "mensagem": "Conta acessada com sucesso!",
-                "dados": rjson
-            }
-        elif response.status_code == 200:
-            Parametros["EstadoServidor"] = {
-                "status": 200,
-                "mensagem": "Conta já estava ativa.",
-                "dados": rjson
-            }
-        elif response.status_code == 202:
-            Parametros["EstadoServidor"] = {
-                "status": 202,
-                "mensagem": "Conta ainda não registrada.",
-                "dados": rjson
-            }
-        elif response.status_code == 503:
-            Parametros["EstadoServidor"] = {
-                "status": 503,
-                "mensagem": "Servidor não está ativado.",
-                "dados": rjson
-            }
-        elif response.status_code == 504:
-            Parametros["EstadoServidor"] = {
-                "status": 504,
-                "mensagem": "Servidor está desligado.",
-                "dados": rjson
-            }
-        else:
-            Parametros["EstadoServidor"] = {
-                "status": 600,
-                "mensagem": f"Erro inesperado: {response.status_code}",
-                "dados": rjson
-            }
+    print("\n[EntrarServer] === INÍCIO ===")
+    print(f"[EntrarServer] Code={Code!r}")
+    try:
+        print(f"[EntrarServer] Parametros keys: {list(Parametros.keys())}")
+    except Exception as e:
+        print(f"[EntrarServer] (warn) Não foi possível listar chaves de Parametros: {e}")
+
+    try:
+        server_sel = Parametros['ServerSelecionado']
+        print(f"[EntrarServer] ServerSelecionado={server_sel!r}")
+        link = server_sel.get('link')
+        if not link:
+            raise KeyError("ServerSelecionado['link'] ausente ou vazio")
+    except Exception as e:
+        print(f"[EntrarServer] ERRO lendo ServerSelecionado/link: {e}")
+        Parametros["EstadoServidor"] = {
+            "status": None,
+            "mensagem": f"Config inválida: {e}",
+            "dados": None
+        }
+        print(f"[EntrarServer] EstadoServidor => {Parametros['EstadoServidor']!r}")
+        print("[EntrarServer] === FIM (config inválida) ===\n")
+        return
+
+    url = f"{link}/acessar"
+    payload = {'codigo': Code}
+    print(f"[EntrarServer] URL={url}")
+    print(f"[EntrarServer] Payload={payload}")
+
+    t0 = time.monotonic()
+    try:
+        response = requests.post(url, json=payload, timeout=5)
     except requests.exceptions.RequestException as e:
+        dt = time.monotonic() - t0
+        print(f"[EntrarServer] RequestException após {dt:.3f}s: {e}")
         Parametros["EstadoServidor"] = {
             "status": None,
             "mensagem": f"Erro de conexão: {e}",
             "dados": None
         }
+        print(f"[EntrarServer] EstadoServidor => {Parametros['EstadoServidor']!r}")
+        print("[EntrarServer] === FIM (request fail) ===\n")
+        return
+    except Exception as e:
+        dt = time.monotonic() - t0
+        print(f"[EntrarServer] EXCEÇÃO não tratada durante requests.post ({dt:.3f}s): {e}")
+        Parametros["EstadoServidor"] = {
+            "status": None,
+            "mensagem": f"Erro inesperado na requisição: {e}",
+            "dados": None
+        }
+        print(f"[EntrarServer] EstadoServidor => {Parametros['EstadoServidor']!r}")
+        print("[EntrarServer] === FIM (exc) ===\n")
+        return
+
+    dt = time.monotonic() - t0
+    status = getattr(response, "status_code", None)
+    print(f"[EntrarServer] HTTP {status} em {dt:.3f}s")
+    try:
+        print(f"[EntrarServer] Headers: {dict(response.headers)}")
+    except Exception as e:
+        print(f"[EntrarServer] (warn) Não foi possível ler headers: {e}")
+
+    # Conteúdo (preview)
+    try:
+        content_bytes = response.content or b""
+        print(f"[EntrarServer] Tamanho do conteúdo: {len(content_bytes)} bytes")
+        preview = content_bytes[:500]
+        print(f"[EntrarServer] Preview(500b): {preview!r}")
+    except Exception as e:
+        print(f"[EntrarServer] (warn) Falha ao ler content: {e}")
+
+    # Parse JSON com segurança
+    rjson = {}
+    try:
+        if response.content:
+            rjson = response.json()
+            print(f"[EntrarServer] JSON OK: {rjson!r}")
+        else:
+            print("[EntrarServer] Resposta vazia (sem JSON).")
+    except ValueError as e:
+        print(f"[EntrarServer] JSONDecodeError: {e}")
+        try:
+            txt_fallback = response.text
+            print(f"[EntrarServer] Fallback texto (500c): {txt_fallback[:500]!r}")
+        except Exception as e2:
+            print(f"[EntrarServer] (warn) Falha ao ler texto fallback: {e2}")
+        rjson = {}
+    except Exception as e:
+        print(f"[EntrarServer] Erro inesperado ao parsear JSON: {e}")
+        rjson = {}
+
+    # Mapeamento de status -> mensagem
+    if status == 201:
+        msg = "Conta acessada com sucesso!"
+    elif status == 200:
+        msg = "Conta já estava ativa."
+    elif status == 202:
+        msg = "Conta ainda não registrada."
+    elif status == 503:
+        msg = "Servidor não está ativado."
+    elif status == 504:
+        msg = "Servidor está desligado."
+    elif status is None:
+        msg = "Sem status HTTP (response ausente)."
+    else:
+        msg = f"Erro inesperado: {status}"
+
+    Parametros["EstadoServidor"] = {"status": status, "mensagem": msg, "dados": rjson}
+    print(f"[EntrarServer] EstadoServidor => {Parametros['EstadoServidor']!r}")
+    print("[EntrarServer] === FIM ===\n")
 
 def RegistrarNoServer(Code, Personagem, Parametros):
     try:

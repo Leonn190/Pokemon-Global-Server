@@ -1,7 +1,7 @@
-
 import pygame
+import math
 
-from Codigo.Prefabs.FunçõesPrefabs import Barra, Scrolavel, Slider
+from Codigo.Prefabs.FunçõesPrefabs import Barra, Scrolavel, Slider, BarraMovel
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Arrastavel import Arrastavel
@@ -318,7 +318,7 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
         # --- 2) Instanciar/renovar SÓ quando troca de Pokémon ---
         if pokemon_refresh:
             frames = animaçoes.get(nome_poke, CarregarAnimacaoPokemon(nome_poke, animaçoes))
-            idle = Animação(frames=frames, posicao=(CX, CY), intervalo=30, tamanho=1.2)
+            idle = Animação(frames=frames, posicao=(CX, CY), intervalo=28, tamanho=1.2)
 
         # --- 3) Texto "Nível" ACIMA da animação (alinhado ao centro) ---
         nivel = int(pokemon.get("Nivel", 1))
@@ -520,7 +520,7 @@ def PainelPokemonAuxiliar(tela, pos, player, eventos, parametros):
             for i, area in enumerate(_mini_areas_time):
                 if area.collidepoint(pos):
                     origem = player.Pokemons.index(dados)
-                    time = i // 6
+                    time = idxT
                     if dados in player.Equipes[time]:
                         return False
                     else:
@@ -533,7 +533,7 @@ def PainelPokemonAuxiliar(tela, pos, player, eventos, parametros):
             for i, area in enumerate(_mini_areas_time):
                 if area.collidepoint(pos):
                     origem = player.Equipes[timeOrigem].index(dados)
-                    timeAlvo = i // 6
+                    timeAlvo = idxT
                     if player.Equipes[timeOrigem][origem] == player.Equipes[timeAlvo][i - (timeAlvo * 6)]:
                         return False
                     else:
@@ -636,6 +636,8 @@ def PainelPokemonAuxiliar(tela, pos, player, eventos, parametros):
             Botao_invisivel((x, y, TAMANHO_SLOT, TAMANHO_SLOT),
                             lambda p=poke: parametros.update({"PokemonSelecionado": p}),
                             clique_duplo=True)
+    
+    BarraMovel(tela, (grid_rect.right + 4, grid_rect.y, 6, 1), player.Pokemons, idxP, tamanho=grid_rect.height, orientacao="vertical")
 
     # =======================
     # 2) ÁREA DO TIME 1 (3x2)
@@ -763,7 +765,7 @@ def PainelPokemonAuxiliar(tela, pos, player, eventos, parametros):
 def PainelPlayer(tela, pos, player, eventos, parametros):
     # ---------------- Layout base ----------------
     x, y = pos
-    largura = 1550
+    largura = 1570
     altura = 450
     rect_painel = pygame.Rect(x, y, largura, altura)
 
@@ -782,39 +784,158 @@ def PainelPlayer(tela, pos, player, eventos, parametros):
     font = fontes[20]
     font_titulo = fontes[25]
 
-    # ---------------- Esquerda: informações em duas margens ----------------
-    padding = 20
-    col_w = 420
-    gap_colunas = 24
-    top_info = y + padding + 10
-    left_block_x = x + padding
-    right_block_x = left_block_x + col_w + gap_colunas
-
-    total_pokes = len([p for p in player.Pokemons if p is not None])
-    total_itens = getattr(player, "Itens", [])
-    total_skins_lib = len(getattr(player, "SkinsLiberadas", []))
-    v_pvp = getattr(player, "BatalhasVencidasPVP", 0)
-    v_bot = getattr(player, "BatalhasVencidasBOT", 0)
-    v_total = v_pvp + v_bot
-
+    # ---------------- Helpers ----------------
     def draw_kv(label, valor, x0, y0):
         tela.blit(font.render(str(label), True, cor_texto_suave), (x0, y0))
         tela.blit(font_titulo.render(str(valor), True, cor_texto), (x0, y0 + 22))
 
-    tela.blit(font_titulo.render("Perfil do Jogador", True, cor_texto), (left_block_x, y + padding))
+    def seconds_to_hhmmss(seg):
+        try:
+            seg = int(seg)
+        except:
+            seg = 0
+        h = seg // 3600
+        m = (seg % 3600) // 60
+        s = seg % 60
+        return f"{h:02d}:{m:02d}:{s:02d}"
 
-    linha = top_info + 28
-    draw_kv("Pokémons", total_pokes, left_block_x, linha); linha += 60
-    draw_kv("Itens", total_itens, left_block_x, linha); linha += 60
-    draw_kv("Skins liberadas", total_skins_lib, left_block_x, linha); linha += 60
+    def maior_poder_pokemon(pokes):
+        maior = 0
+        for p in pokes:
+            if not p:
+                continue
+            try:
+                tot = p.get("Total", 0)
+            except:
+                try:
+                    tot = getattr(p, "Total", 0)
+                except:
+                    tot = 0
+            if tot > maior:
+                maior = tot
+        return round(maior)
 
-    linha2 = top_info + 28
-    draw_kv("Vitórias (Total)", v_total, right_block_x, linha2); linha2 += 60
-    draw_kv("Vitórias vs Jogadores", v_pvp, right_block_x, linha2); linha2 += 60
-    draw_kv("Vitórias vs BOT", v_bot, right_block_x, linha2); linha2 += 60
+    def maior_poder_time(equipes):
+        maior = 0
+        for team in (equipes or []):
+            soma = 0
+            for p in (team or []):
+                if not p:
+                    continue
+                try:
+                    soma += p.get("Total", 0)
+                except:
+                    try:
+                        soma += getattr(p, "Total", 0)
+                    except:
+                        soma += 0
+            if soma > maior:
+                maior = soma
+        return round(maior)
+
+    def draw_pill(surface, rect, base_color, alpha, label, val, big=False,
+              *, xp=None, nivel_for_xp=None, estado_barra=None, chave_xp="xp_nivel"):
+        # rect: pygame.Rect; base_color: (r,g,b); alpha: 0..255
+        pill_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+
+        # fundo semitransparente
+        r, g, b = base_color
+        pygame.draw.rect(
+            pill_surf, (r, g, b, max(0, min(255, alpha))),
+            pygame.Rect(0, 0, rect.width, rect.height), border_radius=rect.height // 2
+        )
+
+        # texto principal
+        texto = f"{label}: {val}"
+        f_lab = fontes[20] if big else font
+        txt_surf = f_lab.render(texto, True, (255, 255, 255))
+        pill_surf.blit(txt_surf, (12, (rect.height - txt_surf.get_height()) // 2))
+
+        # --- barra de XP dentro da pílula (opcional) ---
+        if (xp is not None) and (nivel_for_xp is not None) and (estado_barra is not None):
+            needed = 100 + int(nivel_for_xp) * 15
+
+            # dimensões e posição da barra (pequena, na parte de baixo da pílula)
+            margem_h = 12
+            bar_w = rect.width - margem_h * 2
+            bar_h = max(6, rect.height // 8)
+            bar_x = margem_h
+            bar_y = rect.height - margem_h - bar_h
+
+            # texto pequeno "atual/necessário" logo acima da barra
+            mini_font = fontes[14]
+            txt_xp = f"{int(xp)}/{needed}"
+            mini_surf = mini_font.render(txt_xp, True, (255, 255, 255))
+            pill_surf.blit(mini_surf, (bar_x, bar_y - mini_surf.get_height() - 2))
+
+            # cor da barra (simples e visível)
+            cor_barra = (80, 200, 120)
+
+            # desenha a barra usando tua função, direto no pill_surf
+            Barra(
+                pill_surf,
+                (bar_x, bar_y),
+                (bar_w, bar_h),
+                float(xp),
+                float(needed),
+                cor_barra,
+                estado_barra,
+                chave_xp,
+                vertical=False
+            )
+
+        # desenha a pílula pronta na tela
+        surface.blit(pill_surf, rect.topleft)
+
+    # ---------------- Esquerda: informações em TRÊS colunas ----------------
+    padding = 20
+    col_w = 280   # largura de cada coluna (ajustada para caber 3 colunas)
+    gap_colunas = 24
+    top_info = y + padding + 10
+
+    col1_x = x + padding
+    col2_x = col1_x + col_w + gap_colunas
+    col3_x = col2_x + col_w + gap_colunas
+
+    tela.blit(font_titulo.render("Perfil do Jogador", True, cor_texto), (col1_x, y + padding))
+
+    # Dados do jogador (com defaults seguros)
+    nome = getattr(player, "Nome", getattr(player, "name", "Jogador"))
+    pokes_capt = getattr(player, "PokemonsCapturados", 0)
+    total_pokes = len([p for p in player.Pokemons if p is not None]) 
+    total_itens = getattr(player, "Itens", [])
+    baus_abertos = getattr(player, "BausAbertos", 0)
+    maior_poke = maior_poder_pokemon(getattr(player, "Pokemons", []))
+    maior_time = maior_poder_time(getattr(player, "Equipes", []))
+    tempo_jogo = seconds_to_hhmmss(getattr(player, "TempoDeJogo", 0))
+    passos = round(getattr(player, "Passos", 0))
+
+    # Três colunas, quatro linhas cada (preenche na ordem pedida)
+    linha_h = 65
+    base_y = top_info + 35
+
+    # Coluna 1
+    draw_kv("Nome do Jogador", nome, col1_x, base_y + 0 * linha_h)
+    # Coluna 3 (reservada para crescer; mantemos 4 linhas para padronização visual)
+    draw_kv("Vitórias (Total)", getattr(player, "BatalhasVencidasPVP", 0) + getattr(player, "BatalhasVencidasBOT", 0),
+            col1_x, base_y + 1 * linha_h)
+    draw_kv("Vitórias vs Jogadores", getattr(player, "BatalhasVencidasPVP", 0),
+            col1_x, base_y + 2 * linha_h)
+    draw_kv("Vitórias vs BOT", getattr(player, "BatalhasVencidasBOT", 0),
+            col1_x, base_y + 3 * linha_h)
+
+    draw_kv("Numero de Pokémons", total_pokes, col2_x, base_y + 0 * linha_h)
+    draw_kv("Numero de Itens", total_itens, col2_x, base_y + 1 * linha_h)
+    draw_kv("Pokémons Capturados", pokes_capt, col2_x, base_y + 2 * linha_h)
+    draw_kv("Baús Abertos", baus_abertos, col2_x, base_y + 3 * linha_h)
+
+    draw_kv("Maior poder Pokémon", maior_poke, col3_x, base_y + 0 * linha_h)
+    draw_kv("Maior poder Time", maior_time, col3_x, base_y + 1 * linha_h)
+    draw_kv("Tempo de Jogo", tempo_jogo, col3_x, base_y + 2 * linha_h)
+    draw_kv("Passos", passos, col3_x, base_y + 3 * linha_h)
 
     # ---------------- Direita: área do player ----------------
-    area_player_w = 500
+    area_player_w = 430
     area_player_h = 350
     area_player_x = x + largura - area_player_w - padding
     area_player_y = y + padding
@@ -841,17 +962,90 @@ def PainelPlayer(tela, pos, player, eventos, parametros):
             width=2, border_radius=12
         )
 
+    # ---------------- Pílulas (à ESQUERDA do fundo do player, grudadas) ----------------
+    # Cores base
+    COR_ROXO = (138, 43, 226)   # Nivel
+    COR_VERM = (220, 20, 60)    # Maestria
+    COR_AZUL = (30, 144, 255)   # Velocidade
+    COR_AMAR = (255, 215, 0)    # Mochila
+    COR_ALERTA = (40, 200, 120) # Verde atenção
+
+    nivel = getattr(player, "Nivel", 0)
+    maestria = getattr(player, "Maestria", 0)
+    velocidade = getattr(player, "Velocidade", 0)
+    mochila = getattr(player, "Mochila", 0)
+
+    soma_sec = (maestria or 0) + (velocidade or 0) + (mochila or 0)
+    mismatch = (soma_sec != (nivel or 0))
+
+    # Alpha base das pílulas
+    alpha_base = 150
+    # Alpha pulsante (para alerta)
+    t = pygame.time.get_ticks() / 1000.0
+    alpha_pulse = int(100 + 80 * (0.5 + 0.5 * math.sin(2.2 * t)))  # ~100..180
+
+    # Dimensões e posicionamento: empilhadas, a direita das pílulas encosta no x_quadrado
+    pill_gap = 12
+    pill_h = 50
+    # Larguras decrescentes (a 1ª é a maior)
+    w1, w2, w3, w4 = 240, 180, 180, 180
+
+    # Topo para centralizar verticalmente na área do player
+    start_y = y_quadrado + 5
+
+    # Cada pílula encosta o lado direito no x_quadrado - 6 (um leve afastamento)
+    right_edge = x_quadrado - 6
+
+    # 1) Nível (maior)
+    r1 = pygame.Rect(right_edge - w1, start_y + 0 * (pill_h + pill_gap), w1, pill_h)
+    draw_pill(
+        tela, r1, COR_ROXO, alpha_base,
+        "Nível", nivel, big=True,
+        xp=player.XP,                     # XP atual do jogador
+        nivel_for_xp=nivel,              # nível atual para calcular o necessário
+        estado_barra={},   # dicionário persistente p/ animação suave
+        chave_xp="xp_nivel"              # chave única desta barra
+    )
+
+    # 2) Maestria
+    color2 = COR_ALERTA if mismatch else COR_VERM
+    alpha2 = alpha_pulse if mismatch else alpha_base
+    r2 = pygame.Rect(right_edge - w2, start_y + 1 * (pill_h + pill_gap), w2, pill_h)
+    draw_pill(tela, r2, color2, alpha2, "Maestria", maestria)
+    if mismatch:
+        Botao_invisivel((r2.x, r2.y, r2.w, r2.h),
+            lambda: setattr(player, "Maestria", getattr(player, "Maestria") + 1)
+        )
+
+    # 3) Velocidade
+    color3 = COR_ALERTA if mismatch else COR_AZUL
+    alpha3 = alpha_pulse if mismatch else alpha_base
+    r3 = pygame.Rect(right_edge - w3, start_y + 2 * (pill_h + pill_gap), w3, pill_h)
+    draw_pill(tela, r3, color3, alpha3, "Velocidade", velocidade)
+    if mismatch:
+        Botao_invisivel((r3.x, r3.y, r3.w, r3.h),
+            lambda: setattr(player, "Velocidade", getattr(player, "Velocidade") + 1)
+        )
+
+    # 4) Mochila
+    color4 = COR_ALERTA if mismatch else COR_AMAR
+    alpha4 = alpha_pulse if mismatch else alpha_base
+    r4 = pygame.Rect(right_edge - w4, start_y + 3 * (pill_h + pill_gap), w4, pill_h)
+    draw_pill(tela, r4, color4, alpha4, "Mochila", mochila)
+    if mismatch:
+        Botao_invisivel((r4.x, r4.y, r4.w, r4.h),
+            lambda: setattr(player, "Mochila", getattr(player, "Mochila") + 1)
+        )
+
     # ---------------- Slider de Skin (inferior) ----------------
-    # Slider opera sobre o ÍNDICE na lista SkinsLiberadas (0..N-1)
     slider_x = x + padding
     slider_y = y + altura - 30
     slider_w = largura - 2 * padding
 
     NovoNumero = (player.SkinsLiberadas.index(player.SkinNumero) + 1)
-
     NovoNumero = Slider(
         tela, "Skin", slider_x, slider_y, slider_w,
-        NovoNumero, 1, max(0, total_skins_lib) ,
+        NovoNumero, 1, max(0, len(getattr(player, "SkinsLiberadas", []))),
         (180, 180, 180), (255, 255, 255), eventos,
         "", Mostrar=False)
 
@@ -861,12 +1055,10 @@ def PainelPlayer(tela, pos, player, eventos, parametros):
         player.SkinRedimensionada = pygame.transform.scale(player.Skin, (83, 66))
 
     tela.blit(font.render("Use o slider para trocar a skin do jogador", True, cor_texto_suave),
-              (slider_x, slider_y - 40))
+              (slider_x, slider_y - 45))
 
     # ---------------- Desenhar o player (canto direito superior) ----------------
-    # Usa a skin já atualizada do próprio player
     centro_x = x_quadrado + largura_quadrado / 2
     centro_y = y_quadrado + altura_quadrado / 2
-
     DesenharPlayer(tela, player.Skin, (centro_x, centro_y))
 
