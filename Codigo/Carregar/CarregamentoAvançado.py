@@ -72,6 +72,20 @@ def CarregarEstruturasMundo():
 
     return imagens
 
+def CarregarIcones():
+    pasta = os.path.join("Recursos", "Visual", "Icones")
+    imagens = {}
+
+    for nome_arquivo in os.listdir(pasta):
+        if nome_arquivo.lower().endswith(".png"):
+            chave = os.path.splitext(nome_arquivo)[0]
+            caminho_relativo = os.path.join("Icones", nome_arquivo)
+            imagem = Carregar_Imagem(caminho_relativo)
+            if imagem is not None:
+                imagens[chave] = imagem
+
+    return imagens
+
 def CarregarOutrasSkins():
     pasta = os.path.join("Recursos", "Visual", "Skins", "Bloqueadas")
     imagens = []
@@ -91,6 +105,7 @@ def CarregamentoAvançado(info,Pré):
     Consumiveis = CarregarConsumiveis()
     Equipaveis = CarregarEquipaveis()
     Estruturas = CarregarEstruturasMundo()
+    Icones = CarregarIcones()
 
     if Pré:
         Animações = CarregarAnimações()
@@ -121,5 +136,5 @@ def CarregamentoAvançado(info,Pré):
 
     Outros["SkinsTodas"] = Outros["Skins"] + CarregarOutrasSkins()
 
-    info["Conteudo"] = Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Consumiveis, Equipaveis, Estruturas, Animações
+    info["Conteudo"] = Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Consumiveis, Equipaveis, Estruturas, Animações, Icones
     info["Carregado"] = True

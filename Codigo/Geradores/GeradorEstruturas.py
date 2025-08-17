@@ -5,27 +5,31 @@ import pandas as pd
 
 df = pd.read_csv("Dados/Itens.csv")
 
-def GridToDic(grid_numerica):
+OBJ_NOMES = {
+    0:  "Arvore",
+    1:  "Palmeira",
+    2:  "Arvore2",
+    3:  "Pinheiro",
+    4:  "Ouro",
+    5:  "Diamante",
+    6:  "Esmeralda",
+    7:  "Rubi",
+    8:  "Ametista",
+    9:  "Cobre",
+    10: "Pedra",
+    11: "Arbusto",
+    12: "Lava",
+}
 
+def GridToDic(grid_objetos):
     mapa_estruturas = {}
-    
-    for y, linha in enumerate(grid_numerica):
+    for y, linha in enumerate(grid_objetos):
         for x, valor in enumerate(linha):
-            if valor == 0:
+            nome = OBJ_NOMES.get(valor)
+            if nome is None:       # pula vazio (-1) e qualquer valor não mapeado
                 continue
-
-            if valor == 1:
-                nome = "Arvore"
-            elif valor == 2:
-                nome = "Pedra"
-            elif valor == 3:
-                nome = "Moita"
-            else:
-                continue  # ignora valores não mapeados
-
             estrutura = Estrutura(nome, (x, y))
             mapa_estruturas[(x, y)] = estrutura
-
     return mapa_estruturas
 
 class Estrutura:
@@ -42,8 +46,8 @@ class Estrutura:
         tela.blit(img, pos_img)
 
         # Reduzir 10% do tamanho (5% de cada lado)
-        reducao_w = largura * 0.10
-        reducao_h = altura * 0.10
+        reducao_w = largura * 0.15
+        reducao_h = altura * 0.15
         novo_x = pos_img[0] + reducao_w / 2
         novo_y = pos_img[1] + reducao_h / 2
         novo_w = largura - reducao_w

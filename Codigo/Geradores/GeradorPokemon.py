@@ -6,15 +6,16 @@ import pandas as pd
 
 from Codigo.Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem
 from Codigo.Prefabs.Terminal import adicionar_mensagem_terminal
+from Codigo.Prefabs.Particulas import adicionar_estouro
 from Codigo.Funções.FunçõesConsumiveis import ConsumiveisDic
 
 df = pd.read_csv("Dados/Pokemons.csv")
+dfa = pd.read_csv("Dados/Ataques.csv")
 
 berries = [
     "Caxi Berry",
     "Frambo Berry",
     "Simp Berry",
-    "Secret Berry",
     "Lum Berry",
     "Tomper Berry",
     "Abbajuur Berry",
@@ -23,7 +24,9 @@ berries = [
     "Desert Berry",
     "Frozen Berry",
     "Field Berry",
-    "Water Berry"
+    "Water Berry",
+    "Lava Berry",
+    "Magic Berry"
 ]
 
 CAMPOS_POKEMON = [
@@ -157,30 +160,65 @@ def criar_pokemon_especifico(nome):
 
     return CompactarPokemon(info_serializavel)
 
-def MaterializarPokemon(Dados):
+def _mult_iv(pokemon, campo):
+    """Multiplicador de IV no intervalo [0.8, 1.2]. Usa IV_específico ou IV global (ou 0)."""
+    iv_campo = f"IV_{campo}"
+    iv_valor = pokemon.get(iv_campo, pokemon.get("IV", 0))
+    return 0.8 + (iv_valor / 100.0) * 0.4
 
+def _recalcular_total(pokemon):
+    """Mesmo cálculo já usado por você (mantido)."""
+    soma_atributos = (
+        pokemon.get("Atk", 0) +
+        pokemon.get("Def", 0) +
+        pokemon.get("SpA", 0) +
+        pokemon.get("SpD", 0) +
+        pokemon.get("Vel", 0) +
+        pokemon.get("Mag", 0) +
+        pokemon.get("Per", 0) +
+        pokemon.get("Ene", 0) +
+        pokemon.get("EnR", 0) * 2 +
+        pokemon.get("CrD", 0) * 1.5 +
+        pokemon.get("CrC", 0) * 1.5
+    )
+    total = (
+        soma_atributos * 2 +
+        pokemon.get("Vida", 0) +
+        pokemon.get("Sinergia", 0) * 10 +
+        (pokemon.get("Habilidades", 0) + pokemon.get("Equipaveis", 0)) * 20
+    )
+    pokemon["Total"] = total
+
+def MaterializarPokemon(Dados):
     pokemon = Dados.copy()
 
-    for campo in ["Vida", "Atk", "Def", "SpA", "SpD", "Vel",
-                "Mag", "Per", "Ene", "EnR", "CrD", "CrC"]:
-        pokemon[f"{campo}_Base"] = float(pokemon[campo])  # <-- conversão explícita
+    # 1) Congelar bases e aplicar IV no nível 0
+    for campo in ["Vida", "Atk", "Def", "SpA", "SpD", "Vel", "Mag", "Per", "Ene", "EnR", "CrD", "CrC"]:
+        pokemon[f"{campo}_Base"] = float(pokemon[campo])
+        pokemon[campo] = pokemon[f"{campo}_Base"] * _mult_iv(pokemon, campo)
 
-        iv_campo = f"IV_{campo}"
-        iv_valor = pokemon.get(iv_campo, pokemon.get("IV", 0))
-
-        mult_iv = 0.75 + (iv_valor / 100) * 0.5
-
-        pokemon[campo] = pokemon[f"{campo}_Base"] * mult_iv
-    
-    nivel = pokemon["Nivel"]
+    # 2) Subir até o nível informado (a partir do nível 0)
+    nivel_alvo = int(pokemon.get("Nivel", 0))
     pokemon["Nivel"] = 0
-    for i in range(nivel):
+    # garante chaves esperadas
+    pokemon["XP"] = int(pokemon.get("XP", 0))
+    pokemon["Amizade"] = int(pokemon.get("Amizade", 0))
+
+    pokemon["MoveList"] = [None] * 4
+    pokemon["Memoria"] = [None] * 8
+
+    pokemon["Build"] = [None] * pokemon["Equipaveis"]
+
+    for _ in range(nivel_alvo):
         SubirNivel(pokemon)
 
+    # 3) Ajustes iniciais que você já fazia
+    #    (mantidos; apenas cap de amizade para não passar de 100)
     if "Amizade" in pokemon:
-        pokemon["Amizade"] += max(0,random.randint(0,30) - random.randint(0,pokemon["Nivel"]))
+        pokemon["Amizade"] += max(0, random.randint(0, 30) - random.randint(0, pokemon["Nivel"]))
     else:
-        pokemon["Amizade"] = max(0,random.randint(0,30) - random.randint(0,pokemon["Nivel"]))
+        pokemon["Amizade"] = max(0, random.randint(0, 30) - random.randint(0, pokemon["Nivel"]))
+    pokemon["Amizade"] = min(100, pokemon["Amizade"])
 
     pokemon["Fruta Favorita"] = random.choice(berries)
 
@@ -190,56 +228,102 @@ def MaterializarPokemon(Dados):
     else:
         pokemon["XP"] = 0
     
-    soma_atributos = sum([
-            pokemon["Atk"],
-            pokemon["Def"],
-            pokemon["SpA"],
-            pokemon["SpD"],
-            pokemon["Vel"],
-            pokemon["Mag"],
-            pokemon["Per"],
-            pokemon["Ene"],
-            pokemon["EnR"] * 2,
-            pokemon["CrD"] * 1.5,
-            pokemon["CrC"] * 1.5
-        ])
+    while None in pokemon["MoveList"]:
+        dfa["Code"] = pd.to_numeric(dfa["Code"], errors="coerce")
+        r = dfa[dfa["Code"].between(1, 451)].sample(1).iloc[0]
 
-    total = (
-            soma_atributos * 2 +
-            pokemon["Vida"] +
-            pokemon.get("Sinergia", 0) * 10 +
-            (pokemon.get("Habilidades", 0) + pokemon.get("Equipaveis", 0)) * 20
-        )
-    
-    pokemon["Total"] = total
+        novoataque = {
+            "nome": r["Ataque"],
+            "tipo": r["Tipo"],
+            "custo": r["Custo"],
+            "dano": r["Dano"],
+            "estilo": r["Estilo"],
+            "assertividade": r["Assertividade"],
+            "alvo": r["Alvo"],
+            "descrição": r["Descrição"],
+        }
 
+        for i, mov in enumerate(pokemon["MoveList"]):
+            if mov is None:
+                pokemon["MoveList"][i] = novoataque
+                break  # sai do for e volta pro while, garantindo preencher 1 de cada vez
+
+    # 4) Recalcular Total ao final da materialização
+    _recalcular_total(pokemon)
     return pokemon
 
 def SubirNivel(pokemon):
+    """Sobe 1 nível:
+       - soma 10% da base (com IV) em 2 atributos (par do ciclo)
+       - zera XP
+       - +1 Amizade em níveis múltiplos de 5 (máx 100)
+       - recalcula Total
+       Observação: no 100, cada atributo terá recebido 20 * 10% = +200% da base(IV), totalizando 3x.
+    """
 
-    # Mapeamento de quais atributos sobem em quais níveis (1 a 10)
-    ordem_niveis = ["Vida", "Atk", "SpA", "Def", "SpD", "Mag", "Ene", "EnR", "Per", "Vel"]
+    PARES_LEVEL_UP = [
+        ("Vida", "Mag"),
+        ("Atk",  "SpA"),
+        ("Def",  "SpD"),
+        ("Per",  "Vel"),
+        ("EnR",  "Ene"),
+    ]
+    INCR_PCT = 0.10  # 10% da base (com IV) em cada up
+    NIVEL_MAX = 100  # nível máximo
 
-    # Próximo nível
-    nivel_atual = pokemon["Nivel"] + 1
+    # trava no nível máx (não muda nada caso já esteja nele)
+    if pokemon.get("Nivel", 0) >= NIVEL_MAX:
+        return pokemon
+
+    # próximo nível
+    nivel_atual = pokemon.get("Nivel", 0) + 1
     pokemon["Nivel"] = nivel_atual
 
-    # Descobre qual atributo sobe
-    idx = (nivel_atual - 1) % len(ordem_niveis)
-    atributo = ordem_niveis[idx]
+    # quais dois atributos deste nível
+    par = PARES_LEVEL_UP[(nivel_atual - 1) % len(PARES_LEVEL_UP)]
 
-    # Não aumenta CrC nem CrD (já garantido pela lista)
-    base = pokemon[f"{atributo}_Base"]
+    for atributo in par:
+        base = pokemon.get(f"{atributo}_Base", 0.0)
+        mult = _mult_iv(pokemon, atributo)
+        base_iv = base * mult                  # valor base já com IV aplicado
+        incremento = base_iv * INCR_PCT        # +10% da base(IV) — incremento linear (não composto)
+        pokemon[atributo] = pokemon.get(atributo, 0.0) + incremento
 
-    # Pegando IV específico
-    iv_campo = f"IV_{atributo}"
-    iv_valor = pokemon.get(iv_campo, pokemon.get("IV", 0))
-    mult_iv = 0.75 + (iv_valor / 100) * 0.5
+    # XP zera ao subir
+    pokemon["XP"] = 0
 
-    # Cálculo: valor atual + (20% da base com IV aplicado)
-    incremento = base * mult_iv * 0.20
-    pokemon[atributo] += incremento
+    # Amizade +1 em níveis múltiplos de 5 (cap 100)
+    if nivel_atual % 5 == 0:
+        pokemon["Amizade"] = min(100, int(pokemon.get("Amizade", 0)) + 1)
 
+    if random.randint(0, 100) > 75:
+        dfa["Code"] = pd.to_numeric(dfa["Code"], errors="coerce")
+        r = dfa[dfa["Code"].between(1, 451)].sample(1).iloc[0]
+
+        novoataque = {
+            "nome": r["Ataque"],
+            "tipo": r["Tipo"],
+            "custo": r["Custo"],
+            "dano": r["Dano"],
+            "estilo": r["Estilo"],
+            "assertividade": r["Assertividade"],
+            "alvo": r["Alvo"],
+            "descrição": r["Descrição"],
+        }
+
+        if None in pokemon["MoveList"]:
+            for i, mov in enumerate(pokemon["MoveList"]):
+                if mov is None:
+                    pokemon["MoveList"][i] = novoataque
+                    break  # garante que só preenche o primeiro None encontrado
+        elif None in pokemon["Memoria"]:
+            for i, mov in enumerate(pokemon["Memoria"]):
+                if mov is None:
+                    pokemon["Memoria"][i] = novoataque
+                    break
+
+    # Recalcula o Total após o up
+    _recalcular_total(pokemon)
     return pokemon
 
 class Pokemon:
@@ -257,7 +341,7 @@ class Pokemon:
         self.contador_anim = 0
 
         self.TamanhoMirando = extra["TamanhoMirando"]
-        self.VelocidadeMirando = extra["VelocidadeMirando"]  # graus por frame
+        self.VelocidadeMirando = extra["VelocidadeMirando"] * 100 # graus por frame
         self.Dificuldade = extra["Dificuldade"]
         self.Frutas = extra["Frutas"]
         self.MaxFrutas = extra.get("MaxFrutas", 2)
@@ -308,10 +392,12 @@ class Pokemon:
         self.sumiu_de_vez = False
         self.FimCaptura = False
 
+        self.tempo_anim = 0
+
     def Atualizar(self, tela, pos, player, delta_time):
-        VELOCIDADE_ANIMACAO = 3
-        VELOCIDADE_FADE = 220  # alpha/seg para fugir
-        VELOCIDADE_COR = 1.5   # velocidade da transição da cor
+        VELOCIDADE_ANIMACAO = 0.03  # tempo em segundos para trocar de frame
+        VELOCIDADE_FADE = 220       # alpha/seg para fugir
+        VELOCIDADE_COR = 1.5        # velocidade da transição da cor
 
         if self.sumiu_de_vez or self.FimCaptura:
             return
@@ -323,10 +409,10 @@ class Pokemon:
         self.Rect.center = pos
 
         # ===== animação do sprite =====
-        self.contador_anim += 1
-        if self.contador_anim >= VELOCIDADE_ANIMACAO:
+        self.tempo_anim += delta_time
+        if self.tempo_anim >= VELOCIDADE_ANIMACAO:
             self.indice_anim = (self.indice_anim + 1) % len(self.animação)
-            self.contador_anim = 0
+            self.tempo_anim = 0
 
         quadro = self.animação[self.indice_anim]
         ret = quadro.get_rect(center=pos)
@@ -459,6 +545,16 @@ class Pokemon:
             self.Loc = [nova_pos.x, nova_pos.y]
     
     def Frutificar(self, dados, player):
+
+        # if len(self.Frutas) < self.MaxFrutas:
+        #     if dados["nome"] not in self.Frutas:
+        #         self.Frutas.append(dados["nome"])
+        #     else:
+        #         return
+        # else:
+        #     return
+        
+        adicionar_estouro(self.Loc, 40, 30, [(255, 182, 193),(199, 21, 133)])
         
         ConsumiveisDic[str(dados["nome"])](self, player, dados)
 

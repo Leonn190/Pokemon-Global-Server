@@ -488,40 +488,173 @@ def BarraMovel(
     knob.set_alpha(alpha)
     tela.blit(knob, knob_rect.topleft)
 
-def cria_fundo_degrade(cor1, cor2, tamanho, arredondada=False, raio=0):
+def SurfaceAtaque(novoataque, fontes, icones, main=False, size=(160, 32)):
     """
-    Gera uma Surface com gradiente diagonal de cor1 (sup. esquerda) para cor2 (inf. direita).
+    Renderiza a 'pílula' de ataque.
+    - Agora recebe apenas `fontes` (lista indexada pelo tamanho: fontes[18], fontes[16], fontes[14], etc).
+    - A fonte do NOME é escolhida automaticamente: tenta 18, depois 16, depois 14.
+    - main=False: só nome + fundo (largura mínima 155)
+    - main=True : nome + bloco de custo/ícone (largura mínima 185)
+    - size: (w,h) desejado; se menor que o mínimo para o modo, é forçado.
+    """
 
-    :param cor1: tuple RGB inicial
-    :param cor2: tuple RGB final
-    :param tamanho: (largura, altura)
-    :param arredondada: bool, se True aplica bordas arredondadas
-    :param raio: raio das bordas arredondadas
-    :return: pygame.Surface com gradiente
-    """
-    w, h = tamanho
+    # Paleta por tipo (fallback para 'normal')
+    TIPO_CORES = {
+        "normal":   ((250, 250, 250), (220, 220, 220)),
+        "fogo":     ((255, 100, 0),   (200, 0, 0)),
+        "agua":     ((0, 150, 255),   (0, 50, 200)),
+        "eletrico": ((255, 255, 0),   (255, 150, 0)),
+        "planta":   ((50, 200, 50),   (0, 100, 0)),
+        "gelo":     ((150, 255, 255), (0, 200, 200)),
+        "lutador":  ((255, 140, 40),  (200, 90, 0)),
+        "venenoso": ((180, 0, 180),   (100, 0, 100)),
+        "terrestre":((200, 150, 50),  (100, 70, 0)),
+        "voador":   ((150, 200, 255), (50, 100, 200)),
+        "psiquico": ((255, 100, 255), (180, 0, 180)),
+        "inseto":   ((150, 200, 50),  (80, 150, 0)),
+        "pedra":    ((180, 150, 100), (100, 80, 50)),
+        "fantasma": ((100, 50, 150),  (50, 0, 100)),
+        "dragao":   ((60, 120, 130),  (0, 70, 80)),
+        "sombrio":  ((60, 50, 40),    (20, 15, 10)),
+        "metal":    ((180, 180, 200), (100, 100, 120)),
+        "fada":     ((255, 180, 220), (230, 120, 170)),
+        "sonoro":   ((210, 210, 210), (170, 170, 170)),
+        "cosmico":  ((50, 50, 100),   (0, 0, 40)),
+    }
+
+    # -------- helpers --------
+    def _diagonal_gradient(size, c0, c1):
+        """Gradiente do canto inferior-esquerdo (c0) p/ superior-direito (c1)."""
+        w, h = size
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        x = np.linspace(0.0, 1.0, w, dtype=np.float32)
+        y = np.linspace(0.0, 1.0, h, dtype=np.float32)
+        X, Y = np.meshgrid(x, y)  # (h,w)
+        t = np.clip((X + (1.0 - Y)) * 0.5, 0.0, 1.0)[..., None]  # (h,w,1)
+        c0 = np.asarray(c0[:3], dtype=np.float32)
+        c1 = np.asarray(c1[:3], dtype=np.float32)
+        grad = (c0 * (1.0 - t) + c1 * t).astype(np.uint8)        # (h,w,3)
+        arr3 = pygame.surfarray.pixels3d(surf)                   # (w,h,3)
+        arr3[...] = grad.swapaxes(0, 1)                          # (h,w,3)->(w,h,3)
+        alpha = pygame.surfarray.pixels_alpha(surf)              # (w,h)
+        alpha[...] = 255
+        del arr3, alpha
+        return surf
+
+    def _auto_text_color(rgb):
+        r, g, b = rgb
+        lumin = 0.2126*r + 0.7152*g + 0.0722*b
+        return (0, 0, 0) if lumin > 160 else (255, 255, 255)
+
+    def _get_font(sz_default):
+        """Tenta fontes[sz]; se não existir, procura a menor disponível abaixo; se não achar, cai na primeira disponível."""
+        try:
+            return fontes[sz_default]
+        except Exception:
+            # procura menor
+            for s in range(sz_default-1, -1, -1):
+                try:
+                    return fontes[s]
+                except Exception:
+                    continue
+            # fallback: primeira fonte válida na lista
+            for f in fontes:
+                if f:
+                    return f
+            raise RuntimeError("Lista 'fontes' vazia ou inválida.")
+
+    # -------- dimensões --------
+    min_w = 190 if main else 160
+    w, h = size
+    if w < min_w:
+        w = min_w
+    radius  = h // 2
+    padding = 6
+
+    # -------- fundo --------
+    tipo = str(novoataque.get("tipo", "normal")).lower()
+    c0, c1 = TIPO_CORES.get(tipo, TIPO_CORES["normal"])
+    grad = _diagonal_gradient((w, h), c0, c1)
+    mask = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=radius)
+    grad.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
     surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    surf.blit(grad, (0, 0))
 
-    # cria matriz de interpolação diagonal
-    xs = np.linspace(0, 1, w)
-    ys = np.linspace(0, 1, h)
-    xx, yy = np.meshgrid(xs, ys)
-    fator = (xx + yy) / 2  # média dos dois eixos
+    # cor do nome por contraste (amostra esquerda)
+    sample_x = int(w * 0.25)
+    sample_y = h // 2
+    text_color = _auto_text_color(grad.get_at((sample_x, sample_y))[:3])
 
-    # converte cores para array
-    cor1 = np.array(cor1, dtype=np.float32)
-    cor2 = np.array(cor2, dtype=np.float32)
+    # -------- dados básicos --------
+    nome = str(novoataque.get("nome", ""))
 
-    # interpolação
-    grad = (cor1 + (cor2 - cor1) * fator[..., None]).astype(np.uint8)
+    # -------- bloco direito (quando main=True) --------
+    estilo = str(novoataque.get("estilo", "n")).lower()
+    if   estilo == "n": icon = icones.get("CustoFisico")
+    elif estilo == "s": icon = icones.get("CustoStatus")
+    elif estilo == "e": icon = icones.get("CustoEspecial")
+    else:               icon = icones.get("CustoFisico")
 
-    # transfere para surface
-    pygame.surfarray.blit_array(surf, grad.swapaxes(0, 1))
+    try:
+        custo_val = round(float(novoataque.get("custo", 0)))
+    except Exception:
+        custo_val = 0
+    custo_txt   = str(custo_val)
 
-    # aplica máscara arredondada se necessário
-    if arredondada and raio > 0:
-        mask = pygame.Surface((w, h), pygame.SRCALPHA)
-        pygame.draw.rect(mask, (255, 255, 255), (0, 0, w, h), border_radius=raio)
-        surf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    # Custo usa sempre 14 (ou fallback) — conforme pedido de 1 lista de fontes
+    fonte_custo = _get_font(14)
+    custo_surf  = fonte_custo.render(custo_txt, True, (230, 230, 230))
 
+    # Ícone levemente menor e **gap um pouco menor que antes**
+    icon_side = max(1, int(h * 0.65))   # ~65% da altura
+    gap       = 1                       # antes 3 -> agora 2 (reduz "bem pouco")
+    right_pad = max(3, padding - 2)
+
+    if main:
+        sub_w = padding + icon_side + gap + custo_surf.get_width() + right_pad
+        sub_w = int(min(w * 0.5, sub_w))   # bloco mais enxuto (<= 50% da largura)
+        sub_x = w - sub_w
+
+        sub = pygame.Surface((sub_w, h), pygame.SRCALPHA)
+        pygame.draw.rect(sub, (30, 30, 30, 140), sub.get_rect(), border_radius=radius)
+        surf.blit(sub, (sub_x, 0))
+
+        if icon is not None:
+            ic = pygame.transform.smoothscale(icon, (icon_side, icon_side))
+            ix = sub_x + padding
+            iy = (h - icon_side) // 2
+            surf.blit(ic, (ix, iy))
+            cx = ix + icon_side + gap
+        else:
+            cx = sub_x + padding
+
+        cy = (h - custo_surf.get_height()) // 2
+        surf.blit(custo_surf, (cx, cy))
+    else:
+        sub_x = w  # sem bloco direito; nome ocupa até o fim
+
+    # -------- escolher fonte do NOME (18 -> 16 -> 14) conforme espaço --------
+    max_nome_w = max(0, sub_x - padding - padding)
+    for sz in (18, 16, 14):
+        fonte_nome_try = _get_font(sz)
+        if fonte_nome_try.size(nome)[0] <= max_nome_w:
+            fonte_nome = fonte_nome_try
+            break
+    else:
+        fonte_nome = _get_font(14)  # se nenhum coube, fixa 14 e elipsa depois
+
+    nome_surf = fonte_nome.render(nome, True, text_color)
+
+    # -------- render do nome (com ellipsis se necessário) --------
+    nome_x = padding
+    nome_y = (h - nome_surf.get_height()) // 2
+    if nome_surf.get_width() > max_nome_w:
+        texto = nome
+        while texto and fonte_nome.size(texto + "...")[0] > max_nome_w:
+            texto = texto[:-1]
+        nome_surf = fonte_nome.render((texto + "...") if texto else "...", True, text_color)
+
+    surf.blit(nome_surf, (nome_x, nome_y))
     return surf

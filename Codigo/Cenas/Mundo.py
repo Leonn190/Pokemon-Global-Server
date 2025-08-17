@@ -10,6 +10,7 @@ from Codigo.Modulos.Inventario import TelaInventario
 from Codigo.Modulos.Paineis import BarraDeItens
 from Codigo.Modulos.Comandos import ComandosMundo
 from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda
+from Codigo.Prefabs.Particulas import atualizar_e_desenhar_bursts
 from Codigo.Prefabs.Terminal import terminal
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Tecla
 from Codigo.Prefabs.Sonoridade import Musica
@@ -29,6 +30,7 @@ Estruturas = None
 Equipaveis = None
 Consumiveis = None
 Animaçoes = None
+Icones = None
 
 player = None
 mapa = None
@@ -138,7 +140,6 @@ def GerenciadorDePokemonsProximos(Parametros, Mapa):
 
                 # Se tiver Fugiu == 1 ou Capturado == 1, marcar como removido
                 if pkm_info.get("Fugiu", False) != False or pkm_info.get("Capturado", False) != False:
-                    print(1)
                     if id_ not in Parametros["IDsPokemonsRemovidos"]:
                         Parametros["IDsPokemonsRemovidos"].append(id_)
 
@@ -211,6 +212,12 @@ def LoopRemoveBaus(parametros):
 
 def MundoTelaOpçoes(tela, estados, eventos, parametros):
 
+    if parametros["TelaConfigurações"]["Entrou"]:
+        if pygame.mouse.get_pressed()[0]:
+            return
+        else:
+            parametros["TelaConfigurações"]["Entrou"] = False
+
     Botao(
         tela, "Voltar", (710, 300, 500, 150), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
         lambda: parametros.update({"Tela": MundoTelaPadrao}),
@@ -245,9 +252,9 @@ def MundoTelaPadrao(tela, estados, eventos, parametros):
         terminal(tela,Fontes[16],player.Nome,pygame.K_TAB,eventos,parametros,ComandosMundo,parametros)
 
 def MundoLoop(tela, relogio, estados, config, info):
-    global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, player, mapa, camera
+    global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, player, mapa, camera
     if Cores == None:
-        Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Consumiveis, Equipaveis, Estruturas, Animaçoes = info["Conteudo"]
+        Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Consumiveis, Equipaveis, Estruturas, Animaçoes, Icones = info["Conteudo"]
 
     parametros = {
         "Link": info["Server"]["Link"],
@@ -257,6 +264,7 @@ def MundoLoop(tela, relogio, estados, config, info):
         "Running": True,   # flag para controle da thread
         "Tela": MundoTelaPadrao,
         "Config": config,
+        "TelaConfigurações": {"Entrou": False},
         "PokemonsProximos": [],
         "PokemonsRemover": [],
         "PokemonsAtualizar": [],
@@ -306,7 +314,7 @@ def MundoLoop(tela, relogio, estados, config, info):
         y_base = 10  # Posição inicial do topo
         espaco = 5   # Espaço entre as linhas
 
-        atualizar_e_desenhar_mensagens_itens(tela)
+        atualizar_e_desenhar_mensagens_itens(tela, parametros["delta_time"])
 
         if config["FPS Visivel"]:
             fps_atual = relogio.get_fps()
@@ -326,10 +334,12 @@ def MundoLoop(tela, relogio, estados, config, info):
         if config["Cords Visiveis"]:
             x_cord = round(player.Loc[0], 1)
             y_cord = round(player.Loc[1], 1)
-            texto = f" X:{x_cord} Y:{y_cord}"
+            texto = f" X:{round(x_cord - 450)} Y:{round(y_cord - 450)}"
             texto_surface = Fontes[25].render(texto, True, (255, 255, 255))
             x = tela.get_width() - texto_surface.get_width() - 10
             texto_com_borda(tela, texto, Fontes[25], (x, y_base), (255, 255, 255), (0, 0, 0))
+        
+        atualizar_e_desenhar_bursts(tela,[x_cord,y_cord], parametros["delta_time"])
 
         Clarear(tela, info)
         pygame.display.update()

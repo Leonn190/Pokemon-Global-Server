@@ -66,43 +66,47 @@ class MensagemItemGanho:
     LARGURA = 300
     ALTURA = 60
     PADDING = 10
-    DURAÇÃO = 300  # frames
-    ESPAÇO_ENTRE_MENSAGENS = 5
-    ANIM_FRAMES = 30  # frames da animação de entrada
+    DURACAO_MS = 5000          # duração total em milissegundos (~300 frames @60fps)
+    ESPACO_ENTRE_MENSAGENS = 5
+    ANIM_MS = 500              # duração da animação de entrada em milissegundos (~30 frames @60fps)
 
     def __init__(self, nome_item, imagem_item):
         self.nome = nome_item
-        self.imagem = imagem_item
-        self.frame_atual = 0
-        self.ativa = True
-
-        self.imagem = pygame.transform.scale(self.imagem, (45, 45))
+        self.imagem = pygame.transform.scale(imagem_item, (45, 45))
         self.fonte = pygame.font.Font(None, 28)
 
-    def atualizar(self):
-        self.frame_atual += 1
-        if self.frame_atual >= self.DURAÇÃO:
+        self.elapsed_ms = 0.0   # tempo acumulado em ms
+        self.ativa = True
+
+    def atualizar(self, delta_time):
+        """
+        delta_time: segundos desde o último frame (ex.: clock.get_time()/1000.0)
+        """
+        self.elapsed_ms += float(delta_time) * 1000.0
+        if self.elapsed_ms >= self.DURACAO_MS:
             self.ativa = False
 
-    def desenhar(self, tela, indice):
-        alpha = max(0, 255 - int((self.frame_atual / self.DURAÇÃO) * 255))
+    def desenhar(self, tela, indice, delta_time):
+        f_ms = self.elapsed_ms
+        dur_ms = float(self.DURACAO_MS)
+
+        # fade-out linear ao longo da duração
+        alpha = max(0, 255 - int((f_ms / dur_ms) * 255))
 
         largura = self.LARGURA
         altura = self.ALTURA
         padding = self.PADDING
 
         y_base = tela.get_height() - altura - 20
-        y = y_base - (indice * (altura + self.ESPAÇO_ENTRE_MENSAGENS))
+        y = y_base - (indice * (altura + self.ESPACO_ENTRE_MENSAGENS))
 
-        # posição X fixa final
+        # posição X final
         x_final = tela.get_width() - largura - 20
 
-        # animação de entrada: deslizando da direita para x_final
-        if self.frame_atual < self.ANIM_FRAMES:
-            # começa fora da tela à direita (largura da tela)
+        # animação de entrada: deslizando da direita para x_final, baseada em tempo (ms)
+        if f_ms < self.ANIM_MS:
             x_inicial = tela.get_width()
-            # interpola linearmente a posição X do início ao fim durante os frames da animação
-            progresso = self.frame_atual / self.ANIM_FRAMES
+            progresso = f_ms / float(self.ANIM_MS)  # 0..1
             x = x_inicial + (x_final - x_inicial) * progresso
         else:
             x = x_final
@@ -129,24 +133,26 @@ class MensagemItemGanho:
         tela.blit(imagem_alpha, (int(x) + padding, y + (altura - self.imagem.get_height()) // 2))
         tela.blit(texto_surface, (int(x) + padding + 50, y + (altura - texto_surface.get_height()) // 2))
 
+
 def adicionar_mensagem_item(nome_item, imagens_dict):
     if nome_item not in imagens_dict:
         print(f"[!] Imagem não encontrada para o item '{nome_item}'")
         return
-
     imagem = imagens_dict[nome_item]
     nova_mensagem = MensagemItemGanho(nome_item, imagem)
     mensagens_itens.append(nova_mensagem)
 
-def atualizar_e_desenhar_mensagens_itens(tela):
-    # remove mensagens inativas
+
+def atualizar_e_desenhar_mensagens_itens(tela, delta_time):
+    # atualiza (time-based) e filtra inativas
     for msg in mensagens_itens:
-        msg.atualizar()
+        msg.atualizar(delta_time)
     mensagens_ativas = [msg for msg in mensagens_itens if msg.ativa]
 
-    # redesenha as mensagens empilhadas
+    # redesenha empilhadas (bottom-up)
     for i, msg in enumerate(reversed(mensagens_ativas)):
-        msg.desenhar(tela, i)
+        msg.desenhar(tela, i, delta_time)
 
-    # atualiza a lista principal
+    # mantém apenas as ativas
     mensagens_itens[:] = mensagens_ativas
+

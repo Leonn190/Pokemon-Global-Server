@@ -64,7 +64,7 @@ class Player:
         self.TempoDeJogo += delta_time
 
         for projetil in self.Projeteis:
-            projetil.atualizar(tela, self.Loc, self)
+            projetil.atualizar(tela, self.Loc, self, delta_time)
 
         # Centro da tela
         largura_tela, altura_tela = tela.get_size()

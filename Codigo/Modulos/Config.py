@@ -128,8 +128,8 @@ def TelaConfigurações(tela, estados, eventos, parametros):
 
     # Botões de Voltar e Salvar
     Botao(tela, "Voltar", (x + largura - 470 - 390, y + altura - 85, 390, 70), Texturas["azul"], Cores["preto"], Cores["branco"],
-          [lambda: Voltar(), VerificaSonoridade(parametros["Config"])], Fontes[40], estados.setdefault("Voltar", {}), eventos=eventos)
+          [lambda: Voltar(),lambda: VerificaSonoridade(parametros["Config"]), lambda: parametros.update({"TelaConfigurações": {"Entrou": True}})], Fontes[40], estados.setdefault("Voltar", {}), eventos=eventos)
 
     Botao(tela, "Salvar", (x + largura - 40 - 390, y + altura - 85, 390, 70), Texturas["verde"], Cores["preto"], Cores["branco"],
-          [lambda: SalvarConfig(parametros["Config"]), lambda: Voltar(), VerificaSonoridade(parametros["Config"])], Fontes[40], estados.setdefault("Salvar", {}), eventos=eventos)
+          [lambda: SalvarConfig(parametros["Config"]), lambda: Voltar(), VerificaSonoridade(parametros["Config"]), lambda: parametros.update({"TelaConfigurações": {"Entrou": True}})], Fontes[40], estados.setdefault("Salvar", {}), eventos=eventos)
     

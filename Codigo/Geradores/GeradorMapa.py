@@ -146,12 +146,31 @@ class Camera:
 
     def pegar_cor_bioma(self, bioma):
         # Dicionário simples de cor por tipo de bioma
+
+        #     "OCEAN":        0,
+        #     "LAKE":         1,
+        #     "PLAIN":        2,
+        #     "FOREST":       3,
+        #     "DESERT":       4,
+        #     "SNOW":         5,
+        #     "VULCANO":      6,
+        #     "TERRA_MAGICA": 7,
+        #     "PANTANO":      8,
+
+
         cores = {
-            0: (100, 200, 100),  # verde - grama
-            1: (150, 150, 255),  # azul - água
-            2: (210, 180, 140),  # marrom - terra
-            3: (250, 250, 250),  # branco - neve
-            4: (255, 255, 0),    # amarelo - deserto
+            0: (20, 60, 150),  
+            1: (40, 90, 170),  
+            2: (120, 190, 90),  
+            3: (50, 120, 60),  
+            4: (238, 214, 87),
+            5: (235, 240, 245),
+            6: (150, 20, 20),
+            7: (150, 60, 200)    
         }
+
+        if bioma == 8:
+            bioma = 2
+
         return cores.get(bioma, (0, 0, 0))  # padrão: preto
     

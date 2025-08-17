@@ -1,7 +1,7 @@
 import pygame
 import math
 
-from Codigo.Prefabs.FunçõesPrefabs import Barra, Scrolavel, Slider, BarraMovel
+from Codigo.Prefabs.FunçõesPrefabs import Barra, Scrolavel, Slider, BarraMovel, SurfaceAtaque
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Arrastavel import Arrastavel
@@ -18,10 +18,11 @@ estruturas = None
 equipaveis = None
 consumiveis = None
 animaçoes = None
+icones = None
 
 def BarraDeItens(tela, player, eventos): 
-    from Codigo.Cenas.Mundo import Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes
-    global cores, fontes, texturas, fundos, outros, pokemons, estruturas, equipaveis, consumiveis, animaçoes
+    from Codigo.Cenas.Mundo import Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones
+    global cores, fontes, texturas, fundos, outros, pokemons, estruturas, equipaveis, consumiveis, animaçoes, icones
 
     if cores == None:
         cores = Cores
@@ -34,6 +35,7 @@ def BarraDeItens(tela, player, eventos):
         equipaveis = Equipaveis
         consumiveis = Consumiveis
         animaçoes = Animaçoes
+        icones = Icones
 
     TAMANHO_SLOT = 60
     ESPACO = 4
@@ -189,59 +191,44 @@ B_Voltar = {}
 def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
     global pokemon_cache, pokemon_refresh, pokemon_atributos_salvos
 
-    largura_painel = 1300
-    altura_painel = 700
-    x0, y0 = pos
+    # ========= PALETA =========
+    PALETA = {
+        # painel
+        "fundo": (20, 20, 20),
+        "cabecalho": (35, 35, 35),
+        "linha_separadora": (0, 0, 0),
+        "borda_painel": (0, 0, 0),
 
-    # --- Fundo do painel ---
-    cor_fundo = (139, 69, 19)  # marrom escuro
-    pygame.draw.rect(tela, cor_fundo, (x0, y0, largura_painel, altura_painel))
+        # textos
+        "texto_cabecalho": (255, 255, 255),
+        "texto": (255, 255, 255),
 
-    # --- Cabeçalho ---
-    altura_cabecalho = 70
-    cor_cabecalho = (150, 75, 35)
-    pygame.draw.rect(tela, cor_cabecalho, (x0, y0, largura_painel, altura_cabecalho))
+        # tipagem
+        "tipagem_area_bg": (35, 35, 35),
+        "tipagem_pill_bg": (50, 50, 50),
+        "tipagem_circulo": (255, 255, 255),
+        "tipagem_pct": (235, 235, 235),
 
-    # Linha separadora do cabeçalho
-    pygame.draw.line(
-        tela, (0, 0, 0),
-        (x0, y0 + altura_cabecalho),
-        (x0 + largura_painel, y0 + altura_cabecalho),
-        3
-    )
+        # barras de atributos (12 cores)
+        "barras": [
+            (255, 0, 0),      # Vida
+            (255, 128, 0),    # Atk
+            (255, 255, 0),    # Def
+            (128, 255, 0),    # SpA
+            (0, 255, 0),      # SpD
+            (0, 255, 128),    # Vel
+            (0, 255, 255),    # Mag
+            (0, 128, 255),    # Per
+            (0, 0, 255),      # Ene
+            (128, 0, 255),    # EnR
+            (255, 0, 255),    # CrD
+            (255, 0, 128),    # CrC
+        ],
 
-    # Nome do Pokémon no centro
-    nome_poke = str(pokemon.get("Nome", ""))
-    fonte_cabecalho = fontes[35]
-    txt_nome = fonte_cabecalho.render(nome_poke, True, (255, 255, 255))
-    txt_nome_rect = txt_nome.get_rect(center=(x0 + largura_painel // 2, y0 + altura_cabecalho // 2))
-    tela.blit(txt_nome, txt_nome_rect)
-
-    # --- Botão no canto esquerdo ---
-    botao_x = x0 + 2
-    botao_y = y0 + 2
-    botao_tam = 66
-    Botao(
-        tela, "", (botao_x, botao_y, botao_tam, botao_tam),
-        cores["amarelo"], cores["preto"], cores["branco"],
-        lambda: parametros.update({"PokemonSelecionado": None}),
-        fontes[16], B_Voltar, eventos
-    )
-
-    # --- Imagem do Pokémon no canto direito ---
-    img_x = x0 + largura_painel - botao_tam - 2
-    img_y = y0 + 2
-    if pokemon_refresh:
-        imagem = pokemons.get(nome_poke.lower(), CarregarPokemon(nome_poke.lower(), pokemons))
-    else:
-        imagem = pokemons.get(nome_poke.lower())
-
-    if imagem:
-        imagem_redim = pygame.transform.smoothscale(imagem, (botao_tam, botao_tam))
-        tela.blit(imagem_redim, (img_x, img_y))
-
-    # --- Borda do painel ---
-    pygame.draw.rect(tela, (0, 0, 0), (x0, y0, largura_painel, altura_painel), width=4)
+        # blocos informativos
+        "caixa_info_bg": (70, 70, 70),
+        "caixa_info_borda": (0, 0, 0),
+    }
 
     atributos = [
         ("Vida", "IV_Vida"),
@@ -258,6 +245,17 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
         ("CrC", "IV_CrC"),
     ]
 
+    # ========= Parâmetros base =========
+    largura_painel = 1300
+    altura_painel  = 700
+    x0, y0 = pos
+
+    # ========= Fundo do painel =========
+    cor_fundo      = PALETA["fundo"]
+    cor_cabecalho  = PALETA["cabecalho"]
+    altura_cabecalho = 70
+    pygame.draw.rect(tela, cor_fundo, (x0, y0, largura_painel, altura_painel))
+
     # trecho para animar a barra de status sempre que o pokemon trocar
     if pokemon_refresh:
         for i, (attr, _) in enumerate(atributos):
@@ -272,70 +270,159 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
             pokemon[attr] = 0
         pokemon_refresh = True
 
-    cores_barras = [
-        (255, 0, 0),      # Vida - vermelho
-        (255, 128, 0),    # Atk - laranja
-        (255, 255, 0),    # Def - amarelo
-        (128, 255, 0),    # SpA - verde claro
-        (0, 255, 0),      # SpD - verde
-        (0, 255, 128),    # Vel - verde água
-        (0, 255, 255),    # Mag - ciano
-        (0, 128, 255),    # Per - azul claro
-        (0, 0, 255),      # Ene - azul
-        (128, 0, 255),    # EnR - roxo claro
-        (255, 0, 255),    # CrD - magenta
-        (255, 0, 128),    # CrC - rosa
-    ]
-
-    largura_barra = 30
-    altura_maxima = 250
-    espacamento_horizontal = 75
-
-    margem_inferior = 50
-    margem_superior = 60
-
     fonte_nome = fontes[24]
     fonte_valor = fontes[25]
     fonte_iv = fontes[16]
 
-    # --- TERCEIRO SETOR: animação idle + nível + barra de XP (canto superior esquerdo) ---
+    def _desenhar_cabecalho():
+        """
+        Desenha o cabeçalho à esquerda da área de tipagem (400px).
+        """
+        AREA_W_TIPAGEM = 400
+        cab_x   = x0
+        cab_y   = y0
+        cab_w   = largura_painel - AREA_W_TIPAGEM
+        cab_h   = altura_cabecalho
+        sep_x   = x0 + largura_painel - AREA_W_TIPAGEM  # divisor vertical com a tipagem
+
+        # fundo do cabeçalho (apenas na área à esquerda)
+        pygame.draw.rect(tela, cor_cabecalho, (cab_x, cab_y, cab_w, cab_h))
+
+        # botão (canto esquerdo)
+        botao_tam = min(66, cab_h - 4)
+        botao_x = cab_x + 2
+        botao_y = cab_y + 2
+        Botao(
+            tela, "", (botao_x, botao_y, botao_tam, botao_tam),
+            cores["amarelo"], cores["preto"], cores["branco"],
+            lambda: parametros.update({"PokemonSelecionado": None}),
+            fontes[16], B_Voltar, eventos
+        )
+
+        # imagem do Pokémon (canto direito do cabeçalho, antes do divisor vertical)
+        nome_poke = str(pokemon.get("Nome", ""))
+        if pokemon_refresh:
+            imagem = pokemons.get(nome_poke.lower(), CarregarPokemon(nome_poke.lower(), pokemons))
+        else:
+            imagem = pokemons.get(nome_poke.lower())
+
+        img_pad = 2
+        img_size = botao_tam
+        img_x = sep_x - img_size - img_pad
+        img_y = cab_y + img_pad
+        if imagem:
+            imagem_redim = pygame.transform.smoothscale(imagem, (img_size, img_size))
+            tela.blit(imagem_redim, (img_x, img_y))
+
+        # nome centralizado dentro da área do cabeçalho
+        try:
+            fonte_cabecalho = fontes[35] if 35 < len(fontes) and fontes[35] else fontes[0]
+        except Exception:
+            fonte_cabecalho = fontes[0]
+        txt_nome = fonte_cabecalho.render(nome_poke, True, PALETA["texto_cabecalho"])
+        cx = cab_x + cab_w // 2
+        cy = cab_y + cab_h // 2
+        txt_nome_rect = txt_nome.get_rect(center=(cx, cy))
+        tela.blit(txt_nome, txt_nome_rect)
+
+        # divisor vertical entre cabeçalho e tipagem
+        pygame.draw.line(tela, PALETA["linha_separadora"], (sep_x, cab_y), (sep_x, cab_y + cab_h), 3)
+
+    def _desenhar_tipagem():
+        # Área reservada (400px à direita)
+        AREA_W = 400
+        area_x = x0 + largura_painel - AREA_W
+        area_y = y0
+        area_h = altura_cabecalho
+
+        # Fundo cinza escuro "sobre esse terreno"
+        pygame.draw.rect(tela, PALETA["tipagem_area_bg"], (area_x, area_y, AREA_W, area_h))
+
+        # Pílula (350x50)
+        PILL_W, PILL_H = 350, 50
+        pill_x = area_x + (AREA_W - PILL_W) // 2
+        pill_y = area_y + (area_h - PILL_H) // 2
+        pill_rect = pygame.Rect(pill_x, pill_y, PILL_W, PILL_H)
+        pygame.draw.rect(tela, PALETA["tipagem_pill_bg"], pill_rect, border_radius=PILL_H // 2)
+
+        # Layout interno
+        inner_pad   = 15
+        item_gap    = 18
+        icon_size   = 32
+        circle_r    = icon_size // 2 + 1
+        center_y    = pill_y + PILL_H // 2
+        cursor_x    = pill_x + inner_pad
+
+        # Render por tipo
+        for idx in (1, 2, 3):
+            tipo = pokemon.get(f"Tipo{idx}")
+            if not tipo:
+                continue
+
+            icon = icones.get(tipo)
+            if icon is None and isinstance(tipo, str):
+                icon = icones.get(tipo.lower()) or icones.get(tipo.capitalize())
+            if icon is None:
+                continue
+
+            pct_val = pokemon.get(f"%{idx}", 0)
+            try:
+                if isinstance(pct_val, str) and pct_val.strip().endswith("%"):
+                    pct_txt = pct_val.strip()
+                else:
+                    v = float(pct_val)
+                    pct_txt = f"{int(round(v))}%"
+            except Exception:
+                pct_txt = f"{pct_val}%" if str(pct_val).strip() != "" else "0%"
+
+            txt_surf = fontes[20].render(pct_txt, True, PALETA["tipagem_pct"])
+            needed_w = circle_r * 2 + 8 + txt_surf.get_width()
+            if cursor_x + needed_w + inner_pad > pill_rect.right:
+                break
+
+            # círculo branco + ícone
+            cx = cursor_x + circle_r
+            pygame.draw.circle(tela, PALETA["tipagem_circulo"], (cx, center_y), circle_r)
+            ic = pygame.transform.smoothscale(icon, (icon_size, icon_size))
+            tela.blit(ic, (cx - icon_size // 2, center_y - icon_size // 2))
+
+            # percentual
+            txt_x = cx + circle_r + 8
+            tela.blit(txt_surf, (txt_x, center_y - txt_surf.get_height() // 2))
+
+            cursor_x = txt_x + txt_surf.get_width() + item_gap
+
     def _desenhar_animacao():
         global idle
 
         ANIM_W, ANIM_H = 175, 175
-        # Se quiser posicionar pela "caixa" da animação, defina o canto ESQUERDO/SUPERIOR
         LEFT = x0 + 50
         TOP  = y0 + 100
 
-        # Centro geométrico da animação (a classe desenha no centro)
         CX = LEFT + ANIM_W // 2
         CY = TOP  + ANIM_H // 2
 
-        # --- 1) Nome e frames (carrega se necessário) ---
         nome_poke = pokemon.get("Nome") or pokemon.get("Name") or str(pokemon.get("ID", ""))
-        frames = animaçoes.get(nome_poke)  # use "Animacoes" (ASCII). Evite "Animaçoes" com cedilha.
+        frames = animaçoes.get(nome_poke)
 
-        # --- 2) Instanciar/renovar SÓ quando troca de Pokémon ---
         if pokemon_refresh:
             frames = animaçoes.get(nome_poke, CarregarAnimacaoPokemon(nome_poke, animaçoes))
             idle = Animação(frames=frames, posicao=(CX, CY), intervalo=28, tamanho=1.2)
 
-        # --- 3) Texto "Nível" ACIMA da animação (alinhado ao centro) ---
         nivel = int(pokemon.get("Nivel", 1))
-        txt_nivel = fonte_nome.render(f"Nível {nivel}", True, (0, 0, 0))
+        txt_nivel = fonte_nome.render(f"Nível {nivel}", True, PALETA["texto"])
         txt_nivel_rect = txt_nivel.get_rect(center=(CX, CY - ANIM_H // 2 - 12))
         tela.blit(txt_nivel, txt_nivel_rect)
 
         idle.atualizar(tela)
 
-        # --- 5) Barra de XP ABAIXO da animação ---
         xp_atual = int(pokemon.get("XP", 0))
         xp_max = max(1, nivel * 10)
 
         BAR_W, BAR_H = ANIM_W, 18
         bar_x = CX - BAR_W // 2
         bar_y = CY + ANIM_H // 2 + 10
-        cor_xp = cores["verde"]
+        cor_xp = cores["verde"]  # mantido: usa paleta global 'cores'
 
         Barra(
             tela,
@@ -349,14 +436,20 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
             vertical=False
         )
 
-        # --- 6) Texto "XP atual / XP necessário" abaixo da barra ---
-        txt_xp = fontes[16].render(f"XP: {xp_atual} / {xp_max}", True, (0, 0, 0))
+        txt_xp = fontes[16].render(f"XP: {xp_atual} / {xp_max}", True, PALETA["texto"])
         txt_xp_rect = txt_xp.get_rect(center=(CX, bar_y + BAR_H + 16))
         tela.blit(txt_xp, txt_xp_rect)
 
-    # ---------- HELPER 1: Barras ----------
     def _desenhar_barras():
-        # Pré-calcula o valor máximo ajustado para todas as barras
+        cores_barras = PALETA["barras"]
+
+        largura_barra = 30
+        altura_maxima = 250
+        espacamento_horizontal = 75
+
+        margem_inferior = 50
+        margem_superior = 60
+
         valores_ajustados = []
         for attr, _ in atributos:
             v = pokemon.get(attr, 0)
@@ -374,7 +467,6 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
             valor_atual = pokemon.get(attr, 0)
             valor_iv = pokemon.get(iv_attr, 0)
 
-            # Ajusta o valor para escala da barra
             if attr == "Vida":
                 valor_para_barra = valor_atual / 2
             elif attr == "EnR":
@@ -387,7 +479,6 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
             x_barra = x0 + i * espacamento_horizontal + 30
             y_base = y0 + altura_painel - margem_inferior + 5
 
-            # Usa a função Barra para desenhar
             Barra(
                 tela,
                 (x_barra, y_base - altura_maxima),
@@ -400,24 +491,20 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
                 vertical=True
             )
 
-            # Nome do atributo
-            texto_nome = fonte_nome.render(attr, True, (0, 0, 0))
+            texto_nome = fonte_nome.render(attr, True, PALETA["texto"])
             texto_nome_rect = texto_nome.get_rect(center=(x_barra + largura_barra // 2,
                                                           y_base - altura_maxima - margem_superior + 10))
             tela.blit(texto_nome, texto_nome_rect)
 
-            # Valor do atributo
-            texto_valor = fonte_valor.render(str(int(valor_atual)), True, (0, 0, 0))
+            texto_valor = fonte_valor.render(str(int(valor_atual)), True, PALETA["texto"])
             texto_valor_rect = texto_valor.get_rect(center=(x_barra + largura_barra // 2,
                                                             texto_nome_rect.bottom + 10))
             tela.blit(texto_valor, texto_valor_rect)
 
-            # IV embaixo
-            texto_iv = fonte_iv.render(f"IV: {int(valor_iv)}%", True, (0, 0, 0))
+            texto_iv = fonte_iv.render(f"IV: {int(valor_iv)}%", True, PALETA["texto"])
             texto_iv_rect = texto_iv.get_rect(center=(x_barra + largura_barra // 2, y_base + 20))
             tela.blit(texto_iv, texto_iv_rect)
 
-    # ---------- HELPER 2: Blocos informativos ----------
     def _desenhar_blocos_informativos():
         def calcular_poder_relativo(p):
             stats_relativos = {
@@ -434,7 +521,6 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
                 "CrD": p.get("CrD", 0) * 1.5,
                 "CrC": p.get("CrC", 0) * 1.5
             }
-            # Pegar os 6 maiores valores relativos
             top6 = sorted(stats_relativos.values(), reverse=True)[:6]
             return round(sum(top6) * 4)
 
@@ -455,35 +541,49 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
         altura_caixa = 80
         espacamento_caixa = 15
 
-        # Posição inicial (primeira caixa, primeira coluna)
-        x_base = x0 + len(atributos) * espacamento_horizontal + 25
+        x_base = x0 + len(atributos) * 75 + 25
         y_base = y0 + 225
 
         for i, (titulo, valor) in enumerate(info_caixas):
-            coluna = i // 5  # 0 para primeiras 5, 1 para últimas 5
-            linha = i % 5    # 0 a 4
+            coluna = i // 5
+            linha = i % 5
 
             x_caixa = x_base + coluna * (largura_caixa + espacamento_caixa)
             y_caixa = y_base + linha * (altura_caixa + espacamento_caixa)
 
-            # Desenha caixa
-            pygame.draw.rect(tela, (200, 200, 200), (x_caixa, y_caixa, largura_caixa, altura_caixa))
-            pygame.draw.rect(tela, (0, 0, 0), (x_caixa, y_caixa, largura_caixa, altura_caixa), 2)
+            pygame.draw.rect(tela, PALETA["caixa_info_bg"], (x_caixa, y_caixa, largura_caixa, altura_caixa))
+            pygame.draw.rect(tela, PALETA["caixa_info_borda"], (x_caixa, y_caixa, largura_caixa, altura_caixa), 2)
 
-            # Texto título (em cima)
-            txt_titulo = fonte_nome.render(str(titulo), True, (0, 0, 0))
+            txt_titulo = fonte_nome.render(str(titulo), True, PALETA["texto"])
             txt_titulo_rect = txt_titulo.get_rect(center=(x_caixa + largura_caixa // 2, y_caixa + 20))
             tela.blit(txt_titulo, txt_titulo_rect)
 
-            # Texto valor (embaixo)
-            txt_valor = fonte_valor.render(str(valor), True, (0, 0, 0))
+            txt_valor = fonte_valor.render(str(valor), True, PALETA["texto"])
             txt_valor_rect = txt_valor.get_rect(center=(x_caixa + largura_caixa // 2, y_caixa + altura_caixa - 25))
             tela.blit(txt_valor, txt_valor_rect)
 
-    # --- chamadas das helpers (ordem original: barras primeiro, depois blocos) ---
+    # ========= CABEÇALHO (à esquerda) + TIPAGEM (à direita) =========
+    _desenhar_cabecalho()
+    _desenhar_tipagem()
+
+    # ========= Linha separadora inferior (cobre cabeçalho e tipagem) =========
+    pygame.draw.line(
+        tela, PALETA["linha_separadora"],
+        (x0, y0 + altura_cabecalho),
+        (x0 + largura_painel, y0 + altura_cabecalho),
+        3
+    )
+
+    # ========= Painel de Moves/Memória =========
+    desenhar_moves_memoria(pokemon, (x0 + 360, y0 + 70), tela, eventos)
+    desenha_build(pokemon, (x0 + 255,  y0 + 70), tela, eventos)
+
     _desenhar_barras()
     _desenhar_blocos_informativos()
     _desenhar_animacao()
+
+    # ========= Borda externa do painel =========
+    pygame.draw.rect(tela, PALETA["borda_painel"], (x0, y0, largura_painel, altura_painel), width=4)
 
 # --- coloque no topo do módulo (fora de funções) ---
 _mini_arrastaveis = []
@@ -762,6 +862,393 @@ def PainelPokemonAuxiliar(tela, pos, player, eventos, parametros):
         if getattr(arr, "esta_arrastando", False):
             arr.desenhar(tela)
 
+# ================== UI de edição de ataques (MoveList × Memoria) ==================
+# Requisitos:
+# - Classe Arrastavel compatível com: Arrastavel(img, (x,y), dados=?, interno=True, funcao_execucao=?)
+#   e métodos: atualizar(eventos), arrastar(mouse_pos), desenhar(tela), attr: esta_arrastando, pos, dados
+# - Função SurfaceAtaque(novoataque, fonte, icones, size=(w,h)) -> pygame.Surface
+# - Estrutura do pokemon:
+#     pokemon["MoveList"] -> lista (até 4) de dicts (ataques)
+#     pokemon["Memoria"]  -> lista (até 8) de dicts (ataques)
+
+# ---- Estado global desta UI (mesma ideia do inventário) ----
+arrastaveis_moves_mem = []
+areas_moves = []      # rects dos 4 slots (coluna MoveList)
+areas_memoria = []    # rects dos 8 slots (coluna Memoria)
+areas_hab_ativas = []
+areas_hab_memoria = []
+_moves_cache = None
+_mem_cache = None
+_hab_a_cache = None
+_hab_m_cache = None
+pokemon_ref = None   # referência ao pokemon sendo editado (para o executor saber onde trocar)
+
+def desenhar_moves_memoria(pokemon, pos, tela, eventos):
+
+    # ========= Globais / Estado =========
+    global arrastaveis_moves_mem, areas_moves, areas_memoria
+    global areas_hab_ativas, areas_hab_memoria
+    global _moves_cache, _mem_cache, _hab_a_cache, _hab_m_cache, pokemon_ref
+
+    pokemon_ref = pokemon
+
+    # ========= Cores =========
+    COR_FUNDO        = (24, 24, 24)
+    COR_HEAD         = (52, 52, 52)
+    COR_SLOT         = (40, 40, 40)
+    COR_SLOT_HAB     = (56, 40, 40)
+    COR_TEXTO        = (230, 230, 230)
+
+    # ========= Fontes =========
+    fonte_head = fontes[16] if 16 < len(fontes) and fontes[16] else (fontes[0] if fontes else None)
+    if fonte_head is None:
+        raise RuntimeError("Lista 'fontes' inválida ou vazia.")
+
+    # ========= Geometria base =========
+    x0, y0 = pos
+    PAD_EXTERNO      = 10   # bordas do fundo
+    COL_GAP          = 8   # gap entre as colunas (entre cabeçalhos)
+    HEAD_H           = 24   # altura da barra de cabeçalho
+    HEAD_TO_ROWS_GAP = 10    # << NOVO: distância do cabeçalho até o início das linhas
+    ROW_GAP          = 16   # distância vertical entre linhas
+    SLOT_H           = 28   # altura dos slots (mesma para todos)
+    SLOT_MOV_W       = 175  # largura slot MoveList
+    SLOT_MEM_W       = 145  # largura slot Memoria
+
+    # Larguras fixas de "colunas" conforme cabeçalhos
+    W_MOV_HEAD       = 190
+    W_MEM_HEAD       = 330
+
+    # Linhas: 4 (moves) + habilidades (1 ou 2)
+    hab_nivel   = int(pokemon.get("Habilidades", 1))
+    linhas_hab  = 2 if hab_nivel >= 2 else 1
+
+    # Colunas
+    col_mov_x = x0 + PAD_EXTERNO
+    col_mov_y = y0 + PAD_EXTERNO
+    col_mem_x = col_mov_x + W_MOV_HEAD + COL_GAP
+    col_mem_y = col_mov_y
+
+    # Cabeçalhos
+    head_mov_rect = pygame.Rect(col_mov_x, col_mov_y, W_MOV_HEAD, HEAD_H)
+    head_mem_rect = pygame.Rect(col_mem_x, col_mem_y, W_MEM_HEAD, HEAD_H)
+    pygame.draw.rect(tela, COR_HEAD, head_mov_rect, border_radius=8)
+    pygame.draw.rect(tela, COR_HEAD, head_mem_rect, border_radius=8)
+
+    tela.blit(fonte_head.render("MoveList", True, COR_TEXTO), (head_mov_rect.x + 8, head_mov_rect.y + 2))
+    tela.blit(fonte_head.render("Memoria",  True, COR_TEXTO), (head_mem_rect.x + 8, head_mem_rect.y + 2))
+
+    # ========= Lacunas =========
+    # Y inicial agora considera o GAP extra após o cabeçalho
+    base_y = col_mov_y + HEAD_H + HEAD_TO_ROWS_GAP
+
+    # MoveList
+    areas_moves.clear()
+    mov_margin_x = (W_MOV_HEAD - SLOT_MOV_W) // 2
+    slot_rad = 10
+
+    for i in range(4):
+        sy = base_y + i * (SLOT_H + ROW_GAP)
+        sx = col_mov_x + mov_margin_x
+        r = pygame.Rect(sx, sy, SLOT_MOV_W, SLOT_H)
+        pygame.draw.rect(tela, COR_SLOT, r, border_radius=slot_rad)
+        areas_moves.append(r)
+
+    # Memoria
+    areas_memoria.clear()
+    m_float = (W_MEM_HEAD - 2 * SLOT_MEM_W) / 3.0
+    m_left  = int(round(m_float))
+    m_mid   = int(round(m_float))
+    used    = m_left + SLOT_MEM_W + m_mid + SLOT_MEM_W
+    m_right = W_MEM_HEAD - used
+    col1_x  = col_mem_x + m_left
+    col2_x  = col_mem_x + m_left + SLOT_MEM_W + m_mid
+
+    for row in range(4):
+        sy = base_y + row * (SLOT_H + ROW_GAP)
+        r1 = pygame.Rect(col1_x, sy, SLOT_MEM_W, SLOT_H)
+        r2 = pygame.Rect(col2_x, sy, SLOT_MEM_W, SLOT_H)
+        pygame.draw.rect(tela, COR_SLOT, r1, border_radius=slot_rad)
+        pygame.draw.rect(tela, COR_SLOT, r2, border_radius=slot_rad)
+        areas_memoria.extend([r1, r2])
+
+    # Habilidades
+    areas_hab_ativas.clear()
+    areas_hab_memoria.clear()
+    for hlin in range(linhas_hab):
+        row_index = 4 + hlin
+        sy = base_y + row_index * (SLOT_H + ROW_GAP)
+
+        r_ativa = pygame.Rect(col_mov_x + mov_margin_x, sy, SLOT_MOV_W, SLOT_H)
+        pygame.draw.rect(tela, COR_SLOT_HAB, r_ativa, border_radius=slot_rad)
+        areas_hab_ativas.append(r_ativa)
+
+        r_m1 = pygame.Rect(col1_x, sy, SLOT_MEM_W, SLOT_H)
+        r_m2 = pygame.Rect(col2_x, sy, SLOT_MEM_W, SLOT_H)
+        pygame.draw.rect(tela, COR_SLOT_HAB, r_m1, border_radius=slot_rad)
+        pygame.draw.rect(tela, COR_SLOT_HAB, r_m2, border_radius=slot_rad)
+        areas_hab_memoria.extend([r_m1, r_m2])
+
+    # ========= Função utilitária =========
+    def build_surface_from_attack(atk, slot_rect, main_flag):
+        return SurfaceAtaque(
+            {
+                "nome":  atk.get("nome") or atk.get("Ataque", "") or atk.get("Nome", ""),
+                "tipo":  (atk.get("tipo") or atk.get("Tipo") or "normal"),
+                "custo": atk.get("custo") or atk.get("Custo", 0),
+                "dano":  atk.get("dano")  or atk.get("Dano", 0),
+                "estilo":atk.get("estilo") or atk.get("Estilo", "n"),
+                "alvo":  atk.get("alvo")  or atk.get("Alvo", "-"),
+                "descrição": atk.get("descrição") or atk.get("Descrição", ""),
+            },
+            fontes=fontes, icones=icones,
+            main=main_flag
+        )
+
+    # ========= Executor (inalterado) =========
+    def executar_moves_memoria(arr):
+        interno = arr.interno
+        pos     = arr.pos
+        dados   = arr.dados
+
+        if interno:
+            # Veio dos ATIVOS (MoveList)
+            origem = pokemon_ref["MoveList"].index(dados)
+
+            # Soltou em alguma lacuna da MoveList -> swap dentro da própria lista
+            for i, area in enumerate(areas_moves):
+                if area.collidepoint(pos):
+                    if i >= len(pokemon_ref["MoveList"]):            # slot sem item correspondente
+                        return False
+                    if pokemon_ref["MoveList"][origem] == pokemon_ref["MoveList"][i]:
+                        return False
+                    pokemon_ref["MoveList"][origem], pokemon_ref["MoveList"][i] = (
+                        pokemon_ref["MoveList"][i], pokemon_ref["MoveList"][origem]
+                    )
+                    return True
+
+            # Soltou em alguma lacuna da Memoria -> swap entre listas
+            for i, area in enumerate(areas_memoria):
+                if area.collidepoint(pos):
+                    if i >= len(pokemon_ref["Memoria"]):
+                        return False
+                    pokemon_ref["Memoria"][i], pokemon_ref["MoveList"][origem] = (
+                        pokemon_ref["MoveList"][origem], pokemon_ref["Memoria"][i]
+                    )
+                    return True
+
+            return False
+
+        else:
+            origem = pokemon_ref["Memoria"].index(dados)
+            # Soltou em alguma lacuna da Memoria -> swap dentro da própria lista
+            for i, area in enumerate(areas_memoria):
+                if area.collidepoint(pos):
+                    if i >= len(pokemon_ref["Memoria"]):
+                        return False
+                    if pokemon_ref["Memoria"][origem] == pokemon_ref["Memoria"][i]:
+                        return False
+                    pokemon_ref["Memoria"][origem], pokemon_ref["Memoria"][i] = (
+                        pokemon_ref["Memoria"][i], pokemon_ref["Memoria"][origem]
+                    )
+                    return True
+
+            # Soltou em alguma lacuna da MoveList -> swap entre listas
+            for i, area in enumerate(areas_moves):
+                if area.collidepoint(pos):
+                    if i >= len(pokemon_ref["MoveList"]):
+                        return False
+                    pokemon_ref["MoveList"][i], pokemon_ref["Memoria"][origem] = (
+                        pokemon_ref["Memoria"][origem], pokemon_ref["MoveList"][i]
+                    )
+                    return True
+
+            return False
+
+    if _moves_cache != pokemon_ref["MoveList"]:
+        _moves_cache = list(pokemon_ref["MoveList"])
+        # primeiro remove arrastáveis dessa área
+        arrastaveis_moves_mem = [a for a in arrastaveis_moves_mem if a.dados not in _moves_cache]
+        # recria os novos
+        for i in range(min(4, len(pokemon_ref["MoveList"]))):
+            atk = pokemon_ref["MoveList"][i]
+            if atk is not None:
+                r   = areas_moves[i]
+                surf = build_surface_from_attack(atk, r, main_flag=True)
+                px, py = r.centerx - surf.get_width()//2, r.centery - surf.get_height()//2
+                arrastaveis_moves_mem.append(
+                    Arrastavel(surf, (px, py), dados=atk, interno=True, funcao_execucao=executar_moves_memoria)
+                )
+
+    # ========= Memoria =========
+    if _mem_cache != pokemon_ref["Memoria"]:
+        _mem_cache = list(pokemon_ref["Memoria"])
+        arrastaveis_moves_mem = [a for a in arrastaveis_moves_mem if a.dados not in _mem_cache]
+        for i in range(min(8, len(pokemon_ref["Memoria"]))):
+            atk = pokemon_ref["Memoria"][i]
+            if atk is not None:
+                r   = areas_memoria[i]
+                surf = build_surface_from_attack(atk, r, main_flag=False)
+                px, py = r.centerx - surf.get_width()//2, r.centery - surf.get_height()//2
+                arrastaveis_moves_mem.append(
+                    Arrastavel(surf, (px, py), dados=atk, interno=False, funcao_execucao=executar_moves_memoria)
+                )
+
+    # hab_ativas  = pokemon_ref["HabilidadesAtivas"]
+    # hab_memoria = pokemon_ref["HabilidadesMemoria"]
+
+    # # ========= Habilidades Ativas =========
+    # if _hab_a_cache is not hab_ativas:
+    #     _hab_a_cache = hab_ativas
+    #     arrastaveis_moves_mem = [a for a in arrastaveis_moves_mem if a.dados not in _hab_a_cache]
+    #     for i, r in enumerate(areas_hab_ativas):
+    #         if i < len(hab_ativas):
+    #             hab = hab_ativas[i]
+    #             surf = build_surface_from_attack(hab, r, main_flag=True)
+    #             px, py = r.centerx - surf.get_width()//2, r.centery - surf.get_height()//2
+    #             arrastaveis_moves_mem.append(
+    #                 Arrastavel(surf, (px, py), dados=hab, interno=True, funcao_execucao=None)
+    #             )
+
+    # # ========= Habilidades Memória =========
+    # if _hab_m_cache is not hab_memoria:
+    #     _hab_m_cache = hab_memoria
+    #     arrastaveis_moves_mem = [a for a in arrastaveis_moves_mem if a.dados not in _hab_m_cache]
+    #     for i, r in enumerate(areas_hab_memoria):
+    #         if i < len(hab_memoria):
+    #             hab = hab_memoria[i]
+    #             surf = build_surface_from_attack(hab, r, main_flag=False)
+    #             px, py = r.centerx - surf.get_width()//2, r.centery - surf.get_height()//2
+    #             arrastaveis_moves_mem.append(
+    #                 Arrastavel(surf, (px, py), dados=hab, interno=True, funcao_execucao=None)
+    #             )
+
+    # ========= Atualização/desenho arrastáveis =========
+    mouse_pos = pygame.mouse.get_pos()
+    for arr in arrastaveis_moves_mem:
+        arr.atualizar(eventos)
+        arr.arrastar(mouse_pos)
+
+    for arr in arrastaveis_moves_mem:
+        if not getattr(arr, "esta_arrastando", False):
+            arr.desenhar(tela)
+    for arr in arrastaveis_moves_mem:
+        if getattr(arr, "esta_arrastando", False):
+            arr.desenhar(tela)
+
+areas_build = []
+arrastaveis_build = []
+_build_cache_list = None
+_build_cache_n = None
+
+def desenha_build(pokemon, pos, tela, eventos):
+
+    # ======= Globais/estado =======
+    global areas_build, arrastaveis_build, _build_cache_list, _build_cache_n
+
+    # ======= Paleta (similar à desenhar_moves_memoria) =======
+    COR_HEAD   = (52, 52, 52)
+    COR_SLOT   = (40, 40, 40)
+    COR_TEXTO  = (230, 230, 230)
+    COR_PLUS   = (200, 200, 200)
+
+    # ======= Geometria base (forçada) =======
+    x0, y0 = pos
+    W, H = 100, 260  # sempre 100x270
+    PAD_EXTERNO      = 10
+    HEAD_H           = 24
+    GAP_HEAD_TO_ROW  = 12
+    RAD              = 10
+    SLOT_SIDE        = 50  # sempre 64x64
+    SLOT_GAP         = 12   # << novo: espaçamento fixo entre slots
+
+    # Cabeçalho
+    head_rect = pygame.Rect(x0 + PAD_EXTERNO, y0 + PAD_EXTERNO, W - 2*PAD_EXTERNO, HEAD_H)
+    pygame.draw.rect(tela, COR_HEAD, head_rect, border_radius=8)
+    try:
+        fonte_head = fontes[16] if 16 < len(fontes) and fontes[16] else fontes[0]
+    except Exception:
+        fonte_head = fontes[0]
+    txt = fonte_head.render("Build", True, COR_TEXTO)
+    tela.blit(txt, (head_rect.x + 8, head_rect.y + (HEAD_H - txt.get_height()) // 2))
+
+    # Área útil das lacunas
+    inner_x = x0 + PAD_EXTERNO
+    inner_y = head_rect.bottom + GAP_HEAD_TO_ROW
+    inner_w = W - 2*PAD_EXTERNO
+    # inner_h = H - (inner_y - y0) - PAD_EXTERNO  # (não usado mais)
+
+    # ======= Quantidade e distribuição vertical =======
+    n_slots = int(max(1, min(3, pokemon.get("Equipaveis", 1))))
+    slot_x = inner_x + (inner_w - SLOT_SIDE) // 2  # mantém centralização horizontal
+    cy = inner_y                                   # começa logo após o cabeçalho
+
+    # ======= Desenho das lacunas (empilhadas) =======
+    areas_build.clear()
+    for i in range(n_slots):
+        r = pygame.Rect(slot_x, cy, SLOT_SIDE, SLOT_SIDE)
+        pygame.draw.rect(tela, COR_SLOT, r, border_radius=RAD)
+
+        # Sinal de '+'
+        cx, cy_mid = r.center
+        arm = int(SLOT_SIDE * 0.32)
+        lw  = max(2, SLOT_SIDE // 12)
+        pygame.draw.line(tela, COR_PLUS, (cx - arm, cy_mid), (cx + arm, cy_mid), lw)
+        pygame.draw.line(tela, COR_PLUS, (cx, cy_mid - arm), (cx, cy_mid + arm), lw)
+
+        areas_build.append(r)
+        cy = r.bottom + SLOT_GAP  # próxima lacuna desce fixo
+
+    # ======= Arrastáveis da build =======
+    build_list = pokemon.get("Build", []) or []
+    needs_rebuild = (_build_cache_list != build_list) or (_build_cache_n != n_slots)
+    if needs_rebuild:
+        _build_cache_list = list(build_list)
+        _build_cache_n = n_slots
+        arrastaveis_build.clear()
+
+        for i in range(min(n_slots, len(build_list))):
+            item = build_list[i]
+            if not item:
+                continue
+            nome_item = item.get("nome") or item.get("Nome")
+            if not nome_item:
+                continue
+            img = equipaveis.get(nome_item)
+            if not img:
+                continue
+
+            slot_r = areas_build[i]
+            pad_img = max(4, SLOT_SIDE // 10)
+            target = (SLOT_SIDE - 2 * pad_img, SLOT_SIDE - 2 * pad_img)
+            surf_item = pygame.transform.smoothscale(img, target)
+
+            px = slot_r.centerx - surf_item.get_width() // 2
+            py = slot_r.centery - surf_item.get_height() // 2
+
+            arrastaveis_build.append(
+                Arrastavel(
+                    surf_item,
+                    (px, py),
+                    dados=item,
+                    interno=True,
+                    funcao_execucao=None
+                )
+            )
+
+    # ======= Atualização/desenho dos arrastáveis =======
+    mouse_pos = pygame.mouse.get_pos()
+    for arr in arrastaveis_build:
+        arr.atualizar(eventos)
+        arr.arrastar(mouse_pos)
+
+    for arr in arrastaveis_build:
+        if not getattr(arr, "esta_arrastando", False):
+            arr.desenhar(tela)
+    for arr in arrastaveis_build:
+        if getattr(arr, "esta_arrastando", False):
+            arr.desenhar(tela)
+
 def PainelPlayer(tela, pos, player, eventos, parametros):
     # ---------------- Layout base ----------------
     x, y = pos
@@ -849,29 +1336,39 @@ def PainelPlayer(tela, pos, player, eventos, parametros):
         texto = f"{label}: {val}"
         f_lab = fontes[20] if big else font
         txt_surf = f_lab.render(texto, True, (255, 255, 255))
-        pill_surf.blit(txt_surf, (12, (rect.height - txt_surf.get_height()) // 2))
+        txt_x = 12
+        txt_y = (rect.height - txt_surf.get_height()) // 2
+        pill_surf.blit(txt_surf, (txt_x, txt_y))
 
-        # --- barra de XP dentro da pílula (opcional) ---
+        # --- barra de XP ao lado do texto (opcional) ---
         if (xp is not None) and (nivel_for_xp is not None) and (estado_barra is not None):
             needed = 100 + int(nivel_for_xp) * 15
 
-            # dimensões e posição da barra (pequena, na parte de baixo da pílula)
-            margem_h = 12
-            bar_w = rect.width - margem_h * 2
-            bar_h = max(6, rect.height // 8)
-            bar_x = margem_h
-            bar_y = rect.height - margem_h - bar_h
+            # barra ao lado do texto:
+            margem_h   = 12
+            espaco     = 10  # gap entre texto e barra
+            bar_x      = txt_x + txt_surf.get_width() + espaco
+            # levemente mais grossa que antes: ~1–2px a mais
+            bar_h      = max(10, rect.height // 6)
+            bar_y      = (rect.height - bar_h) // 2 + 8
+            bar_w      = max(20, rect.width - margem_h - bar_x)  # garante largura mínima
 
-            # texto pequeno "atual/necessário" logo acima da barra
+            # se faltar espaço extremo, corta a barra para não sair da pílula
+            if bar_x + bar_w > rect.width - margem_h:
+                bar_w = max(20, (rect.width - margem_h) - bar_x)
+
+            # texto de xp levemente acima da barra
             mini_font = fontes[14]
-            txt_xp = f"{int(xp)}/{needed}"
+            txt_xp = f"XP: {int(xp)}/{needed}"
             mini_surf = mini_font.render(txt_xp, True, (255, 255, 255))
-            pill_surf.blit(mini_surf, (bar_x, bar_y - mini_surf.get_height() - 2))
+            mini_x = bar_x
+            mini_y = max(0, bar_y - mini_surf.get_height() - 2)  # acima da barra
+            pill_surf.blit(mini_surf, (mini_x, mini_y))
 
-            # cor da barra (simples e visível)
+            # cor da barra
             cor_barra = (80, 200, 120)
 
-            # desenha a barra usando tua função, direto no pill_surf
+            # desenha a barra (horizontal) ao lado do texto
             Barra(
                 pill_surf,
                 (bar_x, bar_y),
@@ -1001,7 +1498,7 @@ def PainelPlayer(tela, pos, player, eventos, parametros):
     draw_pill(
         tela, r1, COR_ROXO, alpha_base,
         "Nível", nivel, big=True,
-        xp=player.XP,                     # XP atual do jogador
+        xp=player.Xp,                     # XP atual do jogador
         nivel_for_xp=nivel,              # nível atual para calcular o necessário
         estado_barra={},   # dicionário persistente p/ animação suave
         chave_xp="xp_nivel"              # chave única desta barra

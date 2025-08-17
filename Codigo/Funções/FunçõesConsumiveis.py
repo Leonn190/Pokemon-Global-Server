@@ -152,38 +152,54 @@ def Jujuca_Berry(pokemon, player, dados):
     pokemon.MaxFrutas += 2
 
 def Jungle_Berry(pokemon, player, dados):
-    """Melhora a captura em áreas de floresta (+15%)."""
-    try:
-        pokemon.BonusCapturaPorBioma["floresta"] = pokemon.BonusCapturaPorBioma.get("floresta", 0) + 0.15
-    except Exception:
-        pokemon.BonusCapturaPorBioma = {"floresta": 0.15}
+    from Codigo.Cenas.Mundo import mapa
+    if mapa.GridBiomas[pokemon.Loc[0]][pokemon.Loc[1]] == 3:
+        pokemon.Dificuldade *= 0.65
 
 def Desert_Berry(pokemon, player, dados):
-    """Melhora a captura em áreas desérticas (+15%)."""
-    try:
-        pokemon.BonusCapturaPorBioma["deserto"] = pokemon.BonusCapturaPorBioma.get("deserto", 0) + 0.15
-    except Exception:
-        pokemon.BonusCapturaPorBioma = {"deserto": 0.15}
+    from Codigo.Cenas.Mundo import mapa
+    if mapa.GridBiomas[pokemon.Loc[0]][pokemon.Loc[1]] == 4:
+        pokemon.Dificuldade *= 0.65
 
 def Frozen_Berry(pokemon, player, dados):
-    """Melhora a captura em regiões geladas (+15%)."""
-    try:
-        pokemon.BonusCapturaPorBioma["gelo"] = pokemon.BonusCapturaPorBioma.get("gelo", 0) + 0.15
-    except Exception:
-        pokemon.BonusCapturaPorBioma = {"gelo": 0.15}
+    from Codigo.Cenas.Mundo import mapa
+    if mapa.GridBiomas[pokemon.Loc[0]][pokemon.Loc[1]] == 5:
+        pokemon.Dificuldade *= 0.65
 
 def Field_Berry(pokemon, player, dados):
-    """Melhora a captura em campos abertos (+15%)."""
-    try:
-        pokemon.BonusCapturaPorBioma["campo"] = pokemon.BonusCapturaPorBioma.get("campo", 0) + 0.15
-    except Exception:
-        pokemon.BonusCapturaPorBioma = {"campo": 0.15}
+    from Codigo.Cenas.Mundo import mapa
+    if mapa.GridBiomas[pokemon.Loc[0]][pokemon.Loc[1]] == 2:
+        pokemon.Dificuldade *= 0.65
 
 def Water_Berry(pokemon, player, dados):
-    """Melhora a captura em ambientes aquáticos (+15%)."""
-    try:
-        pokemon.BonusCapturaPorBioma["aquatico"] = pokemon.BonusCapturaPorBioma.get("aquatico", 0) + 0.15
-    except Exception:
-        pokemon.BonusCapturaPorBioma = {"aquatico": 0.15}
+    from Codigo.Cenas.Mundo import mapa
+    if mapa.GridBiomas[pokemon.Loc[0]][pokemon.Loc[1]] in [0,1]:
+        pokemon.Dificuldade *= 0.65
 
+def Lava_Berry(pokemon, player, dados):
+    from Codigo.Cenas.Mundo import mapa
+    if mapa.GridBiomas[pokemon.Loc[0]][pokemon.Loc[1]] in 6:
+        pokemon.Dificuldade *= 0.65
 
+def Magic_Berry(pokemon, player, dados):
+    from Codigo.Cenas.Mundo import mapa
+    if mapa.GridBiomas[pokemon.Loc[0]][pokemon.Loc[1]] in 7:
+        pokemon.Dificuldade *= 0.65
+
+# ========= Berries =========
+ConsumiveisDic["Caxi Berry"]         = Caxi_Berry
+ConsumiveisDic["Frambo Berry"]       = Frambo_Berry
+ConsumiveisDic["Super Frambo Berry"] = Super_Frambo_Berry
+ConsumiveisDic["Simp Berry"]         = Simp_Berry
+ConsumiveisDic["Secret Berry"]       = Secret_Berry
+ConsumiveisDic["Lum Berry"]          = Lum_Berry
+ConsumiveisDic["Tomper Berry"]       = Tomper_Berry
+ConsumiveisDic["Abbajuur Berry"]     = Abbajuur_Berry
+ConsumiveisDic["Jujuca Berry"]       = Jujuca_Berry
+ConsumiveisDic["Jungle Berry"]       = Jungle_Berry
+ConsumiveisDic["Desert Berry"]       = Desert_Berry
+ConsumiveisDic["Frozen Berry"]       = Frozen_Berry
+ConsumiveisDic["Field Berry"]        = Field_Berry
+ConsumiveisDic["Water Berry"]        = Water_Berry
+ConsumiveisDic["Lava Berry"]         = Lava_Berry
+ConsumiveisDic["Magic Berry"]        = Magic_Berry

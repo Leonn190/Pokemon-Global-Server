@@ -98,7 +98,7 @@ def CarregamentoBasico(info):
 
     Fontes = [None] * 102  # Cria uma lista de 73 posições (índices de 0 a 72)
 
-    for tamanho in [16, 20, 24, 25, 30, 35, 40, 50, 60, 72, 100]:
+    for tamanho in [14, 16, 18, 20, 24, 25, 30, 35, 40, 50, 60, 72, 100]:
         Fontes[tamanho] = pygame.font.Font(CAMINHO_FONTE, tamanho)
     Fontes[101] = pygame.font.Font(CAMINHO_FONTE2, 18)
 

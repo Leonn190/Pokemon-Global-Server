@@ -274,7 +274,7 @@ def VerificaOperador(codigo_operador, Parametros):
 def AtivarServidor(Parametros):
     url = f"{Parametros['ServerSelecionado']['link']}/ativar-servidor"
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=500)
         if response.status_code == 200:
             # Servidor ativado ou já ativo
             return True
@@ -286,7 +286,7 @@ def AtivarServidor(Parametros):
 def LigarDesligarServidor(Parametros, ligar):
     url = f"{Parametros['ServerSelecionado']['link']}/ligar-desligar"
     try:
-        response = requests.post(url, json={"ligar": ligar}, timeout=5)
+        response = requests.post(url, json={"ligar": ligar}, timeout=500)
         if response.status_code == 200:
             data = response.json()
             # Confirmar se o estado é o esperado

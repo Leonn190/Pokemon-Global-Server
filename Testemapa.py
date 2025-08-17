@@ -10,7 +10,7 @@ import random
 from collections import deque, defaultdict
 
 # ===================== Parâmetros principais / TUNING =====================
-W, H = 1200, 1200
+W, H = 2000, 2000
 SEED = random.randint(0,1000)
 random.seed(SEED)
 np.random.seed(SEED)
@@ -47,7 +47,7 @@ SIZE_MULT = {
     "FOREST":       1.00,
     "VULCANO":      1.00,
     "TERRA_MAGICA": 1.00,
-    "PANTANO":      1.5,
+    "PANTANO":      1.00,
 }
 
 # Critérios auxiliares dos especiais
@@ -566,6 +566,7 @@ def print_biome_percentages(biomes):
 
 # ===================== Pipeline =====================
 def main():
+    print("começou")
     shape = (H, W)
     elev = generate_elevation(shape)
     moist = generate_moisture(shape)
@@ -600,5 +601,4 @@ def main():
     # np.save("grid_biomes.npy", biome_grid)
     # np.save("grid_blocks.npy", block_grid)
 
-if __name__ == "__main__":
-    main()
+main()

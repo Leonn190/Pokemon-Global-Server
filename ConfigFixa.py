@@ -1,3 +1,3 @@
 # Arquivo gerado automaticamente para armazenar configurações fixas
 
-Config = {'FPS': 125.40298507462687, 'Volume': 0.0, 'Claridade': 69.85074626865672, 'Mudo': True, 'FPS Visivel': True, 'Ver': 1.0, 'Cords Visiveis': True, 'Ping Visivel': True, 'Pré-Carregamento': False}
+Config = {'FPS': 180.56716417910448, 'Volume': 0.0, 'Claridade': 51.7910447761194, 'Mudo': True, 'FPS Visivel': True, 'Ver': 1.0, 'Cords Visiveis': True, 'Ping Visivel': True, 'Pré-Carregamento': False}

@@ -42,6 +42,12 @@ Inicial = None
 PokemonDestaque = None
 
 def InicioTelaPrincipal(tela, estados, eventos, parametros):
+    
+    if parametros["TelaConfigurações"]["Entrou"]:
+        if pygame.mouse.get_pressed()[0]:
+            return
+        else:
+            parametros["TelaConfigurações"]["Entrou"] = False
 
     Botao(
         tela, "JOGAR", (750, 560, 420, 125), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
@@ -285,7 +291,7 @@ def InicioTelaCriandoPersonagem(tela, estados, eventos, parametros):
             "Velocidade": 0,
             "Mochila": 0,
             "Maestria":0,
-            "Loc": [500,500]
+            "Loc": [450,450]
         }
         SelecionadoNome = False
 
@@ -517,6 +523,7 @@ def InicioLoop(tela, relogio, estados, config, info):
         "Carregar": False,
         "Config": config,
         "TelaEntradaTexto": {"Texto": ""},
+        "TelaConfigurações": {"Entrou": False},
         "TentarEntrarNoServidor": True,
         "TentarOperarServidor": True,
         "ServerOperadoLigado": False,
