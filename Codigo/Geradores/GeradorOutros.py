@@ -8,10 +8,10 @@ class Projetil:
         self.alvo = pygame.math.Vector2(pygame.mouse.get_pos())
 
         if self.dados["estilo"] == "bola":
-            self.velocidade = 180
+            self.velocidade = 360
             self.distancia_total = 520
         elif self.dados["estilo"] == "fruta":
-            self.velocidade = 170
+            self.velocidade = 320
             self.distancia_total = 420
 
         self.distancia_percorrida = 0
@@ -31,7 +31,7 @@ class Projetil:
 
         self.imagem_original = self.imagem  # mantém a imagem original para evitar perda de qualidade
         self.angulo = 0  # ângulo inicial
-        self.velocidade_rotacao = 10  # graus por frame, ajuste como quiser
+        self.velocidade_rotacao = 40  # graus por frame, ajuste como quiser
 
     def atualizar(self, tela, cords_atuais, player, delta_time):
 

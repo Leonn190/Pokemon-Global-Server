@@ -6,7 +6,6 @@ import pandas as pd
 
 from Codigo.Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem
 from Codigo.Prefabs.Terminal import adicionar_mensagem_terminal
-from Codigo.Prefabs.Particulas import adicionar_estouro
 from Codigo.Funções.FunçõesConsumiveis import ConsumiveisDic
 
 df = pd.read_csv("Dados/Pokemons.csv")
@@ -327,234 +326,308 @@ def SubirNivel(pokemon):
     return pokemon
 
 class Pokemon:
-    def __init__(self, Loc, string_dados, extra, Imagens, Animaçoes, Parametros):
+    def __init__(self, Loc, string_dados, extra, Imagens, Animacoes, Parametros):
+        """
+        - Capturado e Fugiu: não são True/False; vêm como False ou número (1..30).
+          -> número aciona o gatilho da animação (captura/fuga).
+        - Movimento: ocorre automaticamente quando LocAlvo != Loc.
+        """
+        # ---- dados base / referências externas ----
         dados = desserializar_pokemon(string_dados)
         self.Dados = dados
-        self.Loc = Loc
-        self.LocAlvo = Loc
         self.Parametros = Parametros
-        self.Apagar = False
 
-        self.animação = Animaçoes.get(self.Dados["Nome"].lower(), CarregarAnimacaoPokemon(self.Dados["Nome"].lower(), Animaçoes))
-        self.imagem = self.animação[0]
+        # ---- posição em MUNDO ----
+        self.Loc = list(Loc)
+        self.LocAlvo = list(Loc)  # moverá quando for diferente de Loc
+
+        # ---- flags vindas do 'extra' (mantidas como estão no seu fluxo) ----
+        self.Irritado   = bool(extra.get("Irritado", False))
+        self.Batalhando = bool(extra.get("Batalhando", False))
+        self.Capturado  = extra.get("Capturado", False)  # False ou número (1..30)
+        self.Fugiu      = extra.get("Fugiu", False)      # False ou número (1..30)
+
+        # ---- estado interno controlado por máquina de estados ----
+        # "vivo" | "capturando" | "fugindo" | "finalizado"
+        self.estado = "vivo"
+        self.Apagar = False           # quando True, seu gerenciador pode remover
+        self.alpha = 255              # fade da fuga
+        self.progress_irritado = 0.0  # 0..1 (cor de fundo)
+        # captura
+        self.captura_progress = 0.0   # 0..1..0
+        self.captura_expandindo = True
+        self.captura_cobriu = False   # quando True, para de desenhar o sprite
+
+        # ---- animação base do sprite ----
+        nome = self.Dados["Nome"].lower()
+        self.animacoes = Animacoes
+        self.animacao = self.animacoes.get(
+            nome, CarregarAnimacaoPokemon(nome, self.animacoes)
+        )
         self.indice_anim = 0
-        self.contador_anim = 0
+        self.tempo_anim  = 0.0
+        self.quadro = self.animacao[0]
 
-        self.TamanhoMirando = extra["TamanhoMirando"]
-        self.VelocidadeMirando = extra["VelocidadeMirando"] * 100 # graus por frame
-        self.Dificuldade = extra["Dificuldade"]
-        self.Frutas = extra["Frutas"]
-        self.MaxFrutas = extra.get("MaxFrutas", 2)
-        self.Tentativas = extra.get("Tentativas", 0)
-        self.DocesExtras = extra.get("DocesExtras", 0)
-        self.Irritado = extra.get("Irritado", False)
-        self.Batalhando = extra.get("Batalhando", False)
-        self.Capturado = extra.get("Capturado", False)
-        self.Fugiu = extra.get("Fugiu", False)
+        # ---- extras (mantidos) ----
+        self.TamanhoMirando   = float(extra.get("TamanhoMirando", 30))  # % do arco 0..100
+        self.VelocidadeMirando= float(extra.get("VelocidadeMirando", 90.0))  # graus/seg (não por frame)
+        self.Dificuldade      = extra.get("Dificuldade")
+        self.Frutas           = extra.get("Frutas")
+        self.MaxFrutas        = int(extra.get("MaxFrutas", 2))
+        self.Tentativas       = int(extra.get("Tentativas", 0))
+        self.DocesExtras      = int(extra.get("DocesExtras", 0))
 
-        # Criar máscara circular só da borda
-        ret = self.imagem.get_rect()
-        self.raio = max(ret.width, ret.height) // 2 + 8
-        diametro = self.raio * 2
+        # ---- máscaras / bounds dependentes do quadro ----
+        self._rebuild_bounds_from_frame(self.quadro)
+        self._build_mirasurfaces()
 
-        surf_mask = pygame.Surface((diametro, diametro), pygame.SRCALPHA)
-        cor_mascara = (255, 255, 255, 255)
-        espessura_anel = 3
-        pygame.draw.circle(surf_mask, cor_mascara, (self.raio, self.raio), self.raio)
-        pygame.draw.circle(surf_mask, (0, 0, 0, 0), (self.raio, self.raio), self.raio - espessura_anel)
+        # ---- constantes de tempo ----
+        self.VEL_ANIM    = 0.03   # s por frame da animação do sprite
+        self.VEL_FADE    = 220.0  # alpha/seg (fuga)
+        self.VEL_IRRITA  = 1.5    # 0..1 por segundo (cor irritado)
+        self.VEL_CAPTURA = 2.5    # velocidade do ciclo do círculo de captura
+
+        # ---- rotação do arco "Mirando" ----
+        self.angulo_mirando = 0.0
+
+        # ---- movimento suave (tiles/seg ou unidades do seu mundo/seg) ----
+        self.VelocidadeMov = float(extra.get("VelocidadeMov", 2.0))
+
+    # ============================================================
+    # Construção de bounds/máscaras a partir do frame atual
+    # ============================================================
+    def _rebuild_bounds_from_frame(self, quadro):
+        r = quadro.get_rect()
+        # raio do disco de fundo com margem
+        self.raio = max(r.width, r.height) // 2 + 8
+        diam = self.raio * 2
+
+        # máscara circular só da borda (anel)
+        surf_mask = pygame.Surface((diam, diam), pygame.SRCALPHA)
+        esp = 3
+        centro = (self.raio, self.raio)
+        pygame.draw.circle(surf_mask, (255,255,255,255), centro, self.raio)
+        pygame.draw.circle(surf_mask, (0,0,0,0),      centro, self.raio - esp)
         self.Mask = pygame.mask.from_surface(surf_mask)
 
-        # Criar superfície para o fluxo verde giratório
+        # rect englobando (centrado na tela no uso)
+        self.Rect = pygame.Rect(0, 0, diam, diam)
+
+    def _build_mirasurfaces(self):
+        # superfície base do arco de mira (antes de rotacionar)
         self.mask_mirando_raio = self.raio + 12
-        diam_mirando = self.mask_mirando_raio * 2
-        self.surf_mirando = pygame.Surface((diam_mirando, diam_mirando), pygame.SRCALPHA)
+        d = self.mask_mirando_raio * 2
+        self.surf_mirando_base = pygame.Surface((d, d), pygame.SRCALPHA)
+        esp = 4
+        rect_arc = pygame.Rect(esp, esp, d - 2*esp, d - 2*esp)
+        arco_graus = max(0.0, min(360.0, 360.0 * (self.TamanhoMirando / 100.0)))
+        pygame.draw.arc(self.surf_mirando_base, (0,255,0,180), rect_arc,
+                        0, math.radians(arco_graus), esp)
+        # máscara será reextraída da superfície rotacionada quando necessário
+        self.MaskMirando = pygame.mask.from_surface(self.surf_mirando_base)
 
-        espessura = 4
-        rect_arc = pygame.Rect(espessura, espessura, diam_mirando - 2 * espessura, diam_mirando - 2 * espessura)
+    # ============================================================
+    # Máquina de estados: detecta transições por GATILHO numérico
+    # ============================================================
+    def _atualizar_transicoes(self):
+        if self.estado in ("finalizado", "capturando", "fugindo"):
+            return
+        # prioridade: Captura > Fuga
+        if self._flag_on(self.Capturado):  # False -> off; número != 0 -> on
+            self.estado = "capturando"
+            return
+        if self._flag_on(self.Fugiu):      # False -> off; número != 0 -> on
+            self.estado = "fugindo"
 
-        arco_graus = 360 * (self.TamanhoMirando / 100)
-        arco_radianos = math.radians(arco_graus)
-        pygame.draw.arc(self.surf_mirando, (0, 255, 0, 180), rect_arc, 0, arco_radianos, espessura)
-        self.MaskMirando = pygame.mask.from_surface(self.surf_mirando)
+    @staticmethod
+    def _flag_on(v):
+        """Retorna True quando v é número != 0 ou qualquer valor truthy.
+           Mantém False para False/None/0."""
+        if v is False or v is None:
+            return False
+        if isinstance(v, (int, float)):
+            return v != 0
+        return True
 
-        self.angulo_mirando = 0
-
-        # --- Rect pré-verificação (quadrado que engloba as duas masks) ---
-        maior_raio = max(self.mask_mirando_raio, self.raio)
-        diam_max = maior_raio * 2
-        self.Rect = pygame.Rect(0, 0, diam_max, diam_max)
-        self.Rect.center = (int(self.Loc[0] * 70), int(self.Loc[1] * 70))
-
-        self.iniciou_fuga = False
-        self.alpha = 255
-        self.progress_irritado = 0.0
-        self.captura_cobriu = False
-        self.sumiu_de_vez = False
-        self.FimCaptura = False
-
-        self.tempo_anim = 0
-
-    def Atualizar(self, tela, pos, player, delta_time):
-        VELOCIDADE_ANIMACAO = 0.03  # tempo em segundos para trocar de frame
-        VELOCIDADE_FADE = 220       # alpha/seg para fugir
-        VELOCIDADE_COR = 1.5        # velocidade da transição da cor
-
-        if self.sumiu_de_vez or self.FimCaptura:
+    # ============================================================
+    # Loop principal de atualização/desenho
+    # ============================================================
+    def Atualizar(self, tela, pos_tela, player, delta_time):
+        """
+        - pos_tela: posição (x,y) em PIXELS onde o Pokémon deve ser desenhado na TELA.
+        - player.Mirando: se True, desenha arco giratório e atualiza MaskMirando.
+        - Este método NÃO muda LocAlvo; ele apenas move quando Loc != LocAlvo.
+        """
+        if self.estado == "finalizado":
             return
 
-        if self.LocAlvo != self.Loc:
-            self.mover_para_alvo(delta_time)
+        # 1) Transições para estados especiais
+        self._atualizar_transicoes()
 
-        # ===== estado base / posição =====
-        self.Rect.center = pos
+        # 2) Movimento físico no mundo (somente quando LocAlvo != Loc)
+        self._mover_para_alvo(delta_time)
 
-        # ===== animação do sprite =====
+        # 3) Animação do sprite base (quadro)
         self.tempo_anim += delta_time
-        if self.tempo_anim >= VELOCIDADE_ANIMACAO:
-            self.indice_anim = (self.indice_anim + 1) % len(self.animação)
-            self.tempo_anim = 0
+        if self.tempo_anim >= self.VEL_ANIM:
+            self.indice_anim = (self.indice_anim + 1) % len(self.animacao)
+            self.tempo_anim = 0.0
+            self.quadro = self.animacao[self.indice_anim]
+            # Se seus frames mudarem MUITO de tamanho, você pode reabrir bounds:
+            # self._rebuild_bounds_from_frame(self.quadro)
 
-        quadro = self.animação[self.indice_anim]
-        ret = quadro.get_rect(center=pos)
+        # 4) Rect centrado no local de desenho
+        ret = self.quadro.get_rect(center=pos_tela)
+        self.Rect.center = pos_tela
 
-        # ===== estados derivados =====
-        capturado_ativo = (self.Capturado != False)
+        # 5) Estados especiais primeiro (retornam após desenhar)
+        if self.estado == "capturando":
+            if not self.captura_cobriu:
+                # antes de cobrir: ainda mostra fundo + sprite
+                self._desenhar_fundo(tela, pos_tela)
+                self._desenhar_sprite(tela, ret)
+            # círculo da captura (expande e depois contrai)
+            self._animacao_capturar(tela, pos_tela, delta_time)
+            return
 
-        # Fugiu: inicia fade só quando muda de False -> diferente de False
-        if not self.iniciou_fuga and self.Fugiu != False:
-            self.iniciou_fuga = True
-
-        # Fade em andamento
-        if self.iniciou_fuga and not self.sumiu_de_vez:
-            self.alpha -= VELOCIDADE_FADE * delta_time
+        if self.estado == "fugindo":
+            # Fade out progressivo de tudo
+            self.alpha = max(0, self.alpha - self.VEL_FADE * delta_time)
             if self.alpha <= 0:
-                self.alpha = 0
-                self.sumiu_de_vez = True
+                self.estado = "finalizado"
+                self.Apagar = True
+                return
+            a = int(self.alpha)
+            self._desenhar_fundo(tela, pos_tela, alpha=a)
+            self._desenhar_mirar(tela, pos_tela, player, alpha=a, delta_time=delta_time)
+            self._desenhar_sprite(tela, ret, alpha=a)
+            return
 
-        # ===== cor por irritação (interpolação azul -> vermelho) =====
-        if self.Irritado:
-            self.progress_irritado += VELOCIDADE_COR * delta_time
-            if self.progress_irritado > 1.0:
-                self.progress_irritado = 1.0
-        else:
-            self.progress_irritado -= VELOCIDADE_COR * delta_time
-            if self.progress_irritado < 0.0:
-                self.progress_irritado = 0.0
+        # 6) Estado normal (“vivo”): irritação, mira, sprite
+        self._atualizar_irritado(delta_time)
+        self._desenhar_fundo(tela, pos_tela)
+        self._desenhar_mirar(tela, pos_tela, player, delta_time=delta_time)
+        self._desenhar_sprite(tela, ret)
 
+    # ============================================================
+    # Desenho de cada camada
+    # ============================================================
+    def _desenhar_fundo(self, tela, pos, alpha=255):
+        """Disco de fundo com cor interpolada Azul->Vermelho conforme 'Irritado'."""
         cor_azul = (173, 216, 230)
-        cor_vermelho = (255, 160, 160)
-        t = self.progress_irritado
+        cor_verm = (255, 160, 160)
+        t = max(0.0, min(1.0, self.progress_irritado))
         cor_fundo = (
-            int(cor_azul[0] + (cor_vermelho[0] - cor_azul[0]) * t),
-            int(cor_azul[1] + (cor_vermelho[1] - cor_azul[1]) * t),
-            int(cor_azul[2] + (cor_vermelho[2] - cor_azul[2]) * t),
+            int(cor_azul[0] + (cor_verm[0] - cor_azul[0]) * t),
+            int(cor_azul[1] + (cor_verm[1] - cor_azul[1]) * t),
+            int(cor_azul[2] + (cor_verm[2] - cor_azul[2]) * t),
         )
         cor_borda = (100, 149, 237)
 
-        # ===== fundo (respeita alpha e captura_cobriu) =====
-        if not (capturado_ativo and self.captura_cobriu):
-            surf_circ = pygame.Surface((self.raio * 2 + 6, self.raio * 2 + 6), pygame.SRCALPHA)
-            centro_local = (surf_circ.get_width() // 2, surf_circ.get_height() // 2)
+        surf = pygame.Surface((self.raio*2 + 6, self.raio*2 + 6), pygame.SRCALPHA)
+        c = (surf.get_width()//2, surf.get_height()//2)
+        pygame.draw.circle(surf, cor_fundo, c, self.raio)
+        pygame.draw.circle(surf, cor_borda, c, self.raio, 3)
+        if alpha < 255:
+            surf.set_alpha(alpha)
+        tela.blit(surf, surf.get_rect(center=pos))
 
-            pygame.draw.circle(surf_circ, cor_fundo, centro_local, self.raio)
-            pygame.draw.circle(surf_circ, cor_borda, centro_local, self.raio, 3)
+    def _desenhar_mirar(self, tela, pos, player, alpha=255, delta_time=0.0):
+        """Arco verde giratório quando player.Mirando == True. Atualiza MaskMirando."""
+        if not getattr(player, "Mirando", False):
+            return
+        # rotação suave (graus/seg)
+        self.angulo_mirando = (self.angulo_mirando + self.VelocidadeMirando * delta_time) % 360.0
+        surf_rot = pygame.transform.rotate(self.surf_mirando_base, self.angulo_mirando)
+        if alpha < 255:
+            surf_rot = surf_rot.copy()
+            surf_rot.set_alpha(alpha)
+        tela.blit(surf_rot, surf_rot.get_rect(center=pos))
 
-            if self.alpha < 255:
-                surf_circ.set_alpha(int(self.alpha))
+        # Se você usa checagem de colisão com a mira, atualize a máscara rotacionada:
+        self.MaskMirando = pygame.mask.from_surface(surf_rot)
 
-            rect_circ = surf_circ.get_rect(center=pos)
-            tela.blit(surf_circ, rect_circ)
+    def _desenhar_sprite(self, tela, ret, alpha=255):
+        """Sprite do pokémon (respeita alpha para fuga)."""
+        if alpha < 255:
+            quadro = self.quadro.copy()
+            quadro.set_alpha(alpha)
+        else:
+            quadro = self.quadro
+        tela.blit(quadro, ret)
 
-        # ===== mirando (respeita alpha) =====
-        if player.Mirando:
-            self.angulo_mirando = (self.angulo_mirando + self.VelocidadeMirando * delta_time) % 360
-            surf_rotacionada = pygame.transform.rotate(self.surf_mirando, self.angulo_mirando)
-            if self.alpha < 255:
-                surf_rotacionada = surf_rotacionada.copy()
-                surf_rotacionada.set_alpha(int(self.alpha))
-            rot_rect = surf_rotacionada.get_rect(center=pos)
-            tela.blit(surf_rotacionada, rot_rect)
-            self.MaskMirando = pygame.mask.from_surface(surf_rotacionada)
+    # ============================================================
+    # Efeitos (irritado, captura)
+    # ============================================================
+    def _atualizar_irritado(self, dt):
+        """Transição de 0..1 (azul->vermelho) enquanto Irritado for True."""
+        v = self.VEL_IRRITA * dt
+        if self.Irritado:
+            self.progress_irritado = min(1.0, self.progress_irritado + v)
+        else:
+            self.progress_irritado = max(0.0, self.progress_irritado - v)
 
-        # ===== sprite do pokémon (respeita captura_cobriu e alpha) =====
-        if not (capturado_ativo and self.captura_cobriu):
-            if self.alpha < 255:
-                quadro_to_blit = quadro.copy()
-                quadro_to_blit.set_alpha(int(self.alpha))
-            else:
-                quadro_to_blit = quadro
-            tela.blit(quadro_to_blit, ret)
-
-        # ===== animação de captura por cima =====
-        if capturado_ativo:
-            self.AnimacaoCapturar(tela, pos, delta_time)
-
-    def AnimacaoCapturar(self, tela, pos, delta_time):
-        cor_inicio = (173, 216, 230)
-        cor_fim = (255, 255, 255)
-
-        if not hasattr(self, "captura_progress"):
-            self.captura_progress = 0.0
-            self.captura_expandindo = True
-            self.captura_cobriu = False
-
-        velocidade = 2.5
+    def _animacao_capturar(self, tela, pos, dt):
+        """
+        Expande (0->1) cobrindo o sprite; marca captura_cobriu=True;
+        contrai (1->0) e finaliza (estado='finalizado', Apagar=True).
+        """
         if self.captura_expandindo:
-            self.captura_progress += velocidade * delta_time
+            self.captura_progress += self.VEL_CAPTURA * dt
             if self.captura_progress >= 1.0:
                 self.captura_progress = 1.0
                 self.captura_expandindo = False
                 self.captura_cobriu = True
         else:
-            self.captura_progress -= velocidade * delta_time
+            self.captura_progress -= self.VEL_CAPTURA * dt
             if self.captura_progress <= 0.0:
-                # Fim da animação
-                self.captura_progress = 0.0
-                self.FimCaptura = True
+                # fim do efeito de captura
+                self.estado = "finalizado"
+                self.Apagar = True
                 return
 
+        # cor do círculo (pode ajustar para outro efeito/gradiente)
+        cor_ini = (173, 216, 230)
+        cor_fim = (255, 255, 255)
+        p = self.captura_progress
         cor = (
-            int(cor_inicio[0] + (cor_fim[0] - cor_inicio[0]) * self.captura_progress),
-            int(cor_inicio[1] + (cor_fim[1] - cor_inicio[1]) * self.captura_progress),
-            int(cor_inicio[2] + (cor_fim[2] - cor_inicio[2]) * self.captura_progress),
+            int(cor_ini[0] + (cor_fim[0] - cor_ini[0]) * p),
+            int(cor_ini[1] + (cor_fim[1] - cor_ini[1]) * p),
+            int(cor_ini[2] + (cor_fim[2] - cor_ini[2]) * p),
         )
 
-        raio_max = max(self.Rect.width, self.Rect.height) * 1.2
-        raio = max(1, int(raio_max * self.captura_progress))
-
+        # raio proporcional (ligeiramente menor que o bound para aliviar fill)
+        raio_max = int(max(self.Rect.width, self.Rect.height) * 0.75)
+        raio = max(2, int(raio_max * max(0.05, p)))
         pygame.draw.circle(tela, cor, pos, raio)
-    
-    def mover_para_alvo(self, delta_time):
-        # Velocidade máxima de movimento por segundo (exemplo)
-        velocidade_mov = getattr(self, "VelocidadeMov", 2.0)  # casas por segundo, ajuste como quiser
 
-        pos_atual = pygame.math.Vector2(self.Loc)
-        pos_alvo = pygame.math.Vector2(self.LocAlvo)
-
-        delta = pos_alvo - pos_atual
-        distancia = delta.length()
-
-        if distancia < 0.01:
-            # Posição próxima o suficiente: encaixa no alvo
-            self.Loc = [pos_alvo.x, pos_alvo.y]
-        else:
-            # Movimento suave em direção ao alvo
-            direcao = delta.normalize()
-            passo = min(velocidade_mov * delta_time, distancia)
-            nova_pos = pos_atual + direcao * passo
-            self.Loc = [nova_pos.x, nova_pos.y]
+    # ============================================================
+    # Movimento suave automático (apenas se LocAlvo != Loc)
+    # ============================================================
+    def _mover_para_alvo(self, dt):
+        pos  = pygame.math.Vector2(self.Loc)
+        alvo = pygame.math.Vector2(self.LocAlvo)
+        delta = alvo - pos
+        dist = delta.length()
+        if dist < 1e-3:
+            # já está no alvo (evita jitter)
+            self.Loc = [alvo.x, alvo.y]
+            return
+        # passo limitado por velocidade
+        passo = min(self.VelocidadeMov * dt, dist)
+        self.Loc = list(pos + delta.normalize() * passo)
     
     def Frutificar(self, dados, player):
 
-        # if len(self.Frutas) < self.MaxFrutas:
-        #     if dados["nome"] not in self.Frutas:
-        #         self.Frutas.append(dados["nome"])
-        #     else:
-        #         return
-        # else:
-        #     return
+        if len(self.Frutas) < self.MaxFrutas:
+            if dados["nome"] not in self.Frutas:
+                self.Frutas.append(dados["nome"])
+            else:
+                return
+        else:
+            return
         
-        adicionar_estouro(self.Loc, 40, 30, [(255, 182, 193),(199, 21, 133)])
+        player.Particulas.adicionar_estouro(self.Rect.center,round(self.raio * 1.2), 80, [(255, 182, 193),(199, 21, 133)],duracao_ms=600)
         
         ConsumiveisDic[str(dados["nome"])](self, player, dados)
 
@@ -566,7 +639,7 @@ class Pokemon:
         DadosIniciais = self.Dados
 
         self.Tentativas += 1
-        dificuldade = self.Dificuldade - player.Maestria * 10
+        dificuldade = self.Dificuldade - player.Maestria * 25
         self.Dificuldade += 5
 
         chance_inicial = max(0.001, 1 - dificuldade / 200)

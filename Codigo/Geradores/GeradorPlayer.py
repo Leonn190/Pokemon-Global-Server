@@ -9,10 +9,11 @@ from Codigo.Geradores.GeradorOutros import Projetil
 ConsumiveisIMG = None
 
 class Player:
-    def __init__(self, Informações, Skins):
+    def __init__(self, Informações, Skins, Particulas):
 
         self.Code = Informações["Code"]
         self.Nome = Informações["Nome"]
+        self.Particulas = Particulas
 
         self.Pokemons = Informações["Pokemons"]
         self.Inventario = Informações["Inventario"]
@@ -358,6 +359,30 @@ class Player:
 
             # Atualiza a posição do rect do player com base na posição real
             self.rect.center = (self.rect.centerx, self.rect.centery)
+
+    def GanharXp(self, Xp):
+        if self.Nivel >= 15:
+            return
+
+        self.Xp += Xp
+
+        # loop para subir de nível várias vezes se necessário
+        while self.Nivel < 15:
+            needed = 100 + int(self.Nivel) * 20
+            if self.Xp >= needed:
+                self.Xp -= needed
+                self.Nivel += 1
+                self.Particulas.adicionar_estouro(
+                    self.Rect.center, 100, 90,
+                    [(255, 182, 193), (199, 21, 133)],
+                    duracao_ms=600
+                )
+            else:
+                break
+
+        # se chegou no nível máximo, trava o XP
+        if self.Nivel >= 15:
+            self.Xp = 0
 
     def ColideComEstruturas(self, novo_rect, ObjetosColisão):
         for estrutura in ObjetosColisão.values():

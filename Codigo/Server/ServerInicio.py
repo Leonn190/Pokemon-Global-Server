@@ -1,5 +1,6 @@
 import requests
 import os
+import random
 from Codigo.Prefabs.Mensagens import adicionar_mensagem_passageira
 from Codigo.Geradores.GeradorPokemon import criar_pokemon_especifico, desserializar_pokemon, MaterializarPokemon
 
@@ -274,9 +275,14 @@ def VerificaOperador(codigo_operador, Parametros):
 def AtivarServidor(Parametros):
     url = f"{Parametros['ServerSelecionado']['link']}/ativar-servidor"
     try:
-        response = requests.get(url, timeout=500)
+        payload = {"seed": random.randint(0,1000)}
+        response = requests.post(url, json=payload, timeout=500)
+
         if response.status_code == 200:
-            # Servidor ativado ou já ativo
+            # Servidor ativado com seed
+            return True
+        elif response.status_code == 201:
+            # Servidor já estava ativo
             return True
         else:
             return False

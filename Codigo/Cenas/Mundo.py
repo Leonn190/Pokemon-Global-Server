@@ -10,7 +10,7 @@ from Codigo.Modulos.Inventario import TelaInventario
 from Codigo.Modulos.Paineis import BarraDeItens
 from Codigo.Modulos.Comandos import ComandosMundo
 from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda
-from Codigo.Prefabs.Particulas import atualizar_e_desenhar_bursts
+from Codigo.Prefabs.Particulas import BurstManager
 from Codigo.Prefabs.Terminal import terminal
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Tecla
 from Codigo.Prefabs.Sonoridade import Musica
@@ -31,6 +31,7 @@ Equipaveis = None
 Consumiveis = None
 Animaçoes = None
 Icones = None
+Particulas = None
 
 player = None
 mapa = None
@@ -108,7 +109,7 @@ def GerenciadorDePokemonsProximos(Parametros, Mapa):
                             string_dados=pkm_info["info"],
                             extra=pkm_info["extra"],
                             Imagens=Pokemons,
-                            Animaçoes=Animaçoes,
+                            Animacoes=Animaçoes,
                             Parametros=Parametros
                         )
                         pokemons_novos[id_] = novo_pokemon
@@ -128,7 +129,8 @@ def GerenciadorDePokemonsProximos(Parametros, Mapa):
                             if "DocesExtras" in pkm_info["extra"]:
                                 pkm_existente.DocesExtras = pkm_info["extra"]["DocesExtras"]
                             if "Irritado" in pkm_info["extra"]:
-                                pkm_existente.Irritado = pkm_info["extra"]["Irritado"]
+                                if pkm_existente.Irritado == False:
+                                    pkm_existente.Irritado = pkm_info["extra"]["Irritado"]
                             if "Batalhando" in pkm_info["extra"]:
                                 pkm_existente.Batalhando = pkm_info["extra"]["Batalhando"]
                             if "Capturado" in pkm_info["extra"]:
@@ -252,7 +254,7 @@ def MundoTelaPadrao(tela, estados, eventos, parametros):
         terminal(tela,Fontes[16],player.Nome,pygame.K_TAB,eventos,parametros,ComandosMundo,parametros)
 
 def MundoLoop(tela, relogio, estados, config, info):
-    global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, player, mapa, camera
+    global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, player, mapa, camera, Particulas
     if Cores == None:
         Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Consumiveis, Equipaveis, Estruturas, Animaçoes, Icones = info["Conteudo"]
 
@@ -284,7 +286,8 @@ def MundoLoop(tela, relogio, estados, config, info):
     VerificaMapa(parametros)
     Musica("MundoTema")
 
-    player = Player(info["Server"]["Player"]["dados"],Outros["SkinsTodas"])
+    Particulas = BurstManager(70,debug=True)
+    player = Player(info["Server"]["Player"]["dados"],Outros["SkinsTodas"],Particulas)
     mapa = Mapa(parametros["GridBiomas"],GridToDic(parametros["GridObjetos"]))
     camera = Camera(18)
 
@@ -339,7 +342,7 @@ def MundoLoop(tela, relogio, estados, config, info):
             x = tela.get_width() - texto_surface.get_width() - 10
             texto_com_borda(tela, texto, Fontes[25], (x, y_base), (255, 255, 255), (0, 0, 0))
         
-        atualizar_e_desenhar_bursts(tela,[x_cord,y_cord], parametros["delta_time"])
+        Particulas.atualizar_e_desenhar_bursts(tela,[x_cord,y_cord], parametros["delta_time"])
 
         Clarear(tela, info)
         pygame.display.update()

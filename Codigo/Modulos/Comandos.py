@@ -2,7 +2,7 @@ ComandosMundo = {}
 
 def LevelUp(n=1):
     from Codigo.Cenas.Mundo import player
-    player.Nivel += int(n)
+    player.GanharXp((100 + player.Nivel * 20) * n)
 
 # registra sem a barra
 ComandosMundo.update({

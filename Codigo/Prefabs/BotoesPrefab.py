@@ -365,3 +365,51 @@ def Botao_invisivel(espaco, acao, clique_duplo=False, intervalo_duplo=300):
         # Quando o botão do mouse soltar, marca que pode aceitar novo clique
         if hasattr(Botao_invisivel, "_clicado"):
             Botao_invisivel._clicado[chave] = False
+
+def Botao_Surface(tela, espaço, surface, acao, eventos):
+    """
+    Desenha um botão baseado em uma surface.
+    - espaço : (x,y,w,h) ou pygame.Rect
+    - surface: pygame.Surface a desenhar
+    - acao   : função ou lista de funções a executar quando clicado
+    - eventos: lista de eventos pygame
+    - tela   : surface onde será desenhado
+    """
+    if not isinstance(espaço, pygame.Rect):
+        rect = pygame.Rect(espaço)
+    else:
+        rect = espaço
+
+    # lista de ações garantida
+    if not isinstance(acao, (list, tuple)):
+        acoes = [acao]
+    else:
+        acoes = list(acao)
+
+    mouse_pos = pygame.mouse.get_pos()
+    mouse_over = rect.collidepoint(mouse_pos)
+
+    # cria cópia da surface (não alterar a original)
+    img = surface.copy()
+
+    # hover → clareia a imagem
+    if mouse_over:
+        overlay = pygame.Surface(img.get_size(), pygame.SRCALPHA)
+        overlay.fill((255, 255, 255, 60))  # branco translúcido
+        img.blit(overlay, (0, 0))
+
+    # desenha
+    if tela:
+        tela.blit(img, rect.topleft)
+
+    # eventos
+    if eventos:
+        for ev in eventos:
+            if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                if mouse_over:
+                    for f in acoes:
+                        if callable(f):
+                            f()
+
+    return rect
+

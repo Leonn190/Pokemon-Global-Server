@@ -2,7 +2,7 @@ import pygame
 import math
 
 from Codigo.Prefabs.FunçõesPrefabs import Barra, Scrolavel, Slider, BarraMovel, SurfaceAtaque
-from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel
+from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel, Botao_Surface
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Arrastavel import Arrastavel
 from Codigo.Modulos.DesenhoPlayer import DesenharPlayer
@@ -289,15 +289,12 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
         pygame.draw.rect(tela, cor_cabecalho, (cab_x, cab_y, cab_w, cab_h))
 
         # botão (canto esquerdo)
-        botao_tam = min(66, cab_h - 4)
+        botao_tam = min(60, cab_h - 4)
         botao_x = cab_x + 2
         botao_y = cab_y + 2
-        Botao(
-            tela, "", (botao_x, botao_y, botao_tam, botao_tam),
-            cores["amarelo"], cores["preto"], cores["branco"],
-            lambda: parametros.update({"PokemonSelecionado": None}),
-            fontes[16], B_Voltar, eventos
-        )
+        Botao_Surface(
+            tela, (botao_x, botao_y, botao_tam, botao_tam),
+            icones["Voltar"], lambda: parametros.update({"PokemonSelecionado": None}),eventos)
 
         # imagem do Pokémon (canto direito do cabeçalho, antes do divisor vertical)
         nome_poke = str(pokemon.get("Nome", ""))
@@ -872,7 +869,8 @@ def PainelPokemonAuxiliar(tela, pos, player, eventos, parametros):
 #     pokemon["Memoria"]  -> lista (até 8) de dicts (ataques)
 
 # ---- Estado global desta UI (mesma ideia do inventário) ----
-arrastaveis_moves_mem = []
+arrastaveis_movelist = []
+arrastaveis_memo = []
 areas_moves = []      # rects dos 4 slots (coluna MoveList)
 areas_memoria = []    # rects dos 8 slots (coluna Memoria)
 areas_hab_ativas = []
@@ -886,14 +884,13 @@ pokemon_ref = None   # referência ao pokemon sendo editado (para o executor sab
 def desenhar_moves_memoria(pokemon, pos, tela, eventos):
 
     # ========= Globais / Estado =========
-    global arrastaveis_moves_mem, areas_moves, areas_memoria
+    global arrastaveis_movelist, arrastaveis_memo, areas_moves, areas_memoria
     global areas_hab_ativas, areas_hab_memoria
     global _moves_cache, _mem_cache, _hab_a_cache, _hab_m_cache, pokemon_ref
 
     pokemon_ref = pokemon
 
     # ========= Cores =========
-    COR_FUNDO        = (24, 24, 24)
     COR_HEAD         = (52, 52, 52)
     COR_SLOT         = (40, 40, 40)
     COR_SLOT_HAB     = (56, 40, 40)
@@ -910,14 +907,14 @@ def desenhar_moves_memoria(pokemon, pos, tela, eventos):
     COL_GAP          = 8   # gap entre as colunas (entre cabeçalhos)
     HEAD_H           = 24   # altura da barra de cabeçalho
     HEAD_TO_ROWS_GAP = 10    # << NOVO: distância do cabeçalho até o início das linhas
-    ROW_GAP          = 16   # distância vertical entre linhas
+    ROW_GAP          = 18   # distância vertical entre linhas
     SLOT_H           = 28   # altura dos slots (mesma para todos)
     SLOT_MOV_W       = 175  # largura slot MoveList
     SLOT_MEM_W       = 145  # largura slot Memoria
 
     # Larguras fixas de "colunas" conforme cabeçalhos
-    W_MOV_HEAD       = 190
-    W_MEM_HEAD       = 330
+    W_MOV_HEAD       = 195
+    W_MEM_HEAD       = 335
 
     # Linhas: 4 (moves) + habilidades (1 ou 2)
     hab_nivel   = int(pokemon.get("Habilidades", 1))
@@ -1012,7 +1009,6 @@ def desenhar_moves_memoria(pokemon, pos, tela, eventos):
         dados   = arr.dados
 
         if interno:
-            # Veio dos ATIVOS (MoveList)
             origem = pokemon_ref["MoveList"].index(dados)
 
             # Soltou em alguma lacuna da MoveList -> swap dentro da própria lista
@@ -1068,7 +1064,7 @@ def desenhar_moves_memoria(pokemon, pos, tela, eventos):
     if _moves_cache != pokemon_ref["MoveList"]:
         _moves_cache = list(pokemon_ref["MoveList"])
         # primeiro remove arrastáveis dessa área
-        arrastaveis_moves_mem = [a for a in arrastaveis_moves_mem if a.dados not in _moves_cache]
+        arrastaveis_movelist.clear()
         # recria os novos
         for i in range(min(4, len(pokemon_ref["MoveList"]))):
             atk = pokemon_ref["MoveList"][i]
@@ -1076,21 +1072,21 @@ def desenhar_moves_memoria(pokemon, pos, tela, eventos):
                 r   = areas_moves[i]
                 surf = build_surface_from_attack(atk, r, main_flag=True)
                 px, py = r.centerx - surf.get_width()//2, r.centery - surf.get_height()//2
-                arrastaveis_moves_mem.append(
+                arrastaveis_movelist.append(
                     Arrastavel(surf, (px, py), dados=atk, interno=True, funcao_execucao=executar_moves_memoria)
                 )
 
     # ========= Memoria =========
     if _mem_cache != pokemon_ref["Memoria"]:
         _mem_cache = list(pokemon_ref["Memoria"])
-        arrastaveis_moves_mem = [a for a in arrastaveis_moves_mem if a.dados not in _mem_cache]
+        arrastaveis_memo.clear()
         for i in range(min(8, len(pokemon_ref["Memoria"]))):
             atk = pokemon_ref["Memoria"][i]
             if atk is not None:
                 r   = areas_memoria[i]
                 surf = build_surface_from_attack(atk, r, main_flag=False)
                 px, py = r.centerx - surf.get_width()//2, r.centery - surf.get_height()//2
-                arrastaveis_moves_mem.append(
+                arrastaveis_memo.append(
                     Arrastavel(surf, (px, py), dados=atk, interno=False, funcao_execucao=executar_moves_memoria)
                 )
 
@@ -1125,14 +1121,14 @@ def desenhar_moves_memoria(pokemon, pos, tela, eventos):
 
     # ========= Atualização/desenho arrastáveis =========
     mouse_pos = pygame.mouse.get_pos()
-    for arr in arrastaveis_moves_mem:
+    for arr in arrastaveis_memo + arrastaveis_movelist:
         arr.atualizar(eventos)
         arr.arrastar(mouse_pos)
 
-    for arr in arrastaveis_moves_mem:
+    for arr in arrastaveis_memo + arrastaveis_movelist:
         if not getattr(arr, "esta_arrastando", False):
             arr.desenhar(tela)
-    for arr in arrastaveis_moves_mem:
+    for arr in arrastaveis_memo + arrastaveis_movelist:
         if getattr(arr, "esta_arrastando", False):
             arr.desenhar(tela)
 
@@ -1160,7 +1156,7 @@ def desenha_build(pokemon, pos, tela, eventos):
     GAP_HEAD_TO_ROW  = 12
     RAD              = 10
     SLOT_SIDE        = 50  # sempre 64x64
-    SLOT_GAP         = 12   # << novo: espaçamento fixo entre slots
+    SLOT_GAP         = 14   # << novo: espaçamento fixo entre slots
 
     # Cabeçalho
     head_rect = pygame.Rect(x0 + PAD_EXTERNO, y0 + PAD_EXTERNO, W - 2*PAD_EXTERNO, HEAD_H)
@@ -1342,27 +1338,32 @@ def PainelPlayer(tela, pos, player, eventos, parametros):
 
         # --- barra de XP ao lado do texto (opcional) ---
         if (xp is not None) and (nivel_for_xp is not None) and (estado_barra is not None):
-            needed = 100 + int(nivel_for_xp) * 15
+            # caso seja nível máximo
+            if int(nivel_for_xp) >= 15:
+                needed = 1  # evita divisão por zero
+                xp_val = 1  # barra cheia
+                mostrar_texto = "Nível Máximo"
+            else:
+                needed = 100 + int(nivel_for_xp) * 20
+                xp_val = float(xp)
+                mostrar_texto = f"XP: {int(xp)}/{needed}"
 
             # barra ao lado do texto:
             margem_h   = 12
             espaco     = 10  # gap entre texto e barra
             bar_x      = txt_x + txt_surf.get_width() + espaco
-            # levemente mais grossa que antes: ~1–2px a mais
             bar_h      = max(10, rect.height // 6)
             bar_y      = (rect.height - bar_h) // 2 + 8
-            bar_w      = max(20, rect.width - margem_h - bar_x)  # garante largura mínima
+            bar_w      = max(20, rect.width - margem_h - bar_x)
 
-            # se faltar espaço extremo, corta a barra para não sair da pílula
             if bar_x + bar_w > rect.width - margem_h:
                 bar_w = max(20, (rect.width - margem_h) - bar_x)
 
             # texto de xp levemente acima da barra
             mini_font = fontes[14]
-            txt_xp = f"XP: {int(xp)}/{needed}"
-            mini_surf = mini_font.render(txt_xp, True, (255, 255, 255))
+            mini_surf = mini_font.render(mostrar_texto, True, (255, 255, 255))
             mini_x = bar_x
-            mini_y = max(0, bar_y - mini_surf.get_height() - 2)  # acima da barra
+            mini_y = max(0, bar_y - mini_surf.get_height() - 2)
             pill_surf.blit(mini_surf, (mini_x, mini_y))
 
             # cor da barra
@@ -1373,8 +1374,8 @@ def PainelPlayer(tela, pos, player, eventos, parametros):
                 pill_surf,
                 (bar_x, bar_y),
                 (bar_w, bar_h),
-                float(xp),
-                float(needed),
+                xp_val,
+                needed,
                 cor_barra,
                 estado_barra,
                 chave_xp,
