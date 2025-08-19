@@ -279,7 +279,8 @@ def MundoLoop(tela, relogio, estados, config, info):
         "Inventario": {
             "Setor": None,
             "ItemSelecionado": None,
-            "PokemonSelecionado": None
+            "PokemonSelecionado": None,
+            "AtaqueSelecionado": None
         }
     }
 

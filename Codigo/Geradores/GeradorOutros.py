@@ -8,10 +8,15 @@ class Projetil:
         self.alvo = pygame.math.Vector2(pygame.mouse.get_pos())
 
         if self.dados["estilo"] == "bola":
-            self.velocidade = 360
+            self.velocidade = 370
             self.distancia_total = 520
+            if self.dados["nome"] == "Sniperball":
+                self.velocidade = 430
+                self.distancia_total = 580
+            if self.dados["nome"] == "Fastball":
+                self.velocidade = 420
         elif self.dados["estilo"] == "fruta":
-            self.velocidade = 320
+            self.velocidade = 330
             self.distancia_total = 420
 
         self.distancia_percorrida = 0

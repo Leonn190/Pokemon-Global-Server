@@ -86,6 +86,20 @@ def CarregarIcones():
 
     return imagens
 
+def CarregarTexturasAtaques():
+    pasta = os.path.join("Recursos", "Visual", "Texturas", "Ataques")
+    imagens = {}
+
+    for nome_arquivo in os.listdir(pasta):
+        if nome_arquivo.lower().endswith((".png", ".jpg", ".jpeg")):  # aceita várias extensões
+            chave = os.path.splitext(nome_arquivo)[0]  # remove extensão
+            caminho_relativo = os.path.join("Texturas", "Ataques", nome_arquivo)
+            imagem = Carregar_Imagem(caminho_relativo)
+            if imagem is not None:
+                imagens[chave] = imagem
+
+    return imagens
+
 def CarregarOutrasSkins():
     pasta = os.path.join("Recursos", "Visual", "Skins", "Bloqueadas")
     imagens = []
@@ -122,6 +136,7 @@ def CarregamentoAvançado(info,Pré):
     Texturas.update({
         "Madeira": Carregar_Imagem("Texturas/TexturaMadeira.jpg")
     })
+    Texturas.update(CarregarTexturasAtaques())
 
     Outros.update({
         "Baus": {

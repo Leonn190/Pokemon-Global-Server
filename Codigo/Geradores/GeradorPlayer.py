@@ -346,7 +346,7 @@ class Player:
             self.ColideComBaus(novo_rect_x, BausColisão, parametros)
             if not self.ColideComEstruturas(novo_rect_x, ObjetosColisão):
                 self.Loc[0] += dx  # atualiza a posição do jogador no mundo
-                self.Passos += 0.1
+                self.Passos += 0.01
 
             nova_pos_tela_y = self.rect.centery + dy * self.tile
             novo_rect_y = self.rect.copy()
@@ -355,7 +355,7 @@ class Player:
             self.ColideComBaus(novo_rect_y, BausColisão, parametros)
             if not self.ColideComEstruturas(novo_rect_y, ObjetosColisão):
                 self.Loc[1] += dy
-                self.Passos += 0.1
+                self.Passos += 0.01
 
             # Atualiza a posição do rect do player com base na posição real
             self.rect.center = (self.rect.centerx, self.rect.centery)

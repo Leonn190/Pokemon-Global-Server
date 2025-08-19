@@ -627,7 +627,7 @@ class Pokemon:
         else:
             return
         
-        player.Particulas.adicionar_estouro(self.Rect.center,round(self.raio * 1.2), 80, [(255, 182, 193),(199, 21, 133)],duracao_ms=600)
+        player.Particulas.adicionar_estouro(self.Rect.center,round(self.raio * 1.25), 90, [(255, 182, 193),(199, 21, 133)],duracao_ms=700)
         
         ConsumiveisDic[str(dados["nome"])](self, player, dados)
 

@@ -128,14 +128,16 @@ def Barra_De_Texto(tela, espaço, fonte, cor_fundo, cor_borda, cor_texto,
 
     texto_modificado = False
 
-    # Configuração para apagar com tecla pressionada
     keys = pygame.key.get_pressed()
     tempo_atual = pygame.time.get_ticks()
 
-    # Estado de controle estático da função
+    # Estado estático (mantém entre chamadas)
     if not hasattr(Barra_De_Texto, "backspace_timer"):
         Barra_De_Texto.backspace_timer = 0
         Barra_De_Texto.backspace_held = False
+        Barra_De_Texto.cursor_timer = 0
+        Barra_De_Texto.cursor_visivel = True
+        Barra_De_Texto.ultimo_input = 0
 
     for evento in eventos:
         if evento.type == pygame.MOUSEBUTTONDOWN:
@@ -150,21 +152,22 @@ def Barra_De_Texto(tela, espaço, fonte, cor_fundo, cor_borda, cor_texto,
                 texto_modificado = True
                 Barra_De_Texto.backspace_timer = tempo_atual
                 Barra_De_Texto.backspace_held = True
+                Barra_De_Texto.ultimo_input = tempo_atual
             elif evento.key == pygame.K_v and (pygame.key.get_mods() & pygame.KMOD_CTRL):
                 conteudo_colado = pyperclip.paste()
-                # Aplica limite se existir
                 if limite > 0:
                     espaco_disponivel = limite - len(texto_atual)
                     conteudo_colado = conteudo_colado[:espaco_disponivel]
                 texto_atual += conteudo_colado
                 texto_modificado = True
+                Barra_De_Texto.ultimo_input = tempo_atual
             elif evento.key == pygame.K_RETURN:
-                pass  # Enter ainda não faz nada
+                pass
             else:
-                # Só adiciona se não ultrapassar o limite
                 if limite <= 0 or len(texto_atual) < limite:
                     texto_atual += evento.unicode
                     texto_modificado = True
+                    Barra_De_Texto.ultimo_input = tempo_atual
 
         if evento.type == pygame.KEYUP and evento.key == pygame.K_BACKSPACE:
             Barra_De_Texto.backspace_held = False
@@ -175,18 +178,36 @@ def Barra_De_Texto(tela, espaço, fonte, cor_fundo, cor_borda, cor_texto,
             texto_atual = texto_atual[:-1]
             texto_modificado = True
             Barra_De_Texto.backspace_timer = tempo_atual
+            Barra_De_Texto.ultimo_input = tempo_atual
 
-    # Chama função de envio, se houver
+    # Chama função de envio
     if texto_modificado and ao_enviar:
         ao_enviar(texto_atual)
 
-    # Desenho visual
+    # --- Cursor piscante ---
+    if selecionada:
+        if tempo_atual - Barra_De_Texto.ultimo_input > 400:  # começa a piscar depois de 0.4s sem input
+            if tempo_atual - Barra_De_Texto.cursor_timer > 500:  # troca estado a cada 0.5s
+                Barra_De_Texto.cursor_visivel = not Barra_De_Texto.cursor_visivel
+                Barra_De_Texto.cursor_timer = tempo_atual
+        else:
+            Barra_De_Texto.cursor_visivel = True  # enquanto digita, cursor sempre ligado
+            Barra_De_Texto.cursor_timer = tempo_atual
+
+    # --- Desenho ---
     cor_borda_atual = cor_selecionado if selecionada else cor_borda
     pygame.draw.rect(tela, cor_fundo, retangulo)
     pygame.draw.rect(tela, cor_borda_atual, retangulo, 2)
 
     texto_surface = fonte.render(str(texto_atual), True, cor_texto)
     tela.blit(texto_surface, (retangulo.x + 10, retangulo.y + (altura - texto_surface.get_height()) // 2))
+
+    # Desenha cursor
+    if selecionada and Barra_De_Texto.cursor_visivel:
+        cursor_x = retangulo.x + 10 + texto_surface.get_width() + 2
+        cursor_y = retangulo.y + (altura - texto_surface.get_height()) // 2
+        cursor_h = texto_surface.get_height()
+        pygame.draw.line(tela, cor_texto, (cursor_x, cursor_y), (cursor_x, cursor_y + cursor_h), 2)
 
     return texto_atual, selecionada
 

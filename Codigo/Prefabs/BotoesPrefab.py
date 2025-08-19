@@ -380,7 +380,7 @@ def Botao_Surface(tela, espaço, surface, acao, eventos):
     else:
         rect = espaço
 
-    # lista de ações garantida
+    # garante lista de ações
     if not isinstance(acao, (list, tuple)):
         acoes = [acao]
     else:
@@ -389,14 +389,14 @@ def Botao_Surface(tela, espaço, surface, acao, eventos):
     mouse_pos = pygame.mouse.get_pos()
     mouse_over = rect.collidepoint(mouse_pos)
 
-    # cria cópia da surface (não alterar a original)
-    img = surface.copy()
+    # adapta a imagem ao rect
+    img = pygame.transform.smoothscale(surface, rect.size).convert_alpha()
 
-    # hover → clareia a imagem
+    # hover → clareia suavemente sem apagar detalhes
     if mouse_over:
         overlay = pygame.Surface(img.get_size(), pygame.SRCALPHA)
-        overlay.fill((255, 255, 255, 60))  # branco translúcido
-        img.blit(overlay, (0, 0))
+        overlay.fill((40, 40, 40, 0))  # aumenta brilho em R,G,B
+        img.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
     # desenha
     if tela:
@@ -410,6 +410,4 @@ def Botao_Surface(tela, espaço, surface, acao, eventos):
                     for f in acoes:
                         if callable(f):
                             f()
-
-    return rect
 

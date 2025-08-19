@@ -227,6 +227,8 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
 
         # Atualizar e desenhar arrastáveis
     for arr in arrastaveis_pokemons:
+        if parametros["PokemonSelecionado"] is None:
+            arr.esta_arrastando = False
         arr.atualizar(eventos)
         arr.arrastar(pygame.mouse.get_pos())
 
@@ -377,6 +379,13 @@ def TelaInventario(tela, player, eventos, parametros):
 
     if parametros["Inventario"]["Setor"] is None:
         parametros["Inventario"]["Setor"] = SetorItens
+    
+    if parametros["Inventario"]["Setor"] != SetorPokemons:
+        parametros["Inventario"]["PokemonSelecionado"] = None
+        parametros["Inventario"]["AtaqueSelecionado"] = None
+    
+    if parametros["Inventario"]["Setor"] != SetorItens:
+        parametros["Inventario"]["ItemSelecionado"] = None
 
     largura_fundo = 1600
     altura_fundo = 850
