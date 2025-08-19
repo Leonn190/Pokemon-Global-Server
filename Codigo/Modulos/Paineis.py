@@ -453,9 +453,7 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
         txt_xp_rect = txt_xp.get_rect(center=(CX, bar_y + BAR_H + 16))
         tela.blit(txt_xp, txt_xp_rect)
 
-    def _desenhar_moves_memoria():
-
-        pos = (x0 + 350, y0 + 70)
+    def _desenhar_moves_memoria(pos):
 
         # ========= Globais / Estado =========
         global arrastaveis_movelist, arrastaveis_memo, areas_moves, areas_memoria
@@ -717,9 +715,7 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
             if getattr(arr, "esta_arrastando", False):
                 arr.desenhar(tela)
 
-    def desenha_build():
-
-        pos = (x0 + 255,  y0 + 70)
+    def desenha_build(pos):
 
         # ======= Globais/estado =======
         global areas_build, arrastaveis_build, _build_cache_list, _build_cache_n
@@ -962,8 +958,8 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
     )
 
     # ========= Painel de Moves/Memória =========
-    _desenhar_moves_memoria()
-    desenha_build(pokemon, (x0 + 255,  y0 + 70), tela, eventos)
+    _desenhar_moves_memoria((x0 + 350, y0 + 70))
+    desenha_build((x0 + 255,  y0 + 70))
     
     if parametros["AtaqueSelecionado"] != None:
         PainelAtaque(tela, parametros["AtaqueSelecionado"],(x0 + 920, y0 + 75))

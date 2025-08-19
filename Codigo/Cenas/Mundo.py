@@ -239,8 +239,8 @@ def MundoTelaOpçoes(tela, estados, eventos, parametros):
     )
 
 def MundoTelaPadrao(tela, estados, eventos, parametros):
-    
-    camera.desenhar(tela,player.Loc,mapa,player,Estruturas,parametros["delta_time"],Outros["Baus"])
+
+    camera.desenhar(tela,player.Loc,mapa,player,Estruturas,parametros["delta_time"],Outros["Baus"], parametros, Consumiveis, Fontes)
 
     if parametros["ModoTeclado"] == False:
         Botao_Tecla("esc",lambda: parametros.update({"Tela": MundoTelaOpçoes}))
@@ -249,7 +249,6 @@ def MundoTelaPadrao(tela, estados, eventos, parametros):
     if parametros["InventarioAtivo"]:
         TelaInventario(tela, player, eventos, parametros)
     else:
-        player.Atualizar(tela, parametros["delta_time"], mapa, Fontes[20], parametros, Consumiveis)
         BarraDeItens(tela, player, eventos)
         terminal(tela,Fontes[16],player.Nome,pygame.K_TAB,eventos,parametros,ComandosMundo,parametros)
 

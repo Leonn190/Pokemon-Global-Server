@@ -82,15 +82,34 @@ class Player:
 
         # Imagem e cor do corpo (cacheadas)
         imagem_corpo = self.SkinRedimensionada
-        cor_braco = CacheExtrairCor(imagem_corpo)         # <<< cache de cor
-        corpo_rotacionado = PegarRotaçao(imagem_corpo, angulo_correcao)  # <<< cache de rotação
+        cor_braco = CacheExtrairCor(imagem_corpo)                         # cache de cor
+        corpo_rotacionado = PegarRotaçao(imagem_corpo, angulo_correcao)   # cache de rotação
 
-        # Blit do corpo
+        # ===== DESENHO =====
         corpo_rect = corpo_rotacionado.get_rect(center=(x_centro, y_centro))
         tela.blit(corpo_rotacionado, corpo_rect)
 
-        # Atualiza o rect do player (reaproveita o mesmo rect do corpo)
-        self.rect = corpo_rect
+        # Guarde o rect de desenho separadamente (para UI/debug), não use para colisão:
+        self.draw_rect = corpo_rect
+
+        # ===== COLISÃO / HITBOX =====
+        # Crie um rect fixo (baseado na imagem SEM rotação), reduzido para evitar quinas de ar.
+        # Ajuste self.hitbox_scale se quiser mais/menos folga.
+        if not hasattr(self, "hitbox_scale"):
+            self.hitbox_scale = 0.70  # 70% do tamanho do sprite base
+
+        base_w, base_h = imagem_corpo.get_size()
+        hit_w = max(4, int(base_w * self.hitbox_scale))
+        hit_h = max(4, int(base_h * self.hitbox_scale))
+
+        # Reuse o mesmo objeto Rect quando possível (menos GC)
+        if not hasattr(self, "_hit_rect") or self._hit_rect.size != (hit_w, hit_h):
+            self._hit_rect = pygame.Rect(0, 0, hit_w, hit_h)
+
+        self._hit_rect.center = (x_centro, y_centro)
+
+        # Este é o rect que TODA a lógica de colisão deve usar:
+        self.rect = self._hit_rect
 
         # Braços (usa cor cacheada e ângulo em rad)
         self.desenhar_bracos(
@@ -102,8 +121,9 @@ class Player:
             mapa.PokemonsColisão
         )
 
-        # (Opcional) Debug do rect
-        pygame.draw.rect(tela, (0, 255, 0), self.rect, 2)
+        # Debug opcional: verde = hitbox de colisão; ciano = rect de desenho
+        pygame.draw.rect(tela, (0, 255, 0), self.rect, 2)       # colisão (fixo)
+        pygame.draw.rect(tela, (0, 200, 200), self.draw_rect, 1)  # desenho (AABB da rotação)
 
         flutuacao = math.sin(pygame.time.get_ticks() / 200) * 5
 
@@ -116,7 +136,7 @@ class Player:
         y_txt = int(corpo_rect.top - 8 - txt_h + flutuacao)
 
         texto_com_borda(tela, self.Nome, fonte, (x_txt, y_txt), (255, 255, 255), (0, 0, 0))
-
+    
     def desenhar_bracos(self, tela, centro, cor_braco, angulo_rad, ItensIMG, PokemonsColisão):
         x_centro, y_centro = centro
         tempo = pygame.time.get_ticks()
@@ -335,30 +355,63 @@ class Player:
             direcao_x /= magnitude
             direcao_y /= magnitude
             velocidade = self.Velocidade + 3
+
+            # --- deslocamento pretendido (em TILES por frame, como no seu código) ---
             dx = direcao_x * velocidade * delta_time
             dy = direcao_y * velocidade * delta_time
 
-            # Simula o novo centro do rect na tela
+            # --- deslocamento pretendido (em TILES/frame, como no seu código) ---
+            dx = direcao_x * velocidade * delta_time
+            dy = direcao_y * velocidade * delta_time
+
+            # >>> NOVO: aplicar o campo sobre o RETÂNGULO PREVISTO (antes do resolve por eixo)
+            tmp_rect = self.rect.copy()
+            tmp_rect.centerx += int(round(dx * self.tile))
+            tmp_rect.centery += int(round(dy * self.tile))
+
+            for estrutura in ObjetosColisão.values():
+                # usa o retângulo previsto do player para checar a zona (mais preciso)
+                dx, dy = estrutura.aplicar_campo_forca(
+                    tmp_rect,            # rect previsto do player (TELA)
+                    (dx, dy),            # movimento em TILES/frame
+                    self.tile,           # px por tile
+                    delta_time
+                )
+
+            # ====== depois segue igual ao seu fluxo atual ======
+            # EIXO X
             nova_pos_tela_x = self.rect.centerx + dx * self.tile
             novo_rect_x = self.rect.copy()
             novo_rect_x.centerx = nova_pos_tela_x
 
             self.ColideComBaus(novo_rect_x, BausColisão, parametros)
-            if not self.ColideComEstruturas(novo_rect_x, ObjetosColisão):
-                self.Loc[0] += dx  # atualiza a posição do jogador no mundo
-                self.Passos += 0.01
+            colidiu_x = False
+            for estrutura in ObjetosColisão.values():
+                if estrutura.verifica_colisao_player(novo_rect_x):
+                    colidiu_x = True
+                    break
 
+            if not colidiu_x:
+                self.Loc[0] += dx
+                if dx != 0:
+                    self.Passos += 0.01
+
+            # EIXO Y
             nova_pos_tela_y = self.rect.centery + dy * self.tile
             novo_rect_y = self.rect.copy()
             novo_rect_y.centery = nova_pos_tela_y
 
             self.ColideComBaus(novo_rect_y, BausColisão, parametros)
-            if not self.ColideComEstruturas(novo_rect_y, ObjetosColisão):
-                self.Loc[1] += dy
-                self.Passos += 0.01
+            colidiu_y = False
+            for estrutura in ObjetosColisão.values():
+                if estrutura.verifica_colisao_player(novo_rect_y):
+                    colidiu_y = True
+                    break
 
-            # Atualiza a posição do rect do player com base na posição real
-            self.rect.center = (self.rect.centerx, self.rect.centery)
+            if not colidiu_y:
+                self.Loc[1] += dy
+                if dy != 0:
+                    self.Passos += 0.01
 
     def GanharXp(self, Xp):
         if self.Nivel >= 15:
@@ -383,18 +436,18 @@ class Player:
         # se chegou no nível máximo, trava o XP
         if self.Nivel >= 15:
             self.Xp = 0
-
-    def ColideComEstruturas(self, novo_rect, ObjetosColisão):
-        for estrutura in ObjetosColisão.values():
-            if estrutura.rect and novo_rect.colliderect(estrutura.rect):
-                return True
-        return False
     
     def ColideComBaus(self, novo_rect, BausColisão, parametros):
         for Bau in BausColisão.values():
             if Bau.rect and novo_rect.colliderect(Bau.rect):
                 if Bau.Aberto is False:
                     Bau.AbrirBau(self, parametros)
+
+    def ColideComEstruturas(self, novo_rect, ObjetosColisão):
+        for estrutura in ObjetosColisão.values():
+            if estrutura.rect and novo_rect.colliderect(estrutura.rect):
+                return True
+        return False
 
     def AdicionarAoInventario(self, player, nome, raridade, estilo, descriçao, M1, M2):
         global ConsumiveisIMG
@@ -469,3 +522,63 @@ class Player:
             "Passos": self.Passos
         }
     
+
+
+    # def Atualizar(self, tela, delta_time, mapa, fonte, parametros, ItensIMG):
+    #     # Movimento e projéteis
+    #     self.mover(delta_time, mapa, parametros)
+
+    #     self.TempoDeJogo += delta_time
+
+    #     for projetil in self.Projeteis:
+    #         projetil.atualizar(tela, self.Loc, self, delta_time)
+
+    #     # Centro da tela
+    #     largura_tela, altura_tela = tela.get_size()
+    #     x_centro = largura_tela // 2
+    #     y_centro = altura_tela // 2
+    #     mouse_x, mouse_y = pygame.mouse.get_pos()
+
+    #     # Ângulo (em graus e radianos)
+    #     dx, dy = mouse_x - x_centro, mouse_y - y_centro
+    #     angulo = math.degrees(math.atan2(dy, dx))
+    #     angulo_correcao = angulo - 90
+    #     angulo_rad = math.radians(angulo)
+    #     self.angulo = angulo
+
+    #     # Imagem e cor do corpo (cacheadas)
+    #     imagem_corpo = self.SkinRedimensionada
+    #     cor_braco = CacheExtrairCor(imagem_corpo)         # <<< cache de cor
+    #     corpo_rotacionado = PegarRotaçao(imagem_corpo, angulo_correcao)  # <<< cache de rotação
+
+    #     # Blit do corpo
+    #     corpo_rect = corpo_rotacionado.get_rect(center=(x_centro, y_centro))
+    #     tela.blit(corpo_rotacionado, corpo_rect)
+
+    #     # Atualiza o rect do player (reaproveita o mesmo rect do corpo)
+    #     self.rect = corpo_rect
+
+    #     # Braços (usa cor cacheada e ângulo em rad)
+    #     self.desenhar_bracos(
+    #         tela,
+    #         (x_centro, y_centro),
+    #         cor_braco,
+    #         angulo_rad,
+    #         ItensIMG,
+    #         mapa.PokemonsColisão
+    #     )
+
+    #     # (Opcional) Debug do rect
+    #     pygame.draw.rect(tela, (0, 255, 0), self.rect, 2)
+
+    #     flutuacao = math.sin(pygame.time.get_ticks() / 200) * 5
+
+    #     # mede o texto
+    #     txt_surf = fonte.render(self.Nome, True, (255, 255, 255))
+    #     txt_w, txt_h = txt_surf.get_size()
+
+    #     # ancora o apelido no centro do player e 8px acima da cabeça
+    #     x_txt = int(corpo_rect.centerx - txt_w // 2)
+    #     y_txt = int(corpo_rect.top - 8 - txt_h + flutuacao)
+
+    #     texto_com_borda(tela, self.Nome, fonte, (x_txt, y_txt), (255, 255, 255), (0, 0, 0))

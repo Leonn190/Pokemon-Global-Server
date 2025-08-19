@@ -56,7 +56,7 @@ class Camera:
         self.largura_em_tiles = 2 * raio_em_tiles + 1
         self.altura_em_tiles = 2 * raio_em_tiles + 1
 
-    def desenhar(self, tela, jogador_pos, mapa, player, EstruturasIMG, delta_time, BausIMG):
+    def desenhar(self, tela, jogador_pos, mapa, player, EstruturasIMG, delta_time, BausIMG, parametros, Consumiveis, Fontes):
         tile = mapa.Tile
         grid = mapa.GridBiomas
         objetos = mapa.DicObjetos
@@ -87,6 +87,8 @@ class Camera:
                     pos_y = centro_tela_y + (linha - self.raio) * tile - offset_y
 
                     pygame.draw.rect(tela, cor, (pos_x, pos_y, tile, tile))
+        
+        player.Atualizar(tela, delta_time, mapa, Fontes[20], parametros, Consumiveis)
 
         # Desenha estruturas visíveis
         for (x, y), estrutura in objetos.items():

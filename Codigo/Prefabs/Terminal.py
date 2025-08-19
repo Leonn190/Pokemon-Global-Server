@@ -28,7 +28,7 @@ _BACKSPACE = {
 # Configurações
 TERMINAL_LARGURA = 700
 TERMINAL_ALTURA  = 280
-TERMINO_VISIVEL  = 5.0   # segundos "cheio" de visibilidade
+TERMINO_VISIVEL  = 3.0   # segundos "cheio" de visibilidade
 FADE_IN_DUR      = 0.4    # segundos
 FADE_OUT_DUR     = 0.8    # segundos
 ALPHA_MAX        = 180    # opacidade máxima do fundo (0-255)
