@@ -335,6 +335,7 @@ class Player:
 
         ObjetosColisão = mapa.ObjetosColisão
         BausColisão = mapa.BausColisão
+        PokemonsColisão = mapa.PokemonsColisão
 
         teclas = pygame.key.get_pressed()
         direcao_x = 0
@@ -384,6 +385,7 @@ class Player:
             novo_rect_x = self.rect.copy()
             novo_rect_x.centerx = nova_pos_tela_x
 
+            self.ColideComPokemons(PokemonsColisão, parametros)
             self.ColideComBaus(novo_rect_x, BausColisão, parametros)
             colidiu_x = False
             for estrutura in ObjetosColisão.values():
@@ -448,6 +450,13 @@ class Player:
             if estrutura.rect and novo_rect.colliderect(estrutura.rect):
                 return True
         return False
+
+    def ColideComPokemons(self, PokemonsColisao, parametros, tela_largura=1920, tela_altura=1080):
+        for pokemon in PokemonsColisao.values():
+            if self.rect.colliderect(pokemon.Rect):
+                    parametros["Confronto"]["ConfrontoIniciado"] = True
+                    parametros["Confronto"]["BatalhaSimples"] = True
+                    parametros["Confronto"]["AlvoConfronto"] = pokemon
 
     def AdicionarAoInventario(self, player, nome, raridade, estilo, descriçao, M1, M2):
         global ConsumiveisIMG
@@ -522,63 +531,3 @@ class Player:
             "Passos": self.Passos
         }
     
-
-
-    # def Atualizar(self, tela, delta_time, mapa, fonte, parametros, ItensIMG):
-    #     # Movimento e projéteis
-    #     self.mover(delta_time, mapa, parametros)
-
-    #     self.TempoDeJogo += delta_time
-
-    #     for projetil in self.Projeteis:
-    #         projetil.atualizar(tela, self.Loc, self, delta_time)
-
-    #     # Centro da tela
-    #     largura_tela, altura_tela = tela.get_size()
-    #     x_centro = largura_tela // 2
-    #     y_centro = altura_tela // 2
-    #     mouse_x, mouse_y = pygame.mouse.get_pos()
-
-    #     # Ângulo (em graus e radianos)
-    #     dx, dy = mouse_x - x_centro, mouse_y - y_centro
-    #     angulo = math.degrees(math.atan2(dy, dx))
-    #     angulo_correcao = angulo - 90
-    #     angulo_rad = math.radians(angulo)
-    #     self.angulo = angulo
-
-    #     # Imagem e cor do corpo (cacheadas)
-    #     imagem_corpo = self.SkinRedimensionada
-    #     cor_braco = CacheExtrairCor(imagem_corpo)         # <<< cache de cor
-    #     corpo_rotacionado = PegarRotaçao(imagem_corpo, angulo_correcao)  # <<< cache de rotação
-
-    #     # Blit do corpo
-    #     corpo_rect = corpo_rotacionado.get_rect(center=(x_centro, y_centro))
-    #     tela.blit(corpo_rotacionado, corpo_rect)
-
-    #     # Atualiza o rect do player (reaproveita o mesmo rect do corpo)
-    #     self.rect = corpo_rect
-
-    #     # Braços (usa cor cacheada e ângulo em rad)
-    #     self.desenhar_bracos(
-    #         tela,
-    #         (x_centro, y_centro),
-    #         cor_braco,
-    #         angulo_rad,
-    #         ItensIMG,
-    #         mapa.PokemonsColisão
-    #     )
-
-    #     # (Opcional) Debug do rect
-    #     pygame.draw.rect(tela, (0, 255, 0), self.rect, 2)
-
-    #     flutuacao = math.sin(pygame.time.get_ticks() / 200) * 5
-
-    #     # mede o texto
-    #     txt_surf = fonte.render(self.Nome, True, (255, 255, 255))
-    #     txt_w, txt_h = txt_surf.get_size()
-
-    #     # ancora o apelido no centro do player e 8px acima da cabeça
-    #     x_txt = int(corpo_rect.centerx - txt_w // 2)
-    #     y_txt = int(corpo_rect.top - 8 - txt_h + flutuacao)
-
-    #     texto_com_borda(tela, self.Nome, fonte, (x_txt, y_txt), (255, 255, 255), (0, 0, 0))

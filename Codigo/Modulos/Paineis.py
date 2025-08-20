@@ -360,8 +360,8 @@ def PainelPokemon(tela, pos, pokemon, estado_barra, eventos, parametros):
 
         # Layout interno
         inner_pad   = 16
-        item_gap    = 20
-        icon_size   = 32
+        item_gap    = 21
+        icon_size   = 33
         circle_r    = icon_size // 2 + 1
         center_y    = pill_y + PILL_H // 2
         cursor_x    = pill_x + inner_pad

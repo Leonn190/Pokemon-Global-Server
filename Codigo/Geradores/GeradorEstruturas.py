@@ -253,6 +253,7 @@ class Estrutura:
             pygame.draw.rect(tela, (0, 200, 0), self.rect, 1)  # núcleo
             pygame.draw.rect(tela, (0, 100, 0), self.rect.inflate(self.Campo*2, self.Campo*2), 1)  # campo
 
+
 class Bau:
     RARIDADES = ["Comum", "Incomum", "Raro", "Epico", "Mitico", "Lendario"]
 
@@ -297,8 +298,8 @@ class Bau:
         tela.blit(img, pos_img)
 
         # Calcular rect de colisão 30% maior (15% extra para cada lado)
-        aumento_w = int(largura * 1.2)
-        aumento_h = int(altura * 1.2)
+        aumento_w = int(largura * 1.5)
+        aumento_h = int(altura * 1.5)
 
         novo_w = largura + aumento_w
         novo_h = altura + aumento_h

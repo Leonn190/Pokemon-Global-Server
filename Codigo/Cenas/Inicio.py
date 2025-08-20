@@ -6,7 +6,7 @@ import time
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Selecao, Botao_Alavanca
 from Codigo.Prefabs.FunçõesPrefabs import Barra_De_Texto, Slider, texto_com_borda
 from Codigo.Prefabs.Animações import Animação
-from Codigo.Prefabs.Sonoridade import Musica
+from Codigo.Prefabs.Sonoridade import Musica, AtualizarMusica
 from Codigo.Prefabs.Mensagens import adicionar_mensagem_passageira, mensagens_passageiras
 from Codigo.Server.ServerInicio import AdicionaServer, CarregarServers, ApagarServer, RenomearServer, EntrarServer, RegistrarNoServer, VerificaOperador, ObterEstadoServidor, AtivarServidor, LigarDesligarServidor, ResetarServidor
 from Codigo.Modulos.TelasGénericas import TelaEntradaDeTexto, TelaDeCerteza
@@ -539,7 +539,7 @@ def InicioLoop(tela, relogio, estados, config, info):
     velocidade = 0.04  # pixels por milissegundo
 
     CarregarServers(parametros)
-    Musica("MusicaTema")
+    Musica("TelaInicio")
 
     while estados["Inicio"]:
         eventos = pygame.event.get()
@@ -588,6 +588,7 @@ def InicioLoop(tela, relogio, estados, config, info):
         texto = f"VER: {config['Ver']:.1f}"
         texto_com_borda(tela, texto, Fontes[40], (10, tela.get_height() - Fontes[40].get_height()), (255, 255, 255), (0, 0, 0))
 
+        AtualizarMusica()
         aplicar_claridade(tela, config["Claridade"])
         Clarear(tela,info)
         pygame.display.update() 

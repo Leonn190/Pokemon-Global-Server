@@ -3,7 +3,7 @@ import threading
 import time
 import traceback
 
-from Codigo.Modulos.Outros import Clarear, Escurecer
+from Codigo.Modulos.Outros import Clarear, Escurecer, FecharIris
 from Codigo.Server.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, SalvarConta, SairConta, RemoverBau, RemoverPokemon, AtualizarPokemon
 from Codigo.Modulos.Config import TelaConfigurações
 from Codigo.Modulos.Inventario import TelaInventario
@@ -13,10 +13,10 @@ from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda
 from Codigo.Prefabs.Particulas import BurstManager
 from Codigo.Prefabs.Terminal import terminal
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Tecla
-from Codigo.Prefabs.Sonoridade import Musica
+from Codigo.Prefabs.Sonoridade import Musica, AtualizarMusica
 from Codigo.Prefabs.Mensagens import atualizar_e_desenhar_mensagens_itens
 from Codigo.Geradores.GeradorPlayer import Player
-from Codigo.Geradores.GeradorMapa import Mapa, Camera
+from Codigo.Geradores.GeradorMapa import Mapa, CameraMundo
 from Codigo.Geradores.GeradorEstruturas import GridToDic, Bau
 from Codigo.Geradores.GeradorPokemon import Pokemon
 
@@ -280,16 +280,23 @@ def MundoLoop(tela, relogio, estados, config, info):
             "ItemSelecionado": None,
             "PokemonSelecionado": None,
             "AtaqueSelecionado": None
+        },
+        "Confronto": {
+            "ConfrontoIniciado": False,
+            "Batalhando": False,
+            "BatalhaSimples": False,
+            "AlvoConfronto": None,
+            "Player": player
         }
     }
 
     VerificaMapa(parametros)
-    Musica("MundoTema")
+    # Musica("MundoTema")
 
     Particulas = BurstManager(70,debug=True)
     player = Player(info["Server"]["Player"]["dados"],Outros["SkinsTodas"],Particulas)
     mapa = Mapa(parametros["GridBiomas"],GridToDic(parametros["GridObjetos"]))
-    camera = Camera(18)
+    camera = CameraMundo(18)
 
     parametros.update({"Player": player})
 
@@ -311,6 +318,18 @@ def MundoLoop(tela, relogio, estados, config, info):
                 estados["Mundo"] = False
                 estados["Rodando"] = False
                 parametros["Running"] = False  # sinaliza para thread parar
+
+        if parametros["Confronto"]["ConfrontoIniciado"]:
+            parametros["Confronto"]["ConfrontoIniciado"] = False
+            parametros["Confronto"]["Batalhando"] = True
+            info["ParametrosConfronto"] = parametros["Confronto"]
+            info["ParametrosMundo"] = parametros
+            if parametros["Confronto"]["BatalhaSimples"]:
+                estados["Mundo"] = False
+                estados["Batalha"] = True
+            else:
+                estados["Mundo"] = False
+                estados["PreBatalha"] = True
         
         parametros["Tela"](tela, estados, eventos, parametros)
 
@@ -344,9 +363,13 @@ def MundoLoop(tela, relogio, estados, config, info):
         
         Particulas.atualizar_e_desenhar_bursts(tela,[x_cord,y_cord], parametros["delta_time"])
 
+        AtualizarMusica()
         Clarear(tela, info)
         pygame.display.update()
 
-    parametros["Running"] = False  # garante que a thread pare ao sair do loop
-    Escurecer(tela, info)
+    if parametros["Confronto"]["Batalhando"]:
+        FecharIris(tela,info)
+    else:
+        parametros["Running"] = False  # garante que a thread pare ao sair do loop
+        Escurecer(tela, info)
     

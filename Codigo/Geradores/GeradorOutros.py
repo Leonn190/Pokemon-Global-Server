@@ -1,6 +1,7 @@
 import pygame
 
 class Projetil:
+    
     def __init__(self, pos, cords_iniciais, dados, imagem, alvos):
         self.pos = pygame.math.Vector2(pos)  # posição em pixels do disparo
         self.cords_iniciais = pygame.math.Vector2(cords_iniciais)  # posição do player no momento do disparo (em tiles)
@@ -86,6 +87,7 @@ class Projetil:
                 overlap = self.mask.overlap(alvo.Mask, offset)
 
                 if overlap:
+                    
                     if self.dados["estilo"] == "bola":
                         overlap_mirando = self.mask.overlap(alvo.MaskMirando, offset)
                         critico = bool(overlap_mirando)

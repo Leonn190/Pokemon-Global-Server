@@ -36,11 +36,47 @@ CAMPOS_POKEMON = [
     "Poder R1", "Poder R2", "Poder R3",
     "Tipo1", "%1", "Tipo2", "%2", "Tipo3", "%3",
     "Altura", "Peso", "Raridade", "Estagio", "FF", "Code",
-    "Nivel",
-    "IV",
+    "Nivel", "Linhagem", "IV",
     "IV_Vida", "IV_Atk", "IV_Def", "IV_SpA", "IV_SpD", "IV_Vel",
     "IV_Mag", "IV_Per", "IV_Ene", "IV_EnR", "IV_CrD", "IV_CrC", "ID"
 ]
+
+def GerarMatilha(pokemon, max=6):
+    """
+    Gera uma matilha de pokemons incluindo o pokemon inicial.
+    max: número máximo de pokemons na matilha (default 6)
+    Nenhum pokemon adicional pode ter Estagio maior que o pokemon inicial.
+    """
+    global df  # usa o df global já carregado
+    matilha = [pokemon]  # inclui o pokemon inicial
+    linhagem = pokemon.get("Linhagem", None)
+    estagio_inicial = int(pokemon.get("Estagio", 0))
+
+    if not linhagem:
+        return matilha  # se não tiver linhagem, retorna só ele
+
+    # garante que a coluna Estagio seja numérica
+    df["Estagio"] = pd.to_numeric(df["Estagio"], errors="coerce").fillna(0).astype(int)
+
+    # pega todos os pokemons da mesma linhagem e com Estagio <= do inicial
+    pokemons_da_linhagem = df[
+        (df["Linhagem"] == linhagem) &
+        (df["Estagio"] <= estagio_inicial)
+    ]
+    nomes_possiveis = pokemons_da_linhagem["Nome"].tolist()
+
+    # gera pokemons até atingir o máximo
+    while len(matilha) < max:
+        if not nomes_possiveis:
+            break  # se não houver nomes válidos, para
+        nome = random.choice(nomes_possiveis)  # pode repetir
+        compactado = criar_pokemon_especifico(nome)
+        if compactado:
+            Dados = desserializar_pokemon(compactado)
+            materializado = MaterializarPokemon(Dados)
+            matilha.append(materializado)
+
+    return matilha
 
 def CarregarPokemon(nome_pokemon, dic):
     """Carrega a imagem de um Pokémon específico, salva no dicionário e retorna a superfície."""
@@ -360,9 +396,8 @@ class Pokemon:
 
         # ---- animação base do sprite ----
         nome = self.Dados["Nome"].lower()
-        self.animacoes = Animacoes
-        self.animacao = self.animacoes.get(
-            nome, CarregarAnimacaoPokemon(nome, self.animacoes)
+        self.animacao = Animacoes.get(
+            nome, CarregarAnimacaoPokemon(nome, Animacoes)
         )
         self.indice_anim = 0
         self.tempo_anim  = 0.0

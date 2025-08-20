@@ -130,7 +130,10 @@ def CarregamentoAvançado(info,Pré):
 
     Fundos.update({
         "FundoMundo": Carregar_Imagem("Fundos/FundoMundo.jpg"),
-        "FundoSlots": Carregar_Imagem("Fundos/FundoSlots.jpg")
+        "FundoSlots": Carregar_Imagem("Fundos/FundoSlots.jpg"),
+        "FundoBatalha": Carregar_Imagem("Fundos/FundoBatalha.jpg",(1920,1080)),
+        "FundoPokemonAliado": Carregar_Imagem("Fundos/FundoPokemonAliado.jpg"),
+        "FundoPokemonInimigo": Carregar_Imagem("Fundos/FundoPokemonInimigo.jpg")
         })
     
     Texturas.update({

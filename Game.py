@@ -68,6 +68,7 @@ estados = {
     "Inicio": False,
     "Carregamento": True,
     "Mundo": False,
+    "PreBatalha": False,
     "Batalha": False
 }
 
