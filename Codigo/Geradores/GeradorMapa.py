@@ -2,9 +2,10 @@ import pygame
 from pygame.math import Vector2
 
 class Mapa:
-    def __init__(self, GridBiomas, DicObjetos):
+    def __init__(self, GridBlocos, GridBiomas, DicObjetos):
         self.GridBiomas = GridBiomas  # matriz de números
         self.DicObjetos = DicObjetos  # dicionário global de objetos {(x, y): objeto}
+        self.GridBlocos = GridBlocos
 
         self.PokemonsAtivos = {}
         self.BausAtivos = {}
@@ -60,7 +61,7 @@ class CameraMundo:
 
     def desenhar(self, tela, jogador_pos, mapa, player, EstruturasIMG, delta_time, BausIMG, parametros, Consumiveis, Fontes):
         tile = mapa.Tile
-        grid = mapa.GridBiomas
+        grid = mapa.GridBlocos       # agora é np.ndarray (uint8)
         objetos = mapa.DicObjetos
         PokemonsAtivos = mapa.PokemonsAtivos
         BausAtivos = mapa.BausAtivos
@@ -76,23 +77,27 @@ class CameraMundo:
         centro_tela_x = self.Resolucao[0] // 2
         centro_tela_y = self.Resolucao[1] // 2
 
+        h, w = grid.shape  # altura e largura da grid
+
+        # ---------- chão ----------
         for linha in range(self.altura_em_tiles):
             for coluna in range(self.largura_em_tiles):
                 grid_x = inicio_x + coluna
                 grid_y = inicio_y + linha
 
-                if 0 <= grid_y < len(grid) and 0 <= grid_x < len(grid[0]):
-                    bioma = grid[grid_y][grid_x]
-                    cor = self.pegar_cor_bioma(bioma)
+                if 0 <= grid_y < h and 0 <= grid_x < w:
+                    bioma = grid[grid_y, grid_x]   # acesso numpy
+                    cor = self.pegar_cor_bioma(int(bioma))  # converte para int só por garantia
 
                     pos_x = centro_tela_x + (coluna - self.raio) * tile - offset_x
                     pos_y = centro_tela_y + (linha - self.raio) * tile - offset_y
 
                     pygame.draw.rect(tela, cor, (pos_x, pos_y, tile, tile))
-        
+
+        # ---------- player ----------
         player.Atualizar(tela, delta_time, mapa, Fontes[20], parametros, Consumiveis)
 
-        # Desenha estruturas visíveis
+        # ---------- estruturas ----------
         for (x, y), estrutura in objetos.items():
             if inicio_x <= x < inicio_x + self.largura_em_tiles and inicio_y <= y < inicio_y + self.altura_em_tiles:
                 coluna = x - inicio_x
@@ -101,11 +106,12 @@ class CameraMundo:
                 pos_x = centro_tela_x + (coluna - self.raio) * tile - offset_x
                 pos_y = centro_tela_y + (linha - self.raio) * tile - offset_y
 
-                img = EstruturasIMG[estrutura.nome]  # <- pegamos imagem aqui
-                estrutura.desenhar(tela, (pos_x + tile // 2, pos_y + tile // 2), img)  # <- ajusta para centro
-        
+                img = EstruturasIMG[estrutura.nome]
+                estrutura.desenhar(tela, (pos_x + tile // 2, pos_y + tile // 2), img)
+
+        # ---------- pokemons ----------
         for chave, pokemon in PokemonsAtivos.items():
-            x, y = pokemon.Loc  # Obtemos diretamente do atributo .Loc do objeto
+            x, y = pokemon.Loc
             if inicio_x <= x < inicio_x + self.largura_em_tiles and inicio_y <= y < inicio_y + self.altura_em_tiles:
                 coluna = x - inicio_x
                 linha = y - inicio_y
@@ -115,9 +121,9 @@ class CameraMundo:
 
                 pokemon.Atualizar(tela, (pos_x + tile // 2, pos_y + tile // 2), player, delta_time)
 
+        # ---------- baús ----------
         for bau_id, bau in BausAtivos.items():
             x, y = bau.Loc
-
             if inicio_x <= x < inicio_x + self.largura_em_tiles and inicio_y <= y < inicio_y + self.altura_em_tiles:
                 coluna = x - inicio_x
                 linha = y - inicio_y
@@ -148,37 +154,21 @@ class CameraMundo:
                     img = BausIMG[bau.raridade][0]
                     bau.desenhar(tela, centro_pos, img)
 
-    def pegar_cor_bioma(self, bioma):
-        # Dicionário simples de cor por tipo de bioma
-
-        #     "OCEAN":        0,
-        #     "LAKE":         1,
-        #     "PLAIN":        2,
-        #     "FOREST":       3,
-        #     "DESERT":       4,
-        #     "SNOW":         5,
-        #     "VULCANO":      6,
-        #     "TERRA_MAGICA": 7,
-        #     "PANTANO":      8,
-
+    def pegar_cor_bioma(self, bloco):
 
         cores = {
-            0: (20, 60, 150),  
-            1: (40, 90, 170),  
-            2: (120, 190, 90),  
-            3: (50, 120, 60),  
-            4: (238, 214, 87),
-            5: (235, 240, 245),
-            6: (150, 20, 20),
-            7: (150, 60, 200)    
+            0: (0, 80, 200),     # água
+            1: (90, 170, 255),   # água rasa
+            2: (50, 160, 60),    # mato
+            3: (20, 110, 35),    # matofloresta
+            4: (235, 245, 255),  # neve
+            5: (235, 215, 130),  # deserto
+            6: (245, 230, 150),  # praia
+            7: (130, 130, 130),  # terra morta (pântano)
+            8: (205, 170, 255),  # terra mágica
+            9: (120, 20, 20),    # pedra vulcânica
         }
-
-        if bioma == 8:
-            bioma = 2
-        if bioma != 3:
-            print("eita")
-
-        return cores.get(bioma, (0, 0, 0))  # padrão: preto
+        return cores.get(bloco, (0, 0, 0))  # padrão: preto
 
 class CameraBatalha:
     """

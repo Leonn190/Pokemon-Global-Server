@@ -44,7 +44,7 @@ def SetorPlayer(tela, player, eventos, parametros):
     PainelPlayer(tela, (175,250), player, eventos, parametros)
 
 def SetorPokemonsPadrao(tela, player, eventos, parametros):
-    global areas_pokemons, pokemons_cache, arrastaveis_pokemons
+    global areas_pokemons, pokemons_cache, arrastaveis_pokemons, times_cache
 
     def executar_pokemon(arr):
         global pokemons_cache

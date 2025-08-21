@@ -2,66 +2,75 @@ import pygame
 import random
 import math
 import pandas as pd
+import numpy as np
 
 df = pd.read_csv("Dados/Itens.csv")
 
+# 0 agora = vazio
 OBJ_NOMES = {
-    0:  "Arvore",
-    1:  "Palmeira",
-    2:  "Arvore2",
-    3:  "Pinheiro",
-    4:  "Ouro",
-    5:  "Diamante",
-    6:  "Esmeralda",
-    7:  "Rubi",
-    8:  "Ametista",
-    9:  "Cobre",
-    10: "Pedra",
-    11: "Arbusto",
-    12: "Lava",
+    1:  "Arvore",
+    2:  "Palmeira",
+    3:  "Arvore2",
+    4:  "Pinheiro",
+    5:  "Ouro",
+    6:  "Diamante",
+    7:  "Esmeralda",
+    8:  "Rubi",
+    9:  "Ametista",
+    10: "Cobre",
+    11: "Pedra",
+    12: "Arbusto",
+    13: "Lava",
 }
 
-# Config por ID do grid (pixels para tamanho/campo; tiles/seg para intensidade)
 OBJ_CONFIG = {
-    0:  {"tipo": "circle", "tamanho": 35, "campo": 80,  "intensidade": 18},  # Arvore
-    1:  {"tipo": "circle", "tamanho": 40, "campo": 95,  "intensidade": 18},  # Palmeira
-    2:  {"tipo": "circle", "tamanho": 35, "campo": 70,  "intensidade": 18},  # Arvore2
-    3:  {"tipo": "circle", "tamanho": 32, "campo": 80,  "intensidade": 18},  # Pinheiro
+    1:  {"tipo": "circle", "tamanho": 35, "campo": 80,  "intensidade": 18},  # Arvore
+    2:  {"tipo": "circle", "tamanho": 40, "campo": 95,  "intensidade": 18},  # Palmeira
+    3:  {"tipo": "circle", "tamanho": 35, "campo": 70,  "intensidade": 18},  # Arvore2
+    4:  {"tipo": "circle", "tamanho": 32, "campo": 80,  "intensidade": 18},  # Pinheiro
 
-    4:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},   # Ouro (bloco)
-    5:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},   # Diamante
-    6:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},   # Esmeralda
-    7:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},   # Rubi
-    8:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},   # Ametista
-    9:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},   # Cobre
+    5:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},  # Ouro (bloco)
+    6:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},  # Diamante
+    7:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},  # Esmeralda
+    8:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},  # Rubi
+    9:  {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},  # Ametista
+    10: {"tipo": "circle", "tamanho": 45,  "campo": 75,  "intensidade": 20},  # Cobre
 
-    10: {"tipo": "circle", "tamanho": 45, "campo": 75,  "intensidade": 20},  # Pedra
-    11: {"tipo": "circle", "tamanho": 10, "campo": 50, "intensidade": 18},  # Arbusto
-    12: {"tipo": "circle", "tamanho": 90, "campo": 120, "intensidade": 18}, # Lava (campo forte)
+    11: {"tipo": "circle", "tamanho": 45, "campo": 75,  "intensidade": 20},  # Pedra
+    12: {"tipo": "circle", "tamanho": 10, "campo": 50, "intensidade": 18},   # Arbusto
+    13: {"tipo": "circle", "tamanho": 90, "campo": 120, "intensidade": 18},  # Lava
 }
 
 DEFAULT_OBJ = {"tipo": "rect", "tamanho": 0, "campo": 0, "intensidade": 0.0}
 
 def GridToDic(grid_objetos, obj_nomes=OBJ_NOMES, obj_config=OBJ_CONFIG):
     mapa_estruturas = {}
-    for y, linha in enumerate(grid_objetos):
-        for x, valor in enumerate(linha):
-            nome = obj_nomes.get(valor)
-            if nome is None:  # pula vazio (-1) e qualquer valor não mapeado
-                continue
 
-            cfg = obj_config.get(valor, DEFAULT_OBJ)
+    if not isinstance(grid_objetos, np.ndarray):
+        grid_objetos = np.array(grid_objetos, dtype=np.uint8)
 
-            estrutura = Estrutura(
-                nome,
-                (x, y),  # pos em tiles (igual ao seu fluxo)
-                tipo_colisao=("circle" if cfg.get("tipo", "rect") == "circle" else "rect"),
-                tamanho=int(cfg.get("tamanho", 0)),
-                campo=int(cfg.get("campo", 0)),
-                intensidade=float(cfg.get("intensidade", 0.0)),
-            )
+    # np.ndenumerate percorre direto índices (y, x) e valor
+    for (y, x), valor in np.ndenumerate(grid_objetos):
+        if valor == 0:
+            continue  # 0 = vazio 
 
-            mapa_estruturas[(x, y)] = estrutura
+        nome = obj_nomes.get(int(valor))
+        if nome is None:  # pula valores inválidos
+            continue
+
+        cfg = obj_config.get(int(valor), DEFAULT_OBJ)
+
+        estrutura = Estrutura(
+            nome,
+            (x, y),
+            tipo_colisao=("circle" if cfg.get("tipo", "rect") == "circle" else "rect"),
+            tamanho=int(cfg.get("tamanho", 0)),
+            campo=int(cfg.get("campo", 0)),
+            intensidade=float(cfg.get("intensidade", 0.0)),
+        )
+
+        mapa_estruturas[(x, y)] = estrutura
+
     return mapa_estruturas
 
 class Estrutura:
@@ -252,7 +261,6 @@ class Estrutura:
         else:
             pygame.draw.rect(tela, (0, 200, 0), self.rect, 1)  # núcleo
             pygame.draw.rect(tela, (0, 100, 0), self.rect.inflate(self.Campo*2, self.Campo*2), 1)  # campo
-
 
 class Bau:
     RARIDADES = ["Comum", "Incomum", "Raro", "Epico", "Mitico", "Lendario"]

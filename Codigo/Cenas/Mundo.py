@@ -294,13 +294,13 @@ def MundoLoop(tela, relogio, estados, config, info):
 
     Particulas = BurstManager(70,debug=True)
     player = Player(info["Server"]["Player"]["dados"],Outros["SkinsTodas"],Particulas)
-    mapa = Mapa(parametros["GridBiomas"],GridToDic(parametros["GridObjetos"]))
+    mapa = Mapa(parametros["GridBlocos"],parametros["GridBiomas"],GridToDic(parametros["GridObjetos"]))
     camera = CameraMundo(18)
 
+    if mapa.GridBiomas[player.Loc[0]][player.Loc[1]] == 3:
+        Musica("Neve")
     if mapa.GridBiomas[player.Loc[0]][player.Loc[1]] == 4:
         Musica("Deserto")
-    if mapa.GridBiomas[player.Loc[0]][player.Loc[1]] == 5:
-        Musica("Neve")
     else:
         Musica("Vale")
 
@@ -330,14 +330,18 @@ def MundoLoop(tela, relogio, estados, config, info):
             info["ParametrosMundo"] = parametros
             if parametros["Confronto"]["BatalhaSimples"]:
 
-                if mapa.GridBiomas[round(player.Loc[1])][round(player.Loc[0])] == 0:
+                if mapa.GridBiomas[round(player.Loc[1]),round(player.Loc[0])] == 0:
                     Musica("ConfrontoDoMar")
-                elif mapa.GridBiomas[round(player.Loc[1])][round(player.Loc[0])] == 4:
-                    Musica("ConfrontoDeserto")
-                elif mapa.GridBiomas[round(player.Loc[1])][round(player.Loc[0])] == 5:
+                elif mapa.GridBiomas[round(player.Loc[1]),round(player.Loc[0])] == 4:
+                    Musica("ConfrontoDoDeserto")
+                elif mapa.GridBiomas[round(player.Loc[1]),round(player.Loc[0])] == 3:
                     Musica("ConfrontoDaNeve")
-                elif mapa.GridBiomas[round(player.Loc[1])][round(player.Loc[0])] == 6:
+                elif mapa.GridBiomas[round(player.Loc[1]),round(player.Loc[0])] == 7:
                     Musica("ConfrontoDoVulcao")
+                elif mapa.GridBiomas[round(player.Loc[1]),round(player.Loc[0])] == 6:
+                    Musica("ConfrontoDaMagia")
+                elif mapa.GridBiomas[round(player.Loc[1]),round(player.Loc[0])] == 5:
+                    Musica("ConfrontoDoPantano")
                 else:
                     Musica("ConfrontoDoVale")
 

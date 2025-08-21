@@ -65,6 +65,16 @@ Musicas = {
         "loop": 2.34,
         "fimloop": 83.62
     },
+    "ConfrontoDoMagia": {
+        "arquivo": "Recursos/Audio/Musicas/ConfrontoDaMagia.ogg",
+        "loop": 2.34,
+        "fimloop": 83.62
+    },
+    "ConfrontoDoPantano": {
+        "arquivo": "Recursos/Audio/Musicas/ConfrontoDoPantano.ogg",
+        "loop": 2.34,
+        "fimloop": 83.62
+    },
     "Vale": {
         "arquivo": "Recursos/Audio/Musicas/Vale.ogg",
         "loop": 3.2,
@@ -98,14 +108,7 @@ _fade_target_music = None    # nome da música a tocar após o fade-out
 _fade_prev_music = None      # música que estava tocando quando o fade começou
 
 def TransicaoMusica(nome):
-    """
-    Inicia uma transição suave: fade-out de 5s da música atual; ao terminar,
-    troca para 'nome' e já volta volume para 'Volume' sem fade-in.
 
-    Caso seja chamada durante um fade-out com a MESMA música que tocava antes
-    do fade (cancelamento), a transição muda para um 'fade-in' suave de volta
-    ao volume padrão.
-    """
     global _fade_state, _fade_start_ms, _fade_from_vol, _fade_to_vol
     global _fade_target_music, _fade_prev_music, _musica_atual
 
@@ -202,11 +205,11 @@ def VerificaMusicaMundo(player, mapa, parametros):
     
     # 1) decide a faixa desejada pelo bioma
     bx, by = player.Loc
-    biome = mapa.GridBiomas[round(by)][round(bx)]
+    biome = mapa.GridBiomas[round(by),round(bx)]
     print(biome)
     if biome == 4:
         desejada = "Deserto"
-    elif biome == 5:
+    elif biome == 3:
         desejada = "Neve"
     else:
         desejada = "Vale"

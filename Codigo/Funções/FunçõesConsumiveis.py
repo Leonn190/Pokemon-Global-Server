@@ -31,7 +31,7 @@ def Heavyball(pokemon, player, dados, crit):
 
 def Aquaball(pokemon, player, dados, crit):
     from Codigo.Cenas.Mundo import mapa
-    if mapa.GridBiomas[int(pokemon.Loc[0])][int(pokemon.Loc[1])] == 0:
+    if mapa.GridBiomas[int(pokemon.Loc[0]),int(pokemon.Loc[1])] in [0,1]:
         return 1.9
     return 1.0
 
@@ -153,37 +153,37 @@ def Jujuca_Berry(pokemon, player, dados):
 
 def Jungle_Berry(pokemon, player, dados):
     from Codigo.Cenas.Mundo import mapa
-    if mapa.GridBiomas[int(pokemon.Loc[0])][int(pokemon.Loc[1])] == 3:
+    if mapa.GridBiomas[int(pokemon.Loc[0]),int(pokemon.Loc[1])] == 2:
         pokemon.Dificuldade *= 0.65
 
 def Desert_Berry(pokemon, player, dados):
     from Codigo.Cenas.Mundo import mapa
-    if mapa.GridBiomas[int(pokemon.Loc[0])][int(pokemon.Loc[1])] == 4:
+    if mapa.GridBiomas[int(pokemon.Loc[0]),int(pokemon.Loc[1])] == 4:
         pokemon.Dificuldade *= 0.65
 
 def Frozen_Berry(pokemon, player, dados):
     from Codigo.Cenas.Mundo import mapa
-    if mapa.GridBiomas[int(pokemon.Loc[0])][int(pokemon.Loc[1])] == 5:
+    if mapa.GridBiomas[int(pokemon.Loc[0]),int(pokemon.Loc[1])] == 3:
         pokemon.Dificuldade *= 0.65
 
 def Field_Berry(pokemon, player, dados):
     from Codigo.Cenas.Mundo import mapa
-    if mapa.GridBiomas[int(pokemon.Loc[0])][int(pokemon.Loc[1])] == 2:
+    if mapa.GridBiomas[int(pokemon.Loc[0]),int(pokemon.Loc[1])] == 1:
         pokemon.Dificuldade *= 0.65
 
 def Water_Berry(pokemon, player, dados):
     from Codigo.Cenas.Mundo import mapa
-    if mapa.GridBiomas[int(pokemon.Loc[0])][int(pokemon.Loc[1])] in [0,1]:
+    if mapa.GridBiomas[int(pokemon.Loc[0]),int(pokemon.Loc[1])] in [0,1]:
         pokemon.Dificuldade *= 0.65
 
 def Lava_Berry(pokemon, player, dados):
     from Codigo.Cenas.Mundo import mapa
-    if mapa.GridBiomas[int(pokemon.Loc[0])][int(pokemon.Loc[1])] in 6:
+    if mapa.GridBiomas[int(pokemon.Loc[0]),int(pokemon.Loc[1])] in 7:
         pokemon.Dificuldade *= 0.65
 
 def Magic_Berry(pokemon, player, dados):
     from Codigo.Cenas.Mundo import mapa
-    if mapa.GridBiomas[int(pokemon.Loc[0])][int(pokemon.Loc[1])] in 7:
+    if mapa.GridBiomas[int(pokemon.Loc[0]),int(pokemon.Loc[1])] in 5:
         pokemon.Dificuldade *= 0.65
 
 # ========= Berries =========

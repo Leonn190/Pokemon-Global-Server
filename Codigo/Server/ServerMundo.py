@@ -1,6 +1,7 @@
 import requests
 import json
 import math
+import numpy as np
 
 def sanitizar_dados(d):
     if isinstance(d, dict):
@@ -68,13 +69,15 @@ def VerificaMapa(Parametros):
         url = Parametros["Link"].rstrip('/') + "/Mapa"
 
         # Faz a requisição GET passando os dados como query params
-        resposta = requests.get(url, timeout=5)
+        resposta = requests.get(url, timeout=30)
         resposta.raise_for_status()
 
         dados = resposta.json()
 
-        Parametros["GridBiomas"] = dados.get("biomas")
-        Parametros["GridObjetos"] = dados.get("objetos")
+        # Converte direto para numpy arrays compactos
+        Parametros["GridBiomas"]  = np.array(dados.get("biomas", []),  dtype=np.uint8)
+        Parametros["GridObjetos"] = np.array(dados.get("objetos", []), dtype=np.uint8)
+        Parametros["GridBlocos"]  = np.array(dados.get("blocos", []),  dtype=np.uint8)
 
     except requests.exceptions.RequestException as e:
         print(f"Erro ao acessar servidor (Mapa): {e}")

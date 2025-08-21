@@ -291,7 +291,7 @@ def InicioTelaCriandoPersonagem(tela, estados, eventos, parametros):
             "Velocidade": 0,
             "Mochila": 0,
             "Maestria":0,
-            "Loc": [450,450]
+            "Loc": [600,600]
         }
         SelecionadoNome = False
 
