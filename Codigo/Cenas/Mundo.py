@@ -13,7 +13,7 @@ from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda
 from Codigo.Prefabs.Particulas import BurstManager
 from Codigo.Prefabs.Terminal import terminal
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Tecla
-from Codigo.Prefabs.Sonoridade import Musica, AtualizarMusica
+from Codigo.Prefabs.Sonoridade import Musica, AtualizarMusica, VerificaMusicaMundo
 from Codigo.Prefabs.Mensagens import atualizar_e_desenhar_mensagens_itens
 from Codigo.Geradores.GeradorPlayer import Player
 from Codigo.Geradores.GeradorMapa import Mapa, CameraMundo
@@ -291,12 +291,18 @@ def MundoLoop(tela, relogio, estados, config, info):
     }
 
     VerificaMapa(parametros)
-    # Musica("MundoTema")
 
     Particulas = BurstManager(70,debug=True)
     player = Player(info["Server"]["Player"]["dados"],Outros["SkinsTodas"],Particulas)
     mapa = Mapa(parametros["GridBiomas"],GridToDic(parametros["GridObjetos"]))
     camera = CameraMundo(18)
+
+    if mapa.GridBiomas[player.Loc[0]][player.Loc[1]] == 4:
+        Musica("Deserto")
+    if mapa.GridBiomas[player.Loc[0]][player.Loc[1]] == 5:
+        Musica("Neve")
+    else:
+        Musica("Vale")
 
     parametros.update({"Player": player})
 
@@ -305,8 +311,6 @@ def MundoLoop(tela, relogio, estados, config, info):
     threading.Thread(target=AtualizarColisaoProxima, args=(mapa,player,parametros), daemon=True).start()
     threading.Thread(target=GerenciadorDePokemonsProximos, args=(parametros, mapa), daemon=True).start()
     threading.Thread(target=LoopRemoveBaus, args=(parametros,), daemon=True).start()
-
-    # tela = pygame.display.set_mode(camera.Resolucao, pygame.FULLSCREEN)
 
     while estados["Mundo"]:
         parametros["delta_time"] = relogio.tick(config["FPS"]) / 1000  # Em segundos
@@ -325,6 +329,18 @@ def MundoLoop(tela, relogio, estados, config, info):
             info["ParametrosConfronto"] = parametros["Confronto"]
             info["ParametrosMundo"] = parametros
             if parametros["Confronto"]["BatalhaSimples"]:
+
+                if mapa.GridBiomas[round(player.Loc[1])][round(player.Loc[0])] == 0:
+                    Musica("ConfrontoDoMar")
+                elif mapa.GridBiomas[round(player.Loc[1])][round(player.Loc[0])] == 4:
+                    Musica("ConfrontoDeserto")
+                elif mapa.GridBiomas[round(player.Loc[1])][round(player.Loc[0])] == 5:
+                    Musica("ConfrontoDaNeve")
+                elif mapa.GridBiomas[round(player.Loc[1])][round(player.Loc[0])] == 6:
+                    Musica("ConfrontoDoVulcao")
+                else:
+                    Musica("ConfrontoDoVale")
+
                 estados["Mundo"] = False
                 estados["Batalha"] = True
             else:
@@ -362,6 +378,8 @@ def MundoLoop(tela, relogio, estados, config, info):
             texto_com_borda(tela, texto, Fontes[25], (x, y_base), (255, 255, 255), (0, 0, 0))
         
         Particulas.atualizar_e_desenhar_bursts(tela,[x_cord,y_cord], parametros["delta_time"])
+
+        VerificaMusicaMundo(player,mapa,parametros)
 
         AtualizarMusica()
         Clarear(tela, info)

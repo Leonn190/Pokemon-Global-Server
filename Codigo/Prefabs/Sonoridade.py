@@ -86,10 +86,68 @@ Musicas = {
 _musica_atual = None
 _loop_point = 0.0
 _fimloop_point = 0.0
+_posicao_manual = 0.0   # NOVO: corrige o loop perfeito
+
+# ======= ESTADOS P/ TRANSIÇÃO =======
+_fade_state = "idle"         # "idle" | "out" | "in"
+_fade_start_ms = 0
+_fade_ms = 5000              # 5 segundos
+_fade_from_vol = 1.0
+_fade_to_vol = 0.0
+_fade_target_music = None    # nome da música a tocar após o fade-out
+_fade_prev_music = None      # música que estava tocando quando o fade começou
+
+def TransicaoMusica(nome):
+    """
+    Inicia uma transição suave: fade-out de 5s da música atual; ao terminar,
+    troca para 'nome' e já volta volume para 'Volume' sem fade-in.
+
+    Caso seja chamada durante um fade-out com a MESMA música que tocava antes
+    do fade (cancelamento), a transição muda para um 'fade-in' suave de volta
+    ao volume padrão.
+    """
+    global _fade_state, _fade_start_ms, _fade_from_vol, _fade_to_vol
+    global _fade_target_music, _fade_prev_music, _musica_atual
+
+    # Nada tocando? Toca direto, sem transição
+    if not pygame.mixer.music.get_busy():
+        Musica(nome)
+        pygame.mixer.music.set_volume(Volume)
+        _fade_state = "idle"
+        _fade_target_music = None
+        _fade_prev_music = None
+        return
+
+    # Se já está no meio de uma transição...
+    if _fade_state != "idle":
+        # Cancelamento: pediram de volta a música que tocava antes do fade-out
+        if nome == _fade_prev_music:
+            _fade_state = "in"
+            _fade_start_ms = pygame.time.get_ticks()
+            _fade_from_vol = pygame.mixer.music.get_volume()
+            _fade_to_vol = Volume
+            _fade_target_music = None
+            return
+        # Trocar alvo durante o fade-out: atualiza alvo e recomeça fade a partir do volume atual
+        _fade_state = "out"
+        _fade_start_ms = pygame.time.get_ticks()
+        _fade_from_vol = pygame.mixer.music.get_volume()
+        _fade_to_vol = 0.0
+        _fade_target_music = nome
+        # _fade_prev_music mantém a referência da música original
+        return
+
+    # Inicia um novo fade-out para trocar de faixa
+    _fade_prev_music = _musica_atual
+    _fade_state = "out"
+    _fade_start_ms = pygame.time.get_ticks()
+    _fade_from_vol = pygame.mixer.music.get_volume()
+    _fade_to_vol = 0.0
+    _fade_target_music = nome
 
 def Musica(nome):
     """Inicia a música e define os pontos de loop."""
-    global _musica_atual, _loop_point, _fimloop_point
+    global _musica_atual, _loop_point, _fimloop_point, _posicao_manual
     if nome not in Musicas:
         print(f"[ERRO] Música '{nome}' não encontrada.")
         return
@@ -102,12 +160,60 @@ def Musica(nome):
     pygame.mixer.music.load(dados["arquivo"])
     pygame.mixer.music.set_volume(Volume)
     pygame.mixer.music.play()  # toca do início
+    _posicao_manual = 0.0  # zera a posição manual
 
 def AtualizarMusica():
-    """Chamar dentro do loop principal a cada frame para manter o loop perfeito."""
+    """Chamar a cada frame: mantém o loop perfeito e aplica a transição suave."""
+    global _fade_state, _fade_start_ms, _fade_from_vol, _fade_to_vol
+    global _fade_target_music, _musica_atual, _loop_point, _fimloop_point, _posicao_manual
+
+    # ===== Fade (se ativo) =====
+    if _fade_state != "idle":
+        now = pygame.time.get_ticks()
+        t = min(1.0, (now - _fade_start_ms) / float(_fade_ms))
+        vol = _fade_from_vol + (_fade_to_vol - _fade_from_vol) * t
+        vol = max(0.0, min(1.0, vol))
+        pygame.mixer.music.set_volume(vol)
+
+        if t >= 1.0:
+            if _fade_state == "out":
+                # troca de faixa sem fade-in: volta direto ao volume padrão
+                if _fade_target_music is not None:
+                    Musica(_fade_target_music)          # toca do início
+                    pygame.mixer.music.set_volume(Volume)
+                # encerra transição
+                _fade_state = "idle"
+                _fade_target_music = None
+            else:  # "in"
+                _fade_state = "idle"
+
+    # ===== Loop perfeito =====
     if _musica_atual and pygame.mixer.music.get_busy():
-        pos = pygame.mixer.music.get_pos() / 1000.0
+        pos = pygame.mixer.music.get_pos() / 1000.0 + _posicao_manual
         if pos >= _fimloop_point:
             pygame.mixer.music.play(-1, start=_loop_point)
+            _posicao_manual = _loop_point
 
+def VerificaMusicaMundo(player, mapa, parametros):
+    global _musica_atual, _fade_target_music, _fade_state
 
+    if parametros["Confronto"]["Batalhando"]:
+        return
+    
+    # 1) decide a faixa desejada pelo bioma
+    bx, by = player.Loc
+    biome = mapa.GridBiomas[round(by)][round(bx)]
+    print(biome)
+    if biome == 4:
+        desejada = "Deserto"
+    elif biome == 5:
+        desejada = "Neve"
+    else:
+        desejada = "Vale"
+
+    # 2) o que está valendo agora? (se estiver em fade-out, considere o alvo)
+    efetiva = _fade_target_music if (_fade_state == "out" and _fade_target_music) else _musica_atual
+
+    # 3) só dispara transição se realmente precisa trocar
+    if efetiva != desejada:
+        TransicaoMusica(desejada)

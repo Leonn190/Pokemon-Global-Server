@@ -34,6 +34,7 @@ areas_inventario = []  # Lista de rects dos slots
 
 arrastaveis_pokemons = []
 pokemons_cache = []
+times_cache = []
 areas_pokemons = []
 areas_pokemons_times = []
 
@@ -175,7 +176,8 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
         cur_y += altura_por_time + espacamento_times
 
     # === 3) SOMENTE QUANDO player.Pokemons mudou: (re)criar Arrastaveis ===
-    if pokemons_cache != player.Pokemons:
+    if pokemons_cache != player.Pokemons or times_cache != player.Equipes:
+        times_cache = list(player.Equipes)
         pokemons_cache = list(player.Pokemons)
         arrastaveis_pokemons.clear()
 

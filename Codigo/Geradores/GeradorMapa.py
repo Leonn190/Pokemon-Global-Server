@@ -175,6 +175,8 @@ class CameraMundo:
 
         if bioma == 8:
             bioma = 2
+        if bioma != 3:
+            print("eita")
 
         return cores.get(bioma, (0, 0, 0))  # padrão: preto
 
@@ -220,8 +222,6 @@ class CameraBatalha:
         cx_max = self.BgW - half_w
         cy_max = self.BgH - half_h
 
-        # se a imagem for menor que a tela num eixo (na prática não ocorre porque ZoomMin cobre),
-        # mantém centralizado nesse eixo
         if cx_min > cx_max:
             self.Centro.x = self.BgW/2.0
         else:
@@ -332,7 +332,6 @@ class CameraBatalha:
         src_rect = pygame.Rect(left, top, src_w, src_h)
 
         # 2) recorta só a região visível e escala uma única vez para o tamanho da TELA
-        #    Use 'scale' para performance. Troque por 'smoothscale' se priorizar qualidade.
         view = self.Bg.subsurface(src_rect)
         scaled = pygame.transform.scale(view, (self.SW, self.SH))
 

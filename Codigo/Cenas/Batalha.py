@@ -4,7 +4,7 @@ from pygame.math import Vector2
 
 from Codigo.Modulos.Outros import Clarear, Escurecer
 from Codigo.Prefabs.BotoesPrefab import Botao_Selecao
-from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda
+from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda, Animar
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Sonoridade import Musica, AtualizarMusica
 from Codigo.Geradores.GeradorPokemon import GerarMatilha, CarregarAnimacaoPokemon
@@ -40,6 +40,10 @@ __slot_skin_size = None           # (w_screen, h_screen)
 __slot_skin_aliado = None         # pygame.Surface
 __slot_skin_inimigo = None        # pygame.Surface
 
+# --- estado global da animação de entrada ---
+_anima_t0 = None       # tick inicial
+_anima_dur_ms = 480    # duração da animação (ms)
+
 def _prepare_slot_skins(tela, cam):
     """Cria/atualiza as skins redimensionadas para o tamanho de tela atual."""
     global __slot_skin_size, __slot_skin_aliado, __slot_skin_inimigo
@@ -73,26 +77,23 @@ def _world_rect_to_screen_rect(rect_world, cam):
 
 def _build_world_slots_once(sw, sh, cam, margem, gap, tile_screen):
     """
-    Centraliza um grid 3x3 em cada metade do MUNDO (fundo):
-      - ESQUERDA  => aliados (AZUL)
-      - DIREITA   => inimigos (VERMELHO)
-    Tamanho do tile e gap são em PIXELS DO MUNDO (zoom=1).
+    Monta os grids 3x3 em MUNDO respeitando a margem horizontal:
+      - Painel aliado encosta a 'margem' na ESQUERDA
+      - Painel inimigo encosta a 'margem' na DIREITA
+      - Altura centralizada
+    Tamanhos (tile/gap) são em px do MUNDO (zoom=1).
     """
-    # Agora o tamanho é fixo no MUNDO; o zoom só escala na tela:
     tile_world = int(round(tile_screen))
     gap_world  = int(round(gap))
 
     painel_w_world = tile_world * 3 + gap_world * 2
     painel_h_world = tile_world * 3 + gap_world * 2
 
-    # centros das metades do MUNDO (imagem de fundo)
-    cx_esq = cam.BgW * 0.25   # metade esquerda, centro horizontal
-    cx_dir = cam.BgW * 0.75   # metade direita, centro horizontal
-    cy     = cam.BgH * 0.50   # centro vertical do mundo
+    cy = cam.BgH * 0.50  # centralizado verticalmente
 
-    # origens (top-left) em MUNDO para cada painel
-    origem_esq_world = Vector2(cx_esq - painel_w_world/2.0, cy - painel_h_world/2.0)
-    origem_dir_world = Vector2(cx_dir - painel_w_world/2.0, cy - painel_h_world/2.0)
+    # origens (top-left) finais em MUNDO
+    origem_esq_world = Vector2(int(margem), int(cy - painel_h_world/2.0))
+    origem_dir_world = Vector2(int(cam.BgW - margem - painel_w_world), int(cy - painel_h_world/2.0))
 
     slots_esq, slots_dir = [], []
     for r in range(3):
@@ -110,115 +111,119 @@ def _build_world_slots_once(sw, sh, cam, margem, gap, tile_screen):
 # ================= TELA FUNDO BATALHA =================
 def TelaFundoBatalha(tela, estados, eventos, parametros):
     global camera, _slots_esquerda, _slots_direita, _anim_inimigos, _anim_aliados
-    global __dbg_count
+    global __dbg_count, _anima_t0, _anima_dur_ms
+
     try:
         __dbg_count += 1
     except NameError:
         __dbg_count = 1
 
-    # ---- fundo + câmera ----
-    fundo = Fundos["FundoBatalha"]          # imagem 1920x1080 (mundo)
-    if camera is None:
-        camera = CameraBatalha(fundo, tela.get_size())
-
     camera.Atualizar(eventos)
 
     t0 = time.perf_counter()
-    camera.Desenhar(tela)  # SUSPEITO #1: draw do fundo (escala/crop)
+    camera.Desenhar(tela)
     t1 = time.perf_counter()
 
-    # ---- layout ACOPLADO AO FUNDO (em MUNDO) ----
     sw, sh = tela.get_size()
 
-    # EDITÁVEIS:
-    margem = 18                   # hoje não afeta o centro (mantido p/ compat)
-    gap    = 12                   # GAP entre slots, em PX DO MUNDO (zoom=1)
-    tile_screen = 160             # TAMANHO DO SLOT em PX DO MUNDO (zoom=1)
+    # ===== Layout (em MUNDO) =====
+    margem = 250        # define onde os painéis ficam horizontalmente
+    gap    = 16        # gap entre slots (MUNDO)
+    tile_screen = 170  # tamanho do tile (MUNDO)
 
-    # Constrói UMA VEZ, ancorando no mundo (não reconstrói em zoom/pan)
+    # Constrói apenas 1x
     if _slots_esquerda is None or _slots_direita is None:
         _slots_esquerda, _slots_direita = _build_world_slots_once(
             sw, sh, camera, margem, gap, tile_screen
         )
 
-    # ---- animações (uma vez, guardando centros em MUNDO) ----
-    if _anim_inimigos is None or _anim_aliados is None:
-        _anim_inimigos = []
-        _anim_aliados  = []
+    # ===== Início da animação (uma única vez) =====
+    if _anima_t0 is None:
+        _anima_t0 = pygame.time.get_ticks()
 
-        equipe_inimiga = parametros["EquipeInimiga"]
-        equipe_aliada  = parametros["EquipeAliada"]
+    # Largura de cada painel (usa primeira linha: col 0 -> col 2)
+    esq_first = _slots_esquerda[0]
+    esq_lastc = _slots_esquerda[2]
+    painel_w  = esq_lastc.right - esq_first.left
+    # (é o mesmo pros dois lados, pois usamos o mesmo tile/gap)
 
-        inimigos_validos = [p for p in equipe_inimiga if p]
-        aliados_validos  = [p for p in equipe_aliada  if p]
+    # deslocamentos animados: começam fora do mundo e vão até 0
+    dx_esq = Animar(-(esq_first.left + painel_w), 0, _anima_t0, tempo=_anima_dur_ms)
+    # para a direita: empurra até sair por BgW
+    dir_first = _slots_direita[0]
+    dx_dir = Animar((camera.BgW - dir_first.left), 0, _anima_t0, tempo=_anima_dur_ms)
 
-        inimigos_escolhidos = (random.sample(inimigos_validos, 3)
-                               if len(inimigos_validos) > 3 else inimigos_validos)
-        aliados_escolhidos  = (random.sample(aliados_validos, 3)
-                               if len(aliados_validos)  > 3 else aliados_validos)
-
-        idxs_centrais = [1, 4, 7]  # coluna central do 3x3
-
-        # DIREITA = INIMIGOS (vermelho)
-        for pkm, idx in zip(inimigos_escolhidos, idxs_centrais):
-            nome = pkm["Nome"]
-            cx, cy = _slots_direita[idx].center   # <- direita
-            anim = Animação(Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)), (cx, cy), tamanho=1.15, intervalo=30)
-            _anim_inimigos.append((anim, (cx, cy)))
-
-        # ESQUERDA = ALIADOS (azul)
-        for pkm, idx in zip(aliados_escolhidos, idxs_centrais):
-            nome = pkm["Nome"]
-            cx, cy = _slots_esquerda[idx].center  # <- esquerda
-            anim = Animação(Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)), (cx, cy), tamanho=1.15, intervalo=30, inverted=True)
-            _anim_aliados.append((anim, (cx, cy)))
-
-        # ---- botões (HUD acoplado ao mundo) ----
+    # ===== HUD (botões) =====
     fonte = Fontes[16]
-
-    # prepara as skins redimensionadas para o zoom atual (uma vez)
     _prepare_slot_skins(tela, camera)
     screen_rect = pygame.Rect(0, 0, sw, sh)
 
-    # ESQUERDA = aliados (AZUL / usa skin já no tamanho certo)
-    for rect_world in _slots_esquerda:
-        rect_screen = _world_rect_to_screen_rect(rect_world, camera)
-        if not rect_screen.colliderect(screen_rect):
-            continue
-        Botao_Selecao(
-            tela, "", rect_screen, fonte,
-            __slot_skin_aliado, (0, 0, 0),
-            eventos=eventos, estado_global=EstadoArenaBotoes
-        )
+    # ALIADOS (aplica dx_esq antes de converter para tela)
+    for i, rect_world in enumerate(_slots_esquerda):
+        rect_anim = rect_world.move(dx_esq, 0)
+        rect_screen = _world_rect_to_screen_rect(rect_anim, camera)
+        if rect_screen.colliderect(screen_rect):
+            Botao_Selecao(
+                tela, "", rect_screen, fonte,
+                __slot_skin_aliado, (0, 0, 0),
+                eventos=eventos, estado_global=EstadoArenaBotoes
+            )
 
-    # DIREITA = inimigos (VERMELHO / usa skin já no tamanho certo)
-    for rect_world in _slots_direita:
-        rect_screen = _world_rect_to_screen_rect(rect_world, camera)
-        if not rect_screen.colliderect(screen_rect):
-            continue
-        Botao_Selecao(
-            tela, "", rect_screen, fonte,
-            __slot_skin_inimigo, (0, 0, 0),
-            eventos=eventos, estado_global=EstadoArenaBotoes
-        )
+    # INIMIGOS (aplica dx_dir)
+    for i, rect_world in enumerate(_slots_direita):
+        rect_anim = rect_world.move(dx_dir, 0)
+        rect_screen = _world_rect_to_screen_rect(rect_anim, camera)
+        if rect_screen.colliderect(screen_rect):
+            Botao_Selecao(
+                tela, "", rect_screen, fonte,
+                __slot_skin_inimigo, (0, 0, 0),
+                eventos=eventos, estado_global=EstadoArenaBotoes
+            )
 
-    t2 = time.perf_counter()  # SUSPEITO #2: desenho dos botões (ambos os lados)
+    t2 = time.perf_counter()
 
-    # ---- animações: posiciona pelo centro em MUNDO -> TELA a cada frame ----
-    # usa a sua API: atualizar(tela, nova_pos=None, multiplicador=1)
-    for anim, world_center in _anim_inimigos:
-        scr = camera.TelaAPartirDoMundo(world_center)
+    # ===== Pokémons: movem junto com os painéis =====
+    # Inicializa animações (uma vez) ancoradas nas posições finais
+    if _anim_inimigos is None or _anim_aliados is None:
+        _anim_inimigos = []
+        _anim_aliados  = []
+        equipe_inimiga = [p for p in parametros["EquipeInimiga"] if p]
+        equipe_aliada  = [p for p in parametros["EquipeAliada"] if p]
+        # pode escolher quais centralizar (ex: coluna do meio)
+        idxs_centrais = [1, 4, 7]  # 3 de cima/centro/baixo na coluna do meio
+
+        for pkm, idx in zip(equipe_inimiga[:3], idxs_centrais):
+            nome = pkm["Nome"]
+            cx, cy = _slots_direita[idx].center
+            anim = Animação(Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)),
+                            (cx, cy), tamanho=1.1, intervalo=30)
+            _anim_inimigos.append((anim, (cx, cy)))
+
+        for pkm, idx in zip(equipe_aliada[:3], idxs_centrais):
+            nome = pkm["Nome"]
+            cx, cy = _slots_esquerda[idx].center
+            anim = Animação(Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)),
+                            (cx, cy), tamanho=1.1, intervalo=30, inverted=True)
+            _anim_aliados.append((anim, (cx, cy)))
+
+    # Posiciona por frame usando os deslocamentos animados
+    for anim, (cx, cy) in _anim_inimigos:
+        scr = camera.TelaAPartirDoMundo((cx + dx_dir, cy))
         anim.atualizar(tela, nova_pos=(int(scr.x), int(scr.y)), multiplicador=camera.Zoom)
 
-    t3 = time.perf_counter()  # SUSPEITO #3: animações dos INIMIGOS
+    t3 = time.perf_counter()
 
-    for anim, world_center in _anim_aliados:
-        scr = camera.TelaAPartirDoMundo(world_center)
+    for anim, (cx, cy) in _anim_aliados:
+        scr = camera.TelaAPartirDoMundo((cx + dx_esq, cy))
         anim.atualizar(tela, nova_pos=(int(scr.x), int(scr.y)), multiplicador=camera.Zoom)
 
-    t4 = time.perf_counter()  # SUSPEITO #4: animações dos ALIADOS
+    t4 = time.perf_counter()
 
-    # ---- log (imprime de tempos em tempos para não matar o FPS) ----
+    # (opcional) Se quiser liberar o relógio depois que terminar:
+    if pygame.time.get_ticks() - _anima_t0 >= _anima_dur_ms:
+        # nada especial a fazer; dx_* já ficam 0
+        pass
+
     if __dbg_count % 15 == 0:
         bg_ms    = (t1 - t0) * 1000.0
         btn_ms   = (t2 - t1) * 1000.0
@@ -230,7 +235,7 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
               f"TOTAL:{total_ms:6.2f} ms | zoom={camera.Zoom:.2f}")
 
 def BatalhaLoop(tela, relogio, estados, config, info):
-    global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, Player
+    global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, Player, camera
     from Codigo.Cenas.Mundo import player
 
     if Cores is None:
@@ -258,6 +263,9 @@ def BatalhaLoop(tela, relogio, estados, config, info):
             "EquipeInimiga": GerarMatilha(parametros["AlvoConfronto"].Dados, Membros),
             "EquipeAliada": Equipe
         })
+
+    fundo = Fundos["FundoBatalha"]          
+    camera = CameraBatalha(fundo, tela.get_size())
 
     while estados["Batalha"]:
         eventos = pygame.event.get()
