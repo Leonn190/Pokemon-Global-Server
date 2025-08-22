@@ -335,7 +335,10 @@ def MaterializarPokemon(Dados):
             "descrição": r["Descrição"],
             }
 
-
+            for i, mov in enumerate(pokemon["MoveList"]):
+                if mov is None:
+                    pokemon["MoveList"][i] = novoataque
+                    break
 
     # 4) Recalcular Total ao final da materialização
     _recalcular_total(pokemon)
@@ -653,6 +656,7 @@ class Pokemon:
         v = self.VEL_IRRITA * dt
         if self.Irritado:
             self.progress_irritado = min(1.0, self.progress_irritado + v)
+            self.VelocidadeMov = 3.5
         else:
             self.progress_irritado = max(0.0, self.progress_irritado - v)
 

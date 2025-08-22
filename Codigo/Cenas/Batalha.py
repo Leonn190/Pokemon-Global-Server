@@ -159,7 +159,7 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
     sw, sh = tela.get_size()
 
     # ===== Layout (em MUNDO) =====
-    margem = 250        # define onde os painéis ficam horizontalmente
+    margem = 260        # define onde os painéis ficam horizontalmente
     gap    = 16         # gap entre slots (MUNDO)
     tile_screen = 170   # tamanho do tile (MUNDO)
 

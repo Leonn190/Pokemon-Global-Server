@@ -11,19 +11,40 @@ def Give(identificador,n=1):
     item["numero"] = n
     player.AdicionarAoInventario(item)
 
-def GivePokemon(identificador,mod):
-    from Codigo.Geradores.GeradorPokemon import criar_pokemon_especifico, desserializar_pokemon, MaterializarPokemon
+def GivePokemon(identificador, mod):
+    from Codigo.Geradores.GeradorPokemon import (
+        criar_pokemon_especifico,
+        desserializar_pokemon,
+        MaterializarPokemon
+    )
+
+    # cria o pokémon
     pokemon = desserializar_pokemon(criar_pokemon_especifico(identificador))
 
-    #area q usa o mod
+    # aplica as modificações
+    if mod:
+        partes = mod.split("/")
+        for parte in partes:
+            if "=" not in parte:
+                continue
+            chave, valor = parte.split("=", 1)
 
-    pokemon = MaterializarPokemon(pokemon)
+            # converte para número se der, senão fica string
+            if valor.isdigit():
+                valor = int(valor)
+            elif valor.replace(".", "", 1).isdigit():
+                valor = float(valor)
+
+            if isinstance(pokemon[chave],list):
+                pokemon[chave].append(valor)
+            else:
+                pokemon[chave] = valor
+
+    return MaterializarPokemon(pokemon)
 
 def Tp(x,y):
     from Codigo.Cenas.Mundo import player
     player.Loc = [x,y]
-
-def 
 
 # registra sem a barra
 ComandosMundo.update({

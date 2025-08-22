@@ -9,6 +9,7 @@ from Codigo.Geradores.GeradorOutros import Projetil
 ConsumiveisIMG = None
 
 class Player:
+
     def __init__(self, Informações, Skins, Particulas):
 
         self.Code = Informações["Code"]
@@ -120,10 +121,6 @@ class Player:
             ItensIMG,
             mapa.PokemonsColisão
         )
-
-        # Debug opcional: verde = hitbox de colisão; ciano = rect de desenho
-        pygame.draw.rect(tela, (0, 255, 0), self.rect, 2)       # colisão (fixo)
-        pygame.draw.rect(tela, (0, 200, 200), self.draw_rect, 1)  # desenho (AABB da rotação)
 
         flutuacao = math.sin(pygame.time.get_ticks() / 200) * 5
 
@@ -355,7 +352,7 @@ class Player:
         if magnitude > 0:
             direcao_x /= magnitude
             direcao_y /= magnitude
-            velocidade = self.Velocidade + 3
+            velocidade = (self.Velocidade * 0.5) + 3.5
 
             # --- deslocamento pretendido (em TILES por frame, como no seu código) ---
             dx = direcao_x * velocidade * delta_time
@@ -451,7 +448,7 @@ class Player:
                 return True
         return False
 
-    def ColideComPokemons(self, PokemonsColisao, parametros, tela_largura=1920, tela_altura=1080):
+    def ColideComPokemons(self, PokemonsColisao, parametros):
         for pokemon in PokemonsColisao.values():
             if self.rect.colliderect(pokemon.Rect):
                     parametros["Confronto"]["ConfrontoIniciado"] = True
@@ -496,6 +493,7 @@ class Player:
             "Skin": self.SkinNumero,
             "Nivel": self.Nivel,
             "Loc": self.Loc,
+            "Velocidade": self.Velocidade,
             "Selecionado": self.Selecionado,
             "Angulo": self.Angulo
         }

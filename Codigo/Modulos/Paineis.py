@@ -1854,29 +1854,31 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
            col6: CrC,  CrD
          cor: laranja se > Base, vermelho se < Base, branco se igual
       CENTRAL INFERIOR: 3 slots (64) da Build na horizontal (direita → esquerda),
-         à DIREITA ficam as barras (Vida / Energia) e, no canto direito, Vamp e Asse (30px + fonte 20)
+         as BARRAS ficam à esquerda da coluna Vamp/Asse,
+         no canto direito (coluna reservada) ficam Vamp e Asse (30px + fonte 20)
       DIREITO (maior p/ caber botões ~190): ataques empilhados
     """
+    import pygame
 
-    # =================== VARIÁVEIS DE LAYOUT (fáceis de tunar) ===================
-    W, H = 1000, 190            # tamanho do painel
-    PAD      = 10               # padding geral do painel
-    GAP_CS_CI= 6                # gap vertical entre central superior e inferior
+    # =================== VARIÁVEIS DE LAYOUT ===================
+    W, H = 1000, 190
+    PAD      = 10
+    GAP_CS_CI= 6
 
     # Larguras de setores
-    LEFT_W   = 190              # ESQUERDA (menor)
-    ATTACK_W = 190              # largura visual do botão do ataque
-    RIGHT_IN_PAD = 10           # padding interno do setor direito
-    RIGHT_W  = ATTACK_W + RIGHT_IN_PAD*2  # garante que os botões caibam
+    LEFT_W   = 190                      # ESQUERDA (menor)
+    ATTACK_W = 190                      # largura visual do botão do ataque
+    RIGHT_IN_PAD = 10
+    RIGHT_W  = ATTACK_W + RIGHT_IN_PAD*2
 
-    # Proporções do central (superior > inferior)
-    CS_RATIO = 0.60             # % da altura do bloco central para o superior
+    # Central superior > inferior
+    CS_RATIO = 0.60
 
     # Ícones e fontes dos status
-    ICON_SZ        = 30         # ícones dos status
-    STAT_NUM_SIZE  = 20         # fonte dos valores dos status
-    STAT_ROW_GAP   = 34         # distância vertical entre as duas linhas de status
-    STAT_TXT_GAP   = 6          # gap ícone → número
+    ICON_SZ        = 30
+    STAT_NUM_SIZE  = 20
+    STAT_ROW_GAP   = 34
+    STAT_TXT_GAP   = 6
 
     # Barras e Build
     BARRA_W  = 260
@@ -1886,10 +1888,11 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
     BUILD_SIZE    = 64
     BUILD_GAP     = 8
 
-    # Vamp/Asse (no central inferior, canto direito)
-    VA_GAP_X = 14               # gap horizontal interno entre Vamp/Asse e laia
-    VA_GAP_Y = 2                # gap vertical entre eles
-    # ============================================================================
+    # Coluna Vamp/Asse (reservada no canto direito do CENTRAL INFERIOR)
+    VA_GAP_Y      = 2
+    VA_COL_PAD    = 20   # “gordurinha” pros números não passarem da borda
+    BARRA_RIGHT_GAP = 10 # gap entre a coluna VA e o início das barras
+    # ===========================================================
 
     x0, y0 = pos
 
@@ -1911,8 +1914,8 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
     cy = y0 + PAD
     cH = H - PAD*2
 
-    cs_h = int(cH * CS_RATIO)       # central superior (um pouco mais alto)
-    ci_h = cH - cs_h - GAP_CS_CI    # central inferior
+    cs_h = int(cH * CS_RATIO)
+    ci_h = cH - cs_h - GAP_CS_CI
 
     R_left  = pygame.Rect(x0 + PAD, y0 + PAD, LEFT_W, H - 2*PAD)
     R_csup  = pygame.Rect(cx, cy, cW, cs_h)
@@ -1921,16 +1924,15 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
 
     # cores
     COR_OK = (255, 255, 255)
-    COR_UP = (255, 180, 90)    # laranja claro
-    COR_DN = (220, 70, 70)     # vermelho
+    COR_UP = (255, 180, 90)
+    COR_DN = (220, 70, 70)
 
     # ---------------- helpers ----------------
     def _get_val_and_color(lbl_key):
-        key_map = {"EnE": "Ene"}  # alias visual → chave real
+        key_map = {"EnE": "Ene"}
         k = key_map.get(lbl_key, lbl_key)
         base_k = f"{k}Base"
 
-        # valor mostrado
         if k == "Vida":
             val = pokemon.get("Vida", pokemon.get("VidaMax", 0))
         else:
@@ -1960,7 +1962,6 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
         return (int(round(v)) if k == "Vida" else int(round(v))), cor
 
     def _draw_icon_value(label_key, x, y, icon_sz=ICON_SZ, font=f_num):
-        # mapeia rótulo visual para ícone
         icon_key = {"EnE": "Ene"}.get(label_key, label_key)
         icon = icones.get(icon_key)
         if isinstance(icon, pygame.Surface):
@@ -1969,7 +1970,6 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
             tx = x + icon_sz + STAT_TXT_GAP
             ty = y + (icon_sz - font.get_height()) // 2
         else:
-            # fallback: escreve a sigla se não tiver ícone
             lab = f_mini.render(label_key, True, (220, 220, 220))
             tela.blit(lab, (x, y))
             tx = x + lab.get_width() + STAT_TXT_GAP
@@ -1984,13 +1984,11 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
         nome = str(pokemon.get("Nome", "???"))
         sprite = pokemons.get(nome.lower(), CarregarPokemon(nome.lower(), pokemons))
 
-        # nome centralizado no topo
         nome_surf = f_nome.render(nome, True, (255, 255, 255))
         nx = R_left.x + (R_left.w - nome_surf.get_width()) // 2
         ny = R_left.y
         tela.blit(nome_surf, (nx, ny))
 
-        # sprite
         sp_top = ny + nome_surf.get_height() + 6
         used_h = 0
         if isinstance(sprite, pygame.Surface):
@@ -2002,7 +2000,6 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
             tela.blit(sp, (sp_x, sp_top))
             used_h = sp.get_height()
 
-        # Poder
         total_val = pokemon.get("Total")
         if total_val is None:
             stats_keys = ["Vida","Atk","Def","SpA","SpD","Vel","Mag","Per","Ene","EnR","CrD","CrC","Vamp","Asse"]
@@ -2029,13 +2026,12 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
 
     # ============ Setor: CENTRAL SUPERIOR (status) ============
     def setor_central_superior():
-        # 6 colunas x 2 linhas (Vamp/Asse foram movidos para o inferior)
         cols = [
             ("Vida", "Mag"),
             ("Atk",  "SpA"),
             ("Def",  "SpD"),
             ("Per",  "Vel"),
-            ("EnE",  "EnR"),   # EnE => Ene
+            ("EnE",  "EnR"),
             ("CrC",  "CrD"),
         ]
         col_w = max(1, R_csup.w // len(cols))
@@ -2048,27 +2044,22 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
 
     # ===== Setor: CENTRAL INFERIOR (build + barras + Vamp/Asse) =====
     def setor_central_inferior():
-        # Barras (à direita)
+        # --- Reserva coluna da direita para Vamp/Asse ---
+        # largura dinâmica: ícone + gap + “999” + almofada
+        sample_w = f_num.size("999")[0]
+        VA_COL_W = ICON_SZ + STAT_TXT_GAP + sample_w + VA_COL_PAD
+        R_va = pygame.Rect(R_cinf.right - VA_COL_W, R_cinf.y, VA_COL_W, R_cinf.h)
+
+        # --- Barras à ESQUERDA da coluna VA ---
         vida_atual = int(pokemon.get("Vida", 0) or 0)
         vida_max   = int(pokemon.get("VidaMax", pokemon.get("Vida", 1)) or 1)
         ene_atual  = int(pokemon.get("Energia", pokemon.get("EneAtual", 0)) or 0)
         ene_max    = int(pokemon.get("Ene", 1) or 1)
-
         estado_barras = pokemon.setdefault("_estado_barras", {})
 
-        bx = R_cinf.right - BARRA_W
+        bx = R_va.left - BARRA_RIGHT_GAP - BARRA_W
         by1 = R_cinf.y + 8
         by2 = by1 + BARRA_H + BARRA_GAP_Y
-
-        # Vamp/Asse no canto direito (acima das barras)
-        # primeiro desenha Asse acima de Vamp (ou vice-versa — ficou Asse em cima aqui)
-        va_top_y = R_cinf.y + 2
-        # alinhar à direita: começa em bx + BARRA_W - largura do bloco (30 + gap + texto estimado)
-        # como texto varia, simplesmente ancoramos o ícone no canto direito e deixamos o número ir para a direita
-        # Para manter dentro do retângulo, ancoramos o ícone a partir de (bx + BARRA_W - 2*ICON_SZ - VA_GAP_X)
-        va_icon_x = bx + BARRA_W - 2*ICON_SZ - VA_GAP_X
-        _draw_icon_value("Asse", va_icon_x, va_top_y, ICON_SZ, f_num)
-        _draw_icon_value("Vamp", va_icon_x, va_top_y + ICON_SZ + VA_GAP_Y, ICON_SZ, f_num)
 
         # Vida (vermelha)
         Barra(tela, (bx, by1), (BARRA_W, BARRA_H),
@@ -2082,7 +2073,7 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
         te = f_mini.render(f"{ene_atual}/{ene_max}", True, (255, 255, 255))
         tela.blit(te, (bx + (BARRA_W - te.get_width())//2, by2 + (BARRA_H - te.get_height())//2))
 
-        # Build slots (à esquerda das barras), da direita para a esquerda
+        # --- Build slots (à esquerda das barras), empilhados da direita → esquerda ---
         start_x_right = bx - BUILD_GAP
         x = start_x_right - BUILD_SIZE
         y = R_cinf.y + max(0, (R_cinf.h - BUILD_SIZE)//2)
@@ -2113,6 +2104,34 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
                 branco=True, Surface=True, grossura=1
             )
             x -= (BUILD_SIZE + BUILD_GAP)
+
+        # --- Vamp/Asse dentro da coluna reservada (encaixe à direita sem extrapolar) ---
+        def draw_va(key, top_y):
+            # mede valor para encaixar ícone + número dentro de R_va
+            val, cor = _get_val_and_color(key)
+            val_surf = f_num.render(str(val), True, cor)
+            total_w = ICON_SZ + STAT_TXT_GAP + val_surf.get_width()
+            ix = R_va.right - total_w  # encaixa na borda direita
+            # ícone
+            icon_key = {"EnE": "Ene"}.get(key, key)
+            icon = icones.get(icon_key)
+            if isinstance(icon, pygame.Surface):
+                icon_draw = pygame.transform.smoothscale(icon, (ICON_SZ, ICON_SZ))
+                tela.blit(icon_draw, (ix, top_y))
+            else:
+                # fallback: só a sigla
+                lbl = f_mini.render(key, True, (220,220,220))
+                tela.blit(lbl, (ix, top_y))
+                # ajusta posição do número quando não tem ícone real
+                extra = ICON_SZ - lbl.get_width()
+                ix -= max(0, extra)
+            # número
+            ty = top_y + (ICON_SZ - val_surf.get_height()) // 2
+            tx = ix + ICON_SZ + STAT_TXT_GAP
+            tela.blit(val_surf, (tx, ty))
+
+        draw_va("Asse", R_cinf.y + 2)
+        draw_va("Vamp", R_cinf.y + 2 + ICON_SZ + VA_GAP_Y)
 
     # ================== Setor: DIREITO (ataques) ==================
     def setor_direito():
@@ -2148,3 +2167,4 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos):
     setor_central_superior()
     setor_central_inferior()
     setor_direito()
+    
