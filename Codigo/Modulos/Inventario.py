@@ -1,4 +1,5 @@
 import pygame
+import copy
 
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel
 from Codigo.Prefabs.Arrastavel import Arrastavel
@@ -177,7 +178,7 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
 
     # === 3) SOMENTE QUANDO player.Pokemons mudou: (re)criar Arrastaveis ===
     if pokemons_cache != player.Pokemons or times_cache != player.Equipes:
-        times_cache = list(player.Equipes)
+        times_cache = copy.deepcopy(player.Equipes)
         pokemons_cache = list(player.Pokemons)
         arrastaveis_pokemons.clear()
 

@@ -11,7 +11,7 @@ from Codigo.Modulos.Paineis import BarraDeItens
 from Codigo.Modulos.Comandos import ComandosMundo
 from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda
 from Codigo.Prefabs.Particulas import BurstManager
-from Codigo.Prefabs.Terminal import terminal
+from Codigo.Prefabs.Terminal import Terminal
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_Tecla
 from Codigo.Prefabs.Sonoridade import Musica, AtualizarMusica, VerificaMusicaMundo
 from Codigo.Prefabs.Mensagens import atualizar_e_desenhar_mensagens_itens
@@ -36,6 +36,7 @@ Particulas = None
 player = None
 mapa = None
 camera = None
+terminal = None
 
 B_voltar = {}
 B_config = {}
@@ -250,10 +251,10 @@ def MundoTelaPadrao(tela, estados, eventos, parametros):
         TelaInventario(tela, player, eventos, parametros)
     else:
         BarraDeItens(tela, player, eventos)
-        terminal(tela,Fontes[16],player.Nome,pygame.K_TAB,eventos,parametros,ComandosMundo,parametros)
+        terminal.atualizar(tela,Fontes[16],player.Nome,pygame.K_TAB,eventos,parametros,ComandosMundo,parametros)
 
 def MundoLoop(tela, relogio, estados, config, info):
-    global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, player, mapa, camera, Particulas
+    global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, player, mapa, camera, terminal, Particulas
     if Cores == None:
         Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Consumiveis, Equipaveis, Estruturas, Animaçoes, Icones = info["Conteudo"]
 
@@ -296,6 +297,7 @@ def MundoLoop(tela, relogio, estados, config, info):
     player = Player(info["Server"]["Player"]["dados"],Outros["SkinsTodas"],Particulas)
     mapa = Mapa(parametros["GridBlocos"],parametros["GridBiomas"],GridToDic(parametros["GridObjetos"]))
     camera = CameraMundo(18)
+    terminal = Terminal()
 
     if mapa.GridBiomas[player.Loc[0]][player.Loc[1]] == 3:
         Musica("Neve")

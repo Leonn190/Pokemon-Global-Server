@@ -12,10 +12,10 @@ class Projetil:
             self.velocidade = 380
             self.distancia_total = 520
             if self.dados["nome"] == "Sniperball":
-                self.velocidade = 500
+                self.velocidade = 520
                 self.distancia_total = 620
             if self.dados["nome"] == "Fastball":
-                self.velocidade = 480
+                self.velocidade = 500
         elif self.dados["estilo"] == "fruta":
             self.velocidade = 340
             self.distancia_total = 420
@@ -37,7 +37,7 @@ class Projetil:
 
         self.imagem_original = self.imagem  # mantém a imagem original para evitar perda de qualidade
         self.angulo = 0  # ângulo inicial
-        self.velocidade_rotacao = 40  # graus por frame, ajuste como quiser
+        self.velocidade_rotacao = 80  # graus por frame, ajuste como quiser
 
     def atualizar(self, tela, cords_atuais, player, delta_time):
 

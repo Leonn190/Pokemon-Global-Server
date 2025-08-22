@@ -3,11 +3,12 @@ import pygame, random, time
 from pygame.math import Vector2
 
 from Codigo.Modulos.Outros import Clarear, Escurecer
+from Codigo.Modulos.Paineis import PainelPokemonBatalha
 from Codigo.Prefabs.BotoesPrefab import Botao_Selecao
 from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda, Animar
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Sonoridade import Musica, AtualizarMusica
-from Codigo.Geradores.GeradorPokemon import GerarMatilha, CarregarAnimacaoPokemon
+from Codigo.Geradores.GeradorPokemon import GerarMatilha, CarregarAnimacaoPokemon, GeraPokemonBatalha
 from Codigo.Geradores.GeradorMapa import CameraBatalha
 
 Cores = None
@@ -32,7 +33,8 @@ _slots_direita  = None
 _anim_inimigos  = None
 _anim_aliados   = None
 
-EstadoArenaBotoes = {}
+EstadoArenaBotoesAliado = {}
+EstadoArenaBotoesInimigo = {}
 
 # ================= FUNÇÕES AUX =================
 # cache para skins de botão redimensionadas por zoom
@@ -43,6 +45,15 @@ __slot_skin_inimigo = None        # pygame.Surface
 # --- estado global da animação de entrada ---
 _anima_t0 = None       # tick inicial
 _anima_dur_ms = 480    # duração da animação (ms)
+
+anima = {
+    "_anima_painel_aliado": None,
+    "_anima_painel_inimigo": None,
+    "Y1": 880,
+    "Y2": 1080,
+    "Y3": -200,
+    "Y4": 0
+}
 
 def _prepare_slot_skins(tela, cam):
     """Cria/atualiza as skins redimensionadas para o tamanho de tela atual."""
@@ -108,10 +119,31 @@ def _build_world_slots_once(sw, sh, cam, margem, gap, tile_screen):
 
     return slots_esq, slots_dir
 
+# --- Função auxiliar ---
+def definir_ativos(equipe):
+    # Adiciona chaves extras padrão
+    for poke in equipe:
+        poke["Ativo"] = False
+        poke["Pos"] = None
+
+    # Sorteia até 3
+    qtd = min(3, len(equipe))
+    ativos = random.sample(equipe, qtd)
+
+    # Sorteia posições únicas de 1..9
+    posicoes = random.sample(range(1, 10), qtd)
+
+    # Marca como ativos
+    for poke, pos in zip(ativos, posicoes):
+        poke["Ativo"] = True
+        poke["Pos"] = pos
+
+    return ativos
+
 # ================= TELA FUNDO BATALHA =================
 def TelaFundoBatalha(tela, estados, eventos, parametros):
     global camera, _slots_esquerda, _slots_direita, _anim_inimigos, _anim_aliados
-    global __dbg_count, _anima_t0, _anima_dur_ms
+    global __dbg_count, _anima_t0, _anima_dur_ms, anima
 
     try:
         __dbg_count += 1
@@ -128,8 +160,8 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
 
     # ===== Layout (em MUNDO) =====
     margem = 250        # define onde os painéis ficam horizontalmente
-    gap    = 16        # gap entre slots (MUNDO)
-    tile_screen = 170  # tamanho do tile (MUNDO)
+    gap    = 16         # gap entre slots (MUNDO)
+    tile_screen = 170   # tamanho do tile (MUNDO)
 
     # Constrói apenas 1x
     if _slots_esquerda is None or _slots_direita is None:
@@ -159,51 +191,112 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
     screen_rect = pygame.Rect(0, 0, sw, sh)
 
     # ALIADOS (aplica dx_esq antes de converter para tela)
+    # ALIADOS (aplica dx_esq)
     for i, rect_world in enumerate(_slots_esquerda):
+        poke = None
+        for pok in parametros["AliadosAtivos"]:
+            if pok["Pos"] == i + 1:
+                poke = pok
+                break
         rect_anim = rect_world.move(dx_esq, 0)
         rect_screen = _world_rect_to_screen_rect(rect_anim, camera)
         if rect_screen.colliderect(screen_rect):
             Botao_Selecao(
                 tela, "", rect_screen, fonte,
                 __slot_skin_aliado, (0, 0, 0),
-                eventos=eventos, estado_global=EstadoArenaBotoes
+                cor_passagem=(200, 200, 200), cor_borda_esquerda=Cores["azul"],
+                id_botao=f"ali-{i}",
+                eventos=eventos, estado_global=EstadoArenaBotoesAliado,
+                funcao_esquerdo=[
+                    (lambda p=poke: parametros.update({"AliadoSelecionado": p})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_aliado": pygame.time.get_ticks(),
+                        "Y1": 1080, "Y2": 880
+                    })),
+                ],
+                desfazer_esquerdo=[
+                    (lambda: parametros.update({"AliadoSelecionado": None})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_aliado": pygame.time.get_ticks(),
+                        "Y1": 880, "Y2": 1080
+                    })),
+                ]
             )
 
     # INIMIGOS (aplica dx_dir)
     for i, rect_world in enumerate(_slots_direita):
+        poke = None
+        for pok in parametros["InimigosAtivos"]:
+            if pok["Pos"] == i + 1:
+                poke = pok
+                break
         rect_anim = rect_world.move(dx_dir, 0)
         rect_screen = _world_rect_to_screen_rect(rect_anim, camera)
         if rect_screen.colliderect(screen_rect):
             Botao_Selecao(
                 tela, "", rect_screen, fonte,
-                __slot_skin_inimigo, (0, 0, 0),
-                eventos=eventos, estado_global=EstadoArenaBotoes
+                __slot_skin_inimigo, cor_borda_normal=(0, 0, 0),
+                cor_passagem=(200, 200, 200), cor_borda_esquerda=Cores["vermelho"],
+                id_botao=f"ini-{i}",
+                eventos=eventos, estado_global=EstadoArenaBotoesInimigo,
+                funcao_esquerdo=[
+                    (lambda p=poke: parametros.update({"InimigoSelecionado": p})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_inimigo": pygame.time.get_ticks(),
+                        "Y3": -200, "Y4": 0
+                    })),
+                ],
+                desfazer_esquerdo=[
+                    (lambda: parametros.update({"InimigoSelecionado": None})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_inimigo": pygame.time.get_ticks(),
+                        "Y1": 0, "Y2": -200
+                    })),
+                ]
             )
 
     t2 = time.perf_counter()
 
     # ===== Pokémons: movem junto com os painéis =====
-    # Inicializa animações (uma vez) ancoradas nas posições finais
+    # Agora: usar Pos (1..9) -> índice 0..8 e listas *Ativos*, respeitando Ativo=True.
     if _anim_inimigos is None or _anim_aliados is None:
         _anim_inimigos = []
         _anim_aliados  = []
-        equipe_inimiga = [p for p in parametros["EquipeInimiga"] if p]
-        equipe_aliada  = [p for p in parametros["EquipeAliada"] if p]
-        # pode escolher quais centralizar (ex: coluna do meio)
-        idxs_centrais = [1, 4, 7]  # 3 de cima/centro/baixo na coluna do meio
 
-        for pkm, idx in zip(equipe_inimiga[:3], idxs_centrais):
+        # usa diretamente as listas de ativos e filtra por Ativo=True
+        equipe_inimiga = [p for p in parametros.get("InimigosAtivos", []) if p and p.get("Ativo")]
+        equipe_aliada  = [p for p in parametros.get("AliadosAtivos",  []) if p and p.get("Ativo")]
+
+        # inimigos: slot do lado direito conforme Pos
+        for pkm in equipe_inimiga:
+            try:
+                idx = int(pkm.get("Pos", 1)) - 1
+            except (TypeError, ValueError):
+                idx = 0
+            idx = 0 if idx < 0 else (8 if idx > 8 else idx)
+
             nome = pkm["Nome"]
             cx, cy = _slots_direita[idx].center
-            anim = Animação(Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)),
-                            (cx, cy), tamanho=1.1, intervalo=30)
+            anim = Animação(
+                Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)),
+                (cx, cy), tamanho=1.1, intervalo=30
+            )
             _anim_inimigos.append((anim, (cx, cy)))
 
-        for pkm, idx in zip(equipe_aliada[:3], idxs_centrais):
+        # aliados: slot do lado esquerdo conforme Pos
+        for pkm in equipe_aliada:
+            try:
+                idx = int(pkm.get("Pos", 1)) - 1
+            except (TypeError, ValueError):
+                idx = 0
+            idx = 0 if idx < 0 else (8 if idx > 8 else idx)
+
             nome = pkm["Nome"]
             cx, cy = _slots_esquerda[idx].center
-            anim = Animação(Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)),
-                            (cx, cy), tamanho=1.1, intervalo=30, inverted=True)
+            anim = Animação(
+                Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)),
+                (cx, cy), tamanho=1.1, intervalo=30, inverted=True
+            )
             _anim_aliados.append((anim, (cx, cy)))
 
     # Posiciona por frame usando os deslocamentos animados
@@ -221,7 +314,6 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
 
     # (opcional) Se quiser liberar o relógio depois que terminar:
     if pygame.time.get_ticks() - _anima_t0 >= _anima_dur_ms:
-        # nada especial a fazer; dx_* já ficam 0
         pass
 
     if __dbg_count % 15 == 0:
@@ -233,6 +325,18 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
         print(f"[DBG] BG:{bg_ms:6.2f} ms | Botoes:{btn_ms:6.2f} ms | "
               f"Anim Inim:{inim_ms:6.2f} ms | Anim Ali:{aliado_ms:6.2f} ms | "
               f"TOTAL:{total_ms:6.2f} ms | zoom={camera.Zoom:.2f}")
+        
+def TelaHudBatalha(tela, estados, eventos, parametros):
+
+    YA = Animar(anima["Y1"],anima["Y2"],anima["_anima_painel_aliado"])
+
+    if parametros["AliadoSelecionado"] is not None:
+        PainelPokemonBatalha(parametros["AliadoSelecionado"],tela,(360,YA),eventos)
+
+    YI = Animar(anima["Y3"],anima["Y4"],anima["_anima_painel_inimigo"])
+
+    if parametros["InimigoSelecionado"] is not None:
+        PainelPokemonBatalha(parametros["InimigoSelecionado"],tela,(360,YI),eventos)
 
 def BatalhaLoop(tela, relogio, estados, config, info):
     global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, Player, camera
@@ -260,9 +364,14 @@ def BatalhaLoop(tela, relogio, estados, config, info):
             Equipe = filtrada[:6]
 
         parametros.update({
-            "EquipeInimiga": GerarMatilha(parametros["AlvoConfronto"].Dados, Membros),
-            "EquipeAliada": Equipe
+            "EquipeInimiga": [GeraPokemonBatalha(p) for p in GerarMatilha(parametros["AlvoConfronto"].Dados, Membros)],
+            "EquipeAliada":  [GeraPokemonBatalha(p) for p in Equipe],
+            "AliadoSelecionado": None,
+            "InimigoSelecionado": None
         })
+
+        parametros["AliadosAtivos"]   = definir_ativos(parametros["EquipeAliada"])
+        parametros["InimigosAtivos"]  = definir_ativos(parametros["EquipeInimiga"])
 
     fundo = Fundos["FundoBatalha"]          
     camera = CameraBatalha(fundo, tela.get_size())
@@ -275,6 +384,7 @@ def BatalhaLoop(tela, relogio, estados, config, info):
                 estados["Rodando"] = False
 
         TelaFundoBatalha(tela, estados, eventos, parametros)
+        TelaHudBatalha(tela, estados, eventos, parametros)
 
         if config["FPS Visivel"]:
             fps_atual = relogio.get_fps()

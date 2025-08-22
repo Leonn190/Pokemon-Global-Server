@@ -676,4 +676,4 @@ def GerarMundo(W=1000,H=1000,seed=random.randint(0,100000),img=False):
 
     return blocos_s, biomas_s, objetos
 
-GerarMundo(img=True)
+# GerarMundo(img=True)

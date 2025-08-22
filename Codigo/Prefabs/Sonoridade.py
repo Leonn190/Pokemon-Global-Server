@@ -206,8 +206,9 @@ def VerificaMusicaMundo(player, mapa, parametros):
     # 1) decide a faixa desejada pelo bioma
     bx, by = player.Loc
     biome = mapa.GridBiomas[round(by),round(bx)]
-    print(biome)
-    if biome == 4:
+    if biome == 0:
+        return
+    elif biome == 4:
         desejada = "Deserto"
     elif biome == 3:
         desejada = "Neve"

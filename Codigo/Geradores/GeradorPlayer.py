@@ -458,42 +458,36 @@ class Player:
                     parametros["Confronto"]["BatalhaSimples"] = True
                     parametros["Confronto"]["AlvoConfronto"] = pokemon
 
-    def AdicionarAoInventario(self, player, nome, raridade, estilo, descriçao, M1, M2):
+    def AdicionarAoInventario(self, item):
+        """
+        Simples: só aceita dict de item materializado e empilha por nome.
+        """
         global ConsumiveisIMG
 
         if ConsumiveisIMG is None:
             from Codigo.Cenas.Mundo import Consumiveis
             ConsumiveisIMG = Consumiveis
 
-        # Verifica se há espaço no inventário
+        # sem espaço
         if self.Itens >= self.MaxItens:
-            pass  # Você pode tratar o caso de inventário cheio aqui (mensagem, descarte, etc.)
             return
 
-        inventario = player.Inventario
+        inventario = self.Inventario  # player.Inventario se este método for do player
 
-        # Tenta empilhar primeiro
+        # tentar empilhar por nome
         for slot in inventario:
-            if slot is not None and slot["nome"] == nome:
-                slot["numero"] += 1
-                self.Itens += 1  # Atualiza a contagem total de itens
-                adicionar_mensagem_item(nome, ConsumiveisIMG)
+            if slot is not None and slot.get("nome") == item["nome"]:
+                slot["numero"] += item.get("numero", 1)
+                self.Itens += item.get("numero", 1)
+                adicionar_mensagem_item(item["nome"], ConsumiveisIMG)
                 return
 
-        # Caso não empilhe, adiciona no primeiro espaço None
+        # colocar em espaço vazio
         for i in range(len(inventario)):
             if inventario[i] is None:
-                inventario[i] = {
-                    "nome": nome,
-                    "raridade": raridade,
-                    "estilo": estilo,
-                    "descrição": descriçao,
-                    "numero": 1,
-                    "M1": M1,
-                    "M2": M2
-                }
-                self.Itens += 1  # Atualiza a contagem total de itens
-                adicionar_mensagem_item(nome, ConsumiveisIMG)
+                inventario[i] = item
+                self.Itens += item.get("numero", 1)
+                adicionar_mensagem_item(item["nome"], ConsumiveisIMG)
                 return
 
     def ToDicParcial(self):

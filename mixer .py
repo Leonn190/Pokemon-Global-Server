@@ -40,6 +40,16 @@ Musicas = {
         "loop": 2.34,
         "fimloop": 83.62
     },
+    "ConfrontoDoMagia": {
+        "arquivo": "Recursos/Audio/Musicas/ConfrontoDaMagia.ogg",
+        "loop": 2.34,
+        "fimloop": 83.62
+    },
+    "ConfrontoDoPantano": {
+        "arquivo": "Recursos/Audio/Musicas/ConfrontoDoPantano.ogg",
+        "loop": 2.34,
+        "fimloop": 80.32
+    },
     "Vale": {
         "arquivo": "Recursos/Audio/Musicas/Vale.ogg",
         "loop": 3.2,

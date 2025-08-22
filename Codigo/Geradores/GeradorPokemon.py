@@ -5,7 +5,6 @@ import os
 import pandas as pd
 
 from Codigo.Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem
-from Codigo.Prefabs.Terminal import adicionar_mensagem_terminal
 from Codigo.Funções.FunçõesConsumiveis import ConsumiveisDic
 
 df = pd.read_csv("Dados/Pokemons.csv")
@@ -38,8 +37,42 @@ CAMPOS_POKEMON = [
     "Altura", "Peso", "Raridade", "Estagio", "FF", "Code",
     "Nivel", "Linhagem", "IV",
     "IV_Vida", "IV_Atk", "IV_Def", "IV_SpA", "IV_SpD", "IV_Vel",
-    "IV_Mag", "IV_Per", "IV_Ene", "IV_EnR", "IV_CrD", "IV_CrC", "ID"
-]
+    "IV_Mag", "IV_Per", "IV_Ene", "IV_EnR", "IV_CrD", "IV_CrC", "ID"]
+
+STATUS_PRINCIPAIS = [
+    "Vida", "Atk", "Def", "SpA", "SpD", "Vel",
+    "Mag", "Per", "Ene", "EnR", "CrD", "CrC"]
+
+IGNORAR = {"IV", "IV_Vida", "IV_Atk", "IV_Def", "IV_SpA", "IV_SpD", "IV_Vel",
+           "IV_Mag", "IV_Per", "IV_Ene", "IV_EnR", "IV_CrD", "IV_CrC",
+           "Linhagem", "Raridade"}
+
+def GeraPokemonBatalha(pokemon):
+    dados = {}
+
+    # Status principais (base, normal e vida extra com max) como float
+    for stat in STATUS_PRINCIPAIS:
+        val = float(pokemon[stat])
+        dados[f"{stat}Base"] = val
+        dados[stat] = val
+        if stat == "Vida":
+            dados[f"{stat}Max"] = val
+
+    # Copiar os outros campos (exceto os ignorados)
+    for campo in CAMPOS_POKEMON:
+        if campo in STATUS_PRINCIPAIS or campo in IGNORAR:
+            continue
+        dados[campo] = pokemon.get(campo)
+
+    dados["Energia"] = float(dados["Ene"]) / 2
+    dados["Vamp"] = 0.0
+    dados["Asse"] = 0.0
+
+    dados["Build"] = pokemon["Build"]
+    dados["Amizade"] = float(pokemon["Amizade"])   # força amizade como float
+    dados["MoveList"] = pokemon["MoveList"]
+
+    return dados
 
 def GerarMatilha(pokemon, max=6):
     """
@@ -47,6 +80,9 @@ def GerarMatilha(pokemon, max=6):
     max: número máximo de pokemons na matilha (default 6)
     Nenhum pokemon adicional pode ter Estagio maior que o pokemon inicial.
     """
+
+    pokemon = MaterializarPokemon(pokemon)
+
     global df  # usa o df global já carregado
     matilha = [pokemon]  # inclui o pokemon inicial
     linhagem = pokemon.get("Linhagem", None)
@@ -237,10 +273,9 @@ def MaterializarPokemon(Dados):
     pokemon["Nivel"] = 0
     # garante chaves esperadas
     pokemon["XP"] = int(pokemon.get("XP", 0))
-    pokemon["Amizade"] = int(pokemon.get("Amizade", 0))
 
-    pokemon["MoveList"] = [None] * 4
-    pokemon["Memoria"] = [None] * 8
+    pokemon["MoveList"] = pokemon.get("MoveList", [None] * 4)
+    pokemon["Memoria"] = pokemon.get("Memoria", [None] * 8)
 
     pokemon["Build"] = [None] * pokemon["Equipaveis"]
 
@@ -249,17 +284,15 @@ def MaterializarPokemon(Dados):
 
     # 3) Ajustes iniciais que você já fazia
     #    (mantidos; apenas cap de amizade para não passar de 100)
-    if "Amizade" in pokemon:
-        pokemon["Amizade"] += max(0, random.randint(0, 30) - random.randint(0, pokemon["Nivel"]))
-    else:
-        pokemon["Amizade"] = max(0, random.randint(0, 30) - random.randint(0, pokemon["Nivel"]))
+    pokemon["Amizade"] = int(pokemon.get("Amizade", 0))
+    pokemon["Amizade"] += max(0, random.randint(0, 30) - random.randint(0, pokemon["Nivel"]))
     pokemon["Amizade"] = min(100, pokemon["Amizade"])
 
     pokemon["Fruta Favorita"] = random.choice(berries)
 
     nivel = pokemon.get("Nivel", 0)
     if nivel > 0:
-        pokemon["XP"] = random.randint(0, nivel * 10 - 1)
+        pokemon["XP"] = pokemon.get("xp",random.randint(0, nivel * 10 - 1))
     else:
         pokemon["XP"] = 0
     
@@ -282,6 +315,27 @@ def MaterializarPokemon(Dados):
             if mov is None:
                 pokemon["MoveList"][i] = novoataque
                 break  # sai do for e volta pro while, garantindo preencher 1 de cada vez
+    
+    for i, atk in enumerate(pokemon["MoveList"]):
+        if isinstance(atk,str):
+            r = dfa[dfa["Nome"] == atk]
+        elif isinstance(atk,int):
+            r = dfa[dfa["Code"] == atk]
+        else:
+            r = None
+        if r is not None:
+            novoataque = {
+            "nome": r["Ataque"],
+            "tipo": r["Tipo"],
+            "custo": r["Custo"],
+            "dano": r["Dano"],
+            "estilo": r["Estilo"],
+            "assertividade": r["Assertividade"],
+            "alvo": r["Alvo"],
+            "descrição": r["Descrição"],
+            }
+
+
 
     # 4) Recalcular Total ao final da materialização
     _recalcular_total(pokemon)
@@ -669,6 +723,8 @@ class Pokemon:
         self.Parametros["PokemonsAtualizar"].append(self.Todic())
 
     def Capturar(self, dados, player, crit):
+
+        from Codigo.Cenas.Mundo import terminal
         
         DocesIniciais = self.DocesExtras
         DadosIniciais = self.Dados
@@ -696,14 +752,14 @@ class Pokemon:
                 if pokemon == None:
                     player.Pokemons[i] = MaterializarPokemon(self.Dados)
                     self.Parametros["PokemonsAtualizar"].append(self.Todic())
-                    adicionar_mensagem_terminal(f"Capturou o pokemon com dificuldade de {round(dificuldade)} e chance de {round(chance_final * 100)}%", (0,200,0))
+                    terminal.add(f"Capturou o pokemon com dificuldade de {round(dificuldade)} e chance de {round(chance_final * 100)}%", (0,200,0))
                     player.PokemonsCapturados += 1
                     break
         else:
             self.Dados = DadosIniciais
             self.DocesExtras = DocesIniciais
             self.Parametros["PokemonsAtualizar"].append(self.Todic())
-            adicionar_mensagem_terminal(f"Falhou em capturar o pokemon com dificuldade de {round(dificuldade)} e chance de {round(chance_final * 100)}%", (200,0,0))
+            terminal.add(f"Falhou em capturar o pokemon com dificuldade de {round(dificuldade)} e chance de {round(chance_final * 100)}%", (200,0,0))
             
     def Todic(self):
         return {

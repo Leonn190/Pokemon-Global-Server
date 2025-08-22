@@ -262,6 +262,55 @@ class Estrutura:
             pygame.draw.rect(tela, (0, 200, 0), self.rect, 1)  # núcleo
             pygame.draw.rect(tela, (0, 100, 0), self.rect.inflate(self.Campo*2, self.Campo*2), 1)  # campo
 
+def MaterializarItem(code):
+    """
+    Pega um code (int/str) ou nome do item e devolve o dicionário do item.
+    - Se for número -> usa df['Code']
+    - Se for texto  -> usa df['Nome']
+    """
+    global df
+
+    # tenta interpretar como número
+    is_num = False
+    try:
+        int(code)
+        is_num = True
+    except ValueError:
+        pass
+
+    if is_num:
+        # busca por Code
+        m = df[df['Code'].astype(str) == str(code)]
+    else:
+        # busca por Nome (case-insensitive)
+        m = df[df['Nome'].astype(str).str.lower() == str(code).lower()]
+
+    if m.empty:
+        raise KeyError(f"Item '{code}' não encontrado em Code ou Nome.")
+
+    row = m.iloc[0]
+    nome   = str(row['Nome'])
+    raro   = int(row['Raridade'])
+    estilo = str(row['Estilo'])
+    desc   = str(row['Descrição']) if 'Descrição' in row else ""
+
+    # regras simples de M1/M2
+    if estilo in ("bola", "fruta"):
+        M1, M2 = "Lançar", "Mirar"
+    else:
+        M1, M2 = "Tapa", "Nada"
+
+    return {
+        "code": str(row['Code']),
+        "nome": nome,
+        "raridade": raro,
+        "estilo": estilo,
+        "descrição": desc,
+        "numero": 1,
+        "M1": M1,
+        "M2": M2,
+    }
+
 class Bau:
     RARIDADES = ["Comum", "Incomum", "Raro", "Epico", "Mitico", "Lendario"]
 
@@ -325,50 +374,35 @@ class Bau:
         self.Aberto = True
         player.BausAbertos += 1
         parametros["BausRemover"].append(self.ID)
-        
-        # 1. Quantidade de itens a adicionar
+
+        # 1) Quantidade de itens
         possiveis_qtds = self.tabela_qtd_itens[self.NUMraridade]
         qtd_itens = random.choice(possiveis_qtds)
 
-        # 2. Probabilidades da raridade dos itens
+        # 2) Probabilidades de raridade
         probs_raridades = self.tabela_probabilidades[self.NUMraridade - 1]
         total = sum(probs_raridades)
-        probs_norm = [p / total for p in probs_raridades]  # normalizar
+        probs_norm = [p / total for p in probs_raridades]
 
         for _ in range(qtd_itens):
-            # 3. Sortear raridade do item (de 1 a 6)
+            # 3) Sorteia raridade (1..6)
             raridade_item = random.choices(range(1, 7), weights=probs_norm)[0]
 
-            # 4. Filtrar itens com essa raridade
+            # 4) Filtra itens possíveis (com +1 para frutas no sorteio, como você já faz)
             itens_possiveis = df.copy()
-
-            # Aumenta raridade efetiva das frutas em +1 para sorteio
             itens_possiveis['RaridadeSorteio'] = itens_possiveis.apply(
-                lambda row: min(int(row['Raridade']) + 1, 6) if row['Estilo'] == 'fruta' else int(row['Raridade']),
+                lambda row: min(int(row['Raridade']) + 1, 6) if str(row['Estilo']) == 'fruta'
+                            else int(row['Raridade']),
                 axis=1
             )
-
-            # Filtrar por raridade sorteada
             itens_filtrados = itens_possiveis[itens_possiveis['RaridadeSorteio'] == raridade_item]
-
-            # Se não encontrar nada nessa raridade, tentar em qualquer uma
             if itens_filtrados.empty:
                 itens_filtrados = itens_possiveis
 
-            item_sorteado = itens_filtrados.sample().iloc[0]
+            row = itens_filtrados.sample().iloc[0]
+            code = str(row['Code'])  # requer coluna 'Code' na df
 
-            nome = item_sorteado['Nome']
-            raridade = int(item_sorteado['Raridade'])  # raridade original
-            estilo = item_sorteado['Estilo']
-            descriçao = item_sorteado['Descrição']
-
-            if estilo in ["bola", "fruta"]:
-                M1 = "Lançar"
-                M2 = "Mirar"
-            else:
-                M1 = "Tapa"
-                M2 = "Nada"
-
-            # 5. Adicionar ao inventário do player
-            player.AdicionarAoInventario(player, nome, raridade, estilo, descriçao, M1, M2)
+            # 5) Materializa e adiciona
+            item = MaterializarItem(code)
+            player.AdicionarAoInventario(item)
 

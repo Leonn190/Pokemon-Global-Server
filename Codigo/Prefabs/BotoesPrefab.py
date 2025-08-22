@@ -123,9 +123,29 @@ def Botao_Selecao(
     desfazer_esquerdo=None, desfazer_direito=None,
     tecla_esquerda=None, tecla_direita=None,
     grossura=5, som=None,
-    branco=False  # NOVO ARGUMENTO
+    branco=False,
+    Surface=False
 ):
     x, y, largura, altura = espaço
+
+    # --- helper: aceita callable único OU lista/tupla de callables ---
+    def _call_all(fns):
+        if fns is None:
+            return
+        if isinstance(fns, (list, tuple)):
+            for f in fns:
+                if callable(f):
+                    f()
+        elif callable(fns):
+            fns()
+
+    # --- Se Surface=True e cor_fundo é uma Surface, usar o tamanho real da imagem ---
+    using_surface_area = False
+    if Surface and isinstance(cor_fundo, pygame.Surface):
+        surf_w, surf_h = cor_fundo.get_size()
+        largura, altura = surf_w, surf_h
+        using_surface_area = True
+
     mouse = pygame.mouse.get_pos()
     clique = pygame.mouse.get_pressed()
     mouse_sobre = x <= mouse[0] <= x + largura and y <= mouse[1] <= y + altura
@@ -159,17 +179,33 @@ def Botao_Selecao(
     elif mouse_sobre and cor_passagem:
         cor_borda_atual = cor_passagem
 
-    # Desenhar fundo como imagem ou cor
+    # --- Desenhar fundo como imagem ou cor ---
     if cor_fundo is not None:
         if isinstance(cor_fundo, pygame.Surface):
-            imagem_redimensionada = pygame.transform.scale(cor_fundo, (largura, altura))
-            tela.blit(imagem_redimensionada, (x, y))
+            if using_surface_area:
+                tela.blit(cor_fundo, (x, y))
+            else:
+                imagem_redimensionada = pygame.transform.scale(cor_fundo, (largura, altura))
+                tela.blit(imagem_redimensionada, (x, y))
         else:
             pygame.draw.rect(tela, cor_fundo, (x, y, largura, altura))
 
-    pygame.draw.rect(tela, cor_borda_atual, (x, y, largura, altura), grossura)
+    # --- Borda ---
+    if using_surface_area and isinstance(cor_fundo, pygame.Surface):
+        mask = pygame.mask.from_surface(cor_fundo)
+        outline = mask.outline()
+        if outline:
+            pts = [(x + px, y + py) for (px, py) in outline]
+            if len(pts) >= 2:
+                pygame.draw.lines(tela, cor_borda_atual, True, pts, max(1, grossura))
+            else:
+                pygame.draw.rect(tela, cor_borda_atual, (x, y, largura, altura), grossura)
+        else:
+            pygame.draw.rect(tela, cor_borda_atual, (x, y, largura, altura), grossura)
+    else:
+        pygame.draw.rect(tela, cor_borda_atual, (x, y, largura, altura), grossura)
 
-    cor_texto = (255, 255, 255) if branco else (0, 0, 0)  # NOVA LÓGICA
+    cor_texto = (255, 255, 255) if branco else (0, 0, 0)
     texto_render = Fonte.render(texto, True, cor_texto)
     texto_rect = texto_render.get_rect(center=(x + largura // 2, y + altura // 2))
     tela.blit(texto_render, texto_rect)
@@ -178,38 +214,38 @@ def Botao_Selecao(
         if modo == "esquerdo":
             if estado_global["selecionado_esquerdo"] == id_botao:
                 if desfazer_esquerdo:
-                    desfazer_esquerdo()
+                    _call_all(desfazer_esquerdo)
                 estado_global["selecionado_esquerdo"] = None
             else:
                 if estado_global["selecionado_direito"] == id_botao:
                     if desfazer_direito:
-                        desfazer_direito()
+                        _call_all(desfazer_direito)
                     estado_global["selecionado_direito"] = None
 
                 if estado_global["selecionado_esquerdo"] and desfazer_esquerdo:
-                    desfazer_esquerdo()
+                    _call_all(desfazer_esquerdo)
                 estado_global["selecionado_esquerdo"] = id_botao
                 if funcao_esquerdo:
-                    funcao_esquerdo()
+                    _call_all(funcao_esquerdo)
                 if som:
                     tocar(som)
 
         elif modo == "direito":
             if estado_global["selecionado_direito"] == id_botao:
                 if desfazer_direito:
-                    desfazer_direito()
+                    _call_all(desfazer_direito)
                 estado_global["selecionado_direito"] = None
             else:
                 if estado_global["selecionado_esquerdo"] == id_botao:
                     if desfazer_esquerdo:
-                        desfazer_esquerdo()
+                        _call_all(desfazer_esquerdo)
                     estado_global["selecionado_esquerdo"] = None
 
                 if estado_global["selecionado_direito"] and desfazer_direito:
-                    desfazer_direito()
+                    _call_all(desfazer_direito)
                 estado_global["selecionado_direito"] = id_botao
                 if funcao_direito:
-                    funcao_direito()
+                    _call_all(funcao_direito)
                 if som:
                     tocar(som)
 
@@ -218,23 +254,23 @@ def Botao_Selecao(
             if evento.type == pygame.MOUSEBUTTONDOWN and mouse_sobre:
                 if evento.button == 1 and cor_borda_esquerda:
                     if modo_selecionado == "direito" and desfazer_direito:
-                        desfazer_direito()
+                        _call_all(desfazer_direito)
                         estado_global["selecionado_direito"] = None
                     aplicar_selecao("esquerdo")
                 elif evento.button == 3 and cor_borda_direita:
                     if modo_selecionado == "esquerdo" and desfazer_esquerdo:
-                        desfazer_esquerdo()
+                        _call_all(desfazer_esquerdo)
                         estado_global["selecionado_esquerdo"] = None
                     aplicar_selecao("direito")
             elif evento.type == pygame.KEYDOWN:
                 if evento.key == tecla_esquerda and cor_borda_esquerda:
                     if modo_selecionado == "direito" and desfazer_direito:
-                        desfazer_direito()
+                        _call_all(desfazer_direito)
                         estado_global["selecionado_direito"] = None
                     aplicar_selecao("esquerdo")
                 elif evento.key == tecla_direita and cor_borda_direita:
                     if modo_selecionado == "esquerdo" and desfazer_esquerdo:
-                        desfazer_esquerdo()
+                        _call_all(desfazer_esquerdo)
                         estado_global["selecionado_esquerdo"] = None
                     aplicar_selecao("direito")
 

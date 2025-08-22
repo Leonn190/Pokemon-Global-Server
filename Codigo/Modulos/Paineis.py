@@ -2,7 +2,7 @@ import pygame
 import math
 
 from Codigo.Prefabs.FunçõesPrefabs import Barra, Scrolavel, Slider, BarraMovel, SurfaceAtaque
-from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel, Botao_Surface
+from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel, Botao_Surface, Botao_Selecao
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Arrastavel import Arrastavel
 from Codigo.Modulos.DesenhoPlayer import DesenharPlayer
@@ -1837,3 +1837,314 @@ def PainelAtaque(tela, ataque, pos, tamanho=(360, 180)):
 
     tela.blit(fs_alvo,   (x_alvo,   y_base))
     tela.blit(fs_estilo, (x_estilo, y_base))
+
+EstadoBotoesPainelPokemonBatalha = {}
+
+def PainelPokemonBatalha(pokemon, tela, pos, eventos):
+    """
+    Painel 1000x190 em 4 setores:
+      ESQUERDA (menor): nome (topo, centralizado), sprite, "Poder" e o número (round)
+      CENTRAL SUPERIOR: status em 6 colunas (2 por coluna), ícones 30px, números fonte 20
+         ordem:
+           col1: Vida, Mag
+           col2: Atk,  SpA
+           col3: Def,  SpD
+           col4: Per,  Vel
+           col5: EnE(=Ene), EnR
+           col6: CrC,  CrD
+         cor: laranja se > Base, vermelho se < Base, branco se igual
+      CENTRAL INFERIOR: 3 slots (64) da Build na horizontal (direita → esquerda),
+         à DIREITA ficam as barras (Vida / Energia) e, no canto direito, Vamp e Asse (30px + fonte 20)
+      DIREITO (maior p/ caber botões ~190): ataques empilhados
+    """
+
+    # =================== VARIÁVEIS DE LAYOUT (fáceis de tunar) ===================
+    W, H = 1000, 190            # tamanho do painel
+    PAD      = 10               # padding geral do painel
+    GAP_CS_CI= 6                # gap vertical entre central superior e inferior
+
+    # Larguras de setores
+    LEFT_W   = 190              # ESQUERDA (menor)
+    ATTACK_W = 190              # largura visual do botão do ataque
+    RIGHT_IN_PAD = 10           # padding interno do setor direito
+    RIGHT_W  = ATTACK_W + RIGHT_IN_PAD*2  # garante que os botões caibam
+
+    # Proporções do central (superior > inferior)
+    CS_RATIO = 0.60             # % da altura do bloco central para o superior
+
+    # Ícones e fontes dos status
+    ICON_SZ        = 30         # ícones dos status
+    STAT_NUM_SIZE  = 20         # fonte dos valores dos status
+    STAT_ROW_GAP   = 34         # distância vertical entre as duas linhas de status
+    STAT_TXT_GAP   = 6          # gap ícone → número
+
+    # Barras e Build
+    BARRA_W  = 260
+    BARRA_H  = 18
+    BARRA_GAP_Y = 8
+    BUILD_SLOTS   = 3
+    BUILD_SIZE    = 64
+    BUILD_GAP     = 8
+
+    # Vamp/Asse (no central inferior, canto direito)
+    VA_GAP_X = 14               # gap horizontal interno entre Vamp/Asse e laia
+    VA_GAP_Y = 2                # gap vertical entre eles
+    # ============================================================================
+
+    x0, y0 = pos
+
+    # fundo + borda
+    fundo = pygame.Surface((W, H), pygame.SRCALPHA)
+    fundo.fill((35, 35, 35, 180))
+    tela.blit(fundo, (x0, y0))
+    pygame.draw.rect(tela, (255, 255, 255), (x0, y0, W, H), 2, border_radius=10)
+
+    # fontes (usa índices disponíveis)
+    f_nome  = fontes[20] if len(fontes) > 20 else fontes[-1]
+    f_texto = fontes[16] if len(fontes) > 16 else fontes[0]
+    f_mini  = fontes[14] if len(fontes) > 14 else fontes[0]
+    f_num   = fontes[STAT_NUM_SIZE] if len(fontes) > STAT_NUM_SIZE else fontes[-1]
+
+    # recortes dos setores
+    cx = x0 + PAD + LEFT_W + PAD
+    cW = W - (LEFT_W + RIGHT_W + PAD*4)
+    cy = y0 + PAD
+    cH = H - PAD*2
+
+    cs_h = int(cH * CS_RATIO)       # central superior (um pouco mais alto)
+    ci_h = cH - cs_h - GAP_CS_CI    # central inferior
+
+    R_left  = pygame.Rect(x0 + PAD, y0 + PAD, LEFT_W, H - 2*PAD)
+    R_csup  = pygame.Rect(cx, cy, cW, cs_h)
+    R_cinf  = pygame.Rect(cx, cy + cs_h + GAP_CS_CI, cW, ci_h)
+    R_right = pygame.Rect(x0 + W - PAD - RIGHT_W, y0 + PAD, RIGHT_W, H - 2*PAD)
+
+    # cores
+    COR_OK = (255, 255, 255)
+    COR_UP = (255, 180, 90)    # laranja claro
+    COR_DN = (220, 70, 70)     # vermelho
+
+    # ---------------- helpers ----------------
+    def _get_val_and_color(lbl_key):
+        key_map = {"EnE": "Ene"}  # alias visual → chave real
+        k = key_map.get(lbl_key, lbl_key)
+        base_k = f"{k}Base"
+
+        # valor mostrado
+        if k == "Vida":
+            val = pokemon.get("Vida", pokemon.get("VidaMax", 0))
+        else:
+            val = pokemon.get(k, 0)
+
+        try:
+            v = float(val)
+        except Exception:
+            try:
+                v = float(str(val).replace(",", "."))
+            except Exception:
+                v = 0.0
+
+        b = pokemon.get(base_k, v)
+        try:
+            b = float(b)
+        except Exception:
+            b = v
+
+        if v > b:
+            cor = COR_UP
+        elif v < b:
+            cor = COR_DN
+        else:
+            cor = COR_OK
+
+        return (int(round(v)) if k == "Vida" else int(round(v))), cor
+
+    def _draw_icon_value(label_key, x, y, icon_sz=ICON_SZ, font=f_num):
+        # mapeia rótulo visual para ícone
+        icon_key = {"EnE": "Ene"}.get(label_key, label_key)
+        icon = icones.get(icon_key)
+        if isinstance(icon, pygame.Surface):
+            icon_draw = pygame.transform.smoothscale(icon, (icon_sz, icon_sz))
+            tela.blit(icon_draw, (x, y))
+            tx = x + icon_sz + STAT_TXT_GAP
+            ty = y + (icon_sz - font.get_height()) // 2
+        else:
+            # fallback: escreve a sigla se não tiver ícone
+            lab = f_mini.render(label_key, True, (220, 220, 220))
+            tela.blit(lab, (x, y))
+            tx = x + lab.get_width() + STAT_TXT_GAP
+            ty = y
+
+        val, cor = _get_val_and_color(label_key)
+        val_surf = font.render(str(val), True, cor)
+        tela.blit(val_surf, (tx, ty))
+
+    # ================== Setor: ESQUERDA ==================
+    def setor_esquerda():
+        nome = str(pokemon.get("Nome", "???"))
+        sprite = pokemons.get(nome.lower(), CarregarPokemon(nome.lower(), pokemons))
+
+        # nome centralizado no topo
+        nome_surf = f_nome.render(nome, True, (255, 255, 255))
+        nx = R_left.x + (R_left.w - nome_surf.get_width()) // 2
+        ny = R_left.y
+        tela.blit(nome_surf, (nx, ny))
+
+        # sprite
+        sp_top = ny + nome_surf.get_height() + 6
+        used_h = 0
+        if isinstance(sprite, pygame.Surface):
+            max_sw, max_sh = R_left.w - 20, 82
+            sw, sh = sprite.get_size()
+            scale = min(max_sw / max(1, sw), max_sh / max(1, sh), 1.0)
+            sp = pygame.transform.smoothscale(sprite, (int(sw * scale), int(sh * scale))) if scale < 1.0 else sprite
+            sp_x = R_left.x + (R_left.w - sp.get_width()) // 2
+            tela.blit(sp, (sp_x, sp_top))
+            used_h = sp.get_height()
+
+        # Poder
+        total_val = pokemon.get("Total")
+        if total_val is None:
+            stats_keys = ["Vida","Atk","Def","SpA","SpD","Vel","Mag","Per","Ene","EnR","CrD","CrC","Vamp","Asse"]
+            acc = 0
+            for k in stats_keys:
+                if k == "Vida":
+                    acc += int(pokemon.get("Vida", pokemon.get("VidaMax", 0)) or 0)
+                else:
+                    try:
+                        acc += int(float(pokemon.get(k, 0) or 0))
+                    except Exception:
+                        pass
+            total_val = acc
+
+        poder_lbl = f_texto.render("Poder", True, (230, 230, 230))
+        py = sp_top + used_h + 6
+        px = R_left.x + (R_left.w - poder_lbl.get_width()) // 2
+        tela.blit(poder_lbl, (px, py))
+
+        num_lbl = f_nome.render(str(int(round(total_val))), True, (255, 255, 255))
+        ny2 = py + poder_lbl.get_height() + 2
+        nx2 = R_left.x + (R_left.w - num_lbl.get_width()) // 2
+        tela.blit(num_lbl, (nx2, ny2))
+
+    # ============ Setor: CENTRAL SUPERIOR (status) ============
+    def setor_central_superior():
+        # 6 colunas x 2 linhas (Vamp/Asse foram movidos para o inferior)
+        cols = [
+            ("Vida", "Mag"),
+            ("Atk",  "SpA"),
+            ("Def",  "SpD"),
+            ("Per",  "Vel"),
+            ("EnE",  "EnR"),   # EnE => Ene
+            ("CrC",  "CrD"),
+        ]
+        col_w = max(1, R_csup.w // len(cols))
+        top_y = R_csup.y + 2
+
+        for c, (k1, k2) in enumerate(cols):
+            cx = R_csup.x + c * col_w
+            _draw_icon_value(k1, cx, top_y, ICON_SZ, f_num)
+            _draw_icon_value(k2, cx, top_y + STAT_ROW_GAP, ICON_SZ, f_num)
+
+    # ===== Setor: CENTRAL INFERIOR (build + barras + Vamp/Asse) =====
+    def setor_central_inferior():
+        # Barras (à direita)
+        vida_atual = int(pokemon.get("Vida", 0) or 0)
+        vida_max   = int(pokemon.get("VidaMax", pokemon.get("Vida", 1)) or 1)
+        ene_atual  = int(pokemon.get("Energia", pokemon.get("EneAtual", 0)) or 0)
+        ene_max    = int(pokemon.get("Ene", 1) or 1)
+
+        estado_barras = pokemon.setdefault("_estado_barras", {})
+
+        bx = R_cinf.right - BARRA_W
+        by1 = R_cinf.y + 8
+        by2 = by1 + BARRA_H + BARRA_GAP_Y
+
+        # Vamp/Asse no canto direito (acima das barras)
+        # primeiro desenha Asse acima de Vamp (ou vice-versa — ficou Asse em cima aqui)
+        va_top_y = R_cinf.y + 2
+        # alinhar à direita: começa em bx + BARRA_W - largura do bloco (30 + gap + texto estimado)
+        # como texto varia, simplesmente ancoramos o ícone no canto direito e deixamos o número ir para a direita
+        # Para manter dentro do retângulo, ancoramos o ícone a partir de (bx + BARRA_W - 2*ICON_SZ - VA_GAP_X)
+        va_icon_x = bx + BARRA_W - 2*ICON_SZ - VA_GAP_X
+        _draw_icon_value("Asse", va_icon_x, va_top_y, ICON_SZ, f_num)
+        _draw_icon_value("Vamp", va_icon_x, va_top_y + ICON_SZ + VA_GAP_Y, ICON_SZ, f_num)
+
+        # Vida (vermelha)
+        Barra(tela, (bx, by1), (BARRA_W, BARRA_H),
+              vida_atual, vida_max, (190, 60, 60), estado_barras, chave=f"vida_{pokemon.get('Nome','')}", vertical=False)
+        tv = f_mini.render(f"{vida_atual}/{vida_max}", True, (255, 255, 255))
+        tela.blit(tv, (bx + (BARRA_W - tv.get_width())//2, by1 + (BARRA_H - tv.get_height())//2))
+
+        # Energia (azul)
+        Barra(tela, (bx, by2), (BARRA_W, BARRA_H),
+              ene_atual, ene_max, (60, 120, 200), estado_barras, chave=f"ene_{pokemon.get('Nome','')}", vertical=False)
+        te = f_mini.render(f"{ene_atual}/{ene_max}", True, (255, 255, 255))
+        tela.blit(te, (bx + (BARRA_W - te.get_width())//2, by2 + (BARRA_H - te.get_height())//2))
+
+        # Build slots (à esquerda das barras), da direita para a esquerda
+        start_x_right = bx - BUILD_GAP
+        x = start_x_right - BUILD_SIZE
+        y = R_cinf.y + max(0, (R_cinf.h - BUILD_SIZE)//2)
+
+        build_items = (pokemon.get("Build") or [])[:BUILD_SLOTS]
+        for i in range(BUILD_SLOTS):
+            item = build_items[i] if i < len(build_items) and build_items[i] else None
+            nome_item = (str(item.get("Nome", "")).strip() if isinstance(item, dict) else "")
+
+            surf_item = None
+            if nome_item:
+                surf_item = equipaveis.get(nome_item)
+
+            if not isinstance(surf_item, pygame.Surface):
+                surf_item = pygame.Surface((BUILD_SIZE, BUILD_SIZE), pygame.SRCALPHA)
+                pygame.draw.rect(surf_item, (255,255,255,28), (0,0,BUILD_SIZE,BUILD_SIZE), border_radius=8)
+                if nome_item:
+                    txt = f_mini.render(nome_item, True, (230,230,230))
+                    surf_item.blit(txt, ((BUILD_SIZE - txt.get_width())//2, (BUILD_SIZE - txt.get_height())//2))
+
+            Botao_Selecao(
+                tela, "", (x, y, BUILD_SIZE, BUILD_SIZE), f_mini,
+                surf_item, (200,200,200),
+                id_botao=f"build_{i}_{pokemon.get('Nome','')}",
+                estado_global=EstadoBotoesPainelPokemonBatalha, eventos=eventos,
+                cor_borda_esquerda=(120,220,120), cor_borda_direita=(220,120,120),
+                cor_passagem=(230,230,230),
+                branco=True, Surface=True, grossura=1
+            )
+            x -= (BUILD_SIZE + BUILD_GAP)
+
+    # ================== Setor: DIREITO (ataques) ==================
+    def setor_direito():
+        moves_x = R_right.x + RIGHT_IN_PAD
+        moves_y = R_right.y + RIGHT_IN_PAD
+        move_w, move_h = ATTACK_W, 32
+        move_gap = 10
+
+        movelist = pokemon.get("MoveList", []) or []
+        for i in range(4):
+            ataque = movelist[i] if i < len(movelist) else None
+            if ataque is not None:
+                surf_atk = SurfaceAtaque(ataque, fontes, icones, main=True, size=(move_w, move_h))
+            else:
+                surf_atk = pygame.Surface((move_w, move_h), pygame.SRCALPHA)
+                pygame.draw.rect(surf_atk, (255,255,255,22), (0,0,move_w,move_h), border_radius=8)
+                txt = f_mini.render("-", True, (200,200,200))
+                surf_atk.blit(txt, ((move_w - txt.get_width())//2, (move_h - txt.get_height())//2))
+
+            Botao_Selecao(
+                tela, "", (moves_x, moves_y, move_w, move_h), f_mini,
+                surf_atk, (220,220,220),
+                id_botao=f"move_{i}_{pokemon.get('Nome','')}",
+                estado_global=EstadoBotoesPainelPokemonBatalha, eventos=eventos,
+                cor_borda_esquerda=(120,220,120), cor_borda_direita=(220,120,120),
+                cor_passagem=(230,230,230),
+                branco=True, Surface=True, grossura=1
+            )
+            moves_y += move_h + move_gap
+
+    # desenha setores
+    setor_esquerda()
+    setor_central_superior()
+    setor_central_inferior()
+    setor_direito()
