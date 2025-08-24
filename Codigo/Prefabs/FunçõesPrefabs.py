@@ -312,38 +312,67 @@ def texto_com_borda(tela, texto, fonte, pos, cor_texto, cor_borda, espessura=2):
 
     tela.blit(texto_surface, (x, y))
 
-def Fluxo(tela, x1, y1, x2, y2, num_pontos=30, frequencia=4, velocidade=3, cor_base=(0, 255, 0), raio=5):
+def Fluxo(tela, x1, y1, x2, y2,
+          pontos_por_100px=8, frequencia=4, velocidade=3,
+          cor_base=(0, 255, 0), raio=5, forma="bola"):
 
     dx = x2 - x1
     dy = y2 - y1
     dist_total = math.hypot(dx, dy)
-
     if dist_total == 0:
-        return  # Evita divisão por zero
+        return
 
-    # Normalizar direção
+    # calcula pontos relativos ao comprimento
+    num_pontos = max(2, int(pontos_por_100px * (dist_total / 100.0)))
+
+    # direção normalizada e normal perpendicular
     dir_x = dx / dist_total
     dir_y = dy / dist_total
+    nx, ny = -dir_y, dir_x
 
-    # Tempo atual para animação
-    t = pygame.time.get_ticks() / 1000  # em segundos
+    t = pygame.time.get_ticks() / 1000.0
 
     for i in range(num_pontos):
         fator = i / num_pontos
-        px = int(x1 + dir_x * fator * dist_total)
-        py = int(y1 + dir_y * fator * dist_total)
+        px = x1 + dir_x * fator * dist_total
+        py = y1 + dir_y * fator * dist_total
 
-        # Onda de pulsação (vai e volta)
+        # onda de pulsação
         onda = 0.5 + 0.5 * math.sin(2 * math.pi * frequencia * fator - velocidade * t)
-
-        # Alpha com base na onda
-        alpha = int(onda * 255)
+        alpha = int(max(0, min(255, onda * 255)))
         cor = (*cor_base, alpha)
 
-        # Desenhar com alpha
-        superficie = pygame.Surface((raio * 2, raio * 2), pygame.SRCALPHA)
-        pygame.draw.circle(superficie, cor, (raio, raio), raio)
-        tela.blit(superficie, (px - raio, py - raio))
+        if forma == "seta":
+            L = max(6, int(raio * 3.0))     # comprimento ao longo do fluxo
+            W = max(3, int(raio * 1.6))     # espessura (largura da base)
+
+            bx = px - dir_x * (L / 2)
+            by = py - dir_y * (L / 2)
+            tipx = px + dir_x * (L / 2)
+            tipy = py + dir_y * (L / 2)
+
+            p1 = (bx + nx * (W / 2), by + ny * (W / 2))
+            p2 = (tipx, tipy)
+            p3 = (bx - nx * (W / 2), by - ny * (W / 2))
+            pts = [p1, p2, p3]
+
+            minx = int(min(p[0] for p in pts)) - 1
+            miny = int(min(p[1] for p in pts)) - 1
+            maxx = int(max(p[0] for p in pts)) + 1
+            maxy = int(max(p[1] for p in pts)) + 1
+            w = maxx - minx
+            h = maxy - miny
+
+            s = pygame.Surface((w, h), pygame.SRCALPHA)
+            pts_local = [(p[0] - minx, p[1] - miny) for p in pts]
+            pygame.draw.polygon(s, cor, pts_local)
+            tela.blit(s, (minx, miny))
+
+        else:  # "bola"
+            r = raio
+            s = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+            pygame.draw.circle(s, cor, (r, r), r)
+            tela.blit(s, (int(px) - r, int(py) - r))
 
 def Scrolavel(
     rect,
@@ -679,3 +708,41 @@ def SurfaceAtaque(novoataque, fontes, icones, main=False, size=(160, 32)):
 
     surf.blit(nome_surf, (nome_x, nome_y))
     return surf
+
+def caixa_de_texto(
+    tela,
+    texto,
+    fonte,
+    espaco,              # (x, y, largura, altura)
+    cor_caixa=(40, 40, 40),
+    cor_borda_caixa=(255, 255, 255),
+    esp_borda_caixa=2,
+    cor_texto=(255, 255, 255),
+    cor_borda_texto=(0, 0, 0),
+    esp_borda_texto=2,
+    raio=0               # arredondamento da caixa (padrão agora é 0)
+):
+    # garante que espaco seja um rect
+    if not isinstance(espaco, pygame.Rect):
+        espaco = pygame.Rect(espaco)
+
+    x, y, w, h = espaco
+
+    # desenha em uma surface com alpha (fica bonitinho se quiser transparência)
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    # fundo e borda da caixa
+    pygame.draw.rect(surf, cor_caixa, (0, 0, w, h), border_radius=raio)
+    if esp_borda_caixa and cor_borda_caixa is not None:
+        pygame.draw.rect(surf, cor_borda_caixa, (0, 0, w, h), esp_borda_caixa, border_radius=raio)
+
+    # centraliza o texto dentro da caixa
+    tw, th = fonte.size(str(texto))
+    tx = (w - tw) // 2
+    ty = (h - th) // 2
+
+    # usa sua função para texto com borda
+    texto_com_borda(surf, str(texto), fonte, (tx, ty), cor_texto, cor_borda_texto, esp_borda_texto)
+
+    # manda pra tela
+    tela.blit(surf, (x, y))

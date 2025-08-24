@@ -195,8 +195,8 @@ def GerenciadorDePokemonsProximos(Parametros, Mapa):
             time.sleep(0.5)
 
         except Exception as e:
-            print(f"[ERRO] {e}")
-            traceback.print_exc()
+            # print(f"[ERRO] {e}")
+            # traceback.print_exc()
             continue
 
 def LoopRemoveBaus(parametros):
