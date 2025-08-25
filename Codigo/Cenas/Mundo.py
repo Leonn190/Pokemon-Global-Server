@@ -1,7 +1,6 @@
-import pygame
+import pygame 
 import threading
 import time
-import traceback
 
 from Codigo.Modulos.Outros import Clarear, Escurecer, FecharIris
 from Codigo.Server.ServerMundo import VerificaçãoSimplesServer, VerificaMapa, SalvarConta, SairConta, RemoverBau, RemoverPokemon, AtualizarPokemon
@@ -19,6 +18,7 @@ from Codigo.Geradores.GeradorPlayer import Player
 from Codigo.Geradores.GeradorMapa import Mapa, CameraMundo
 from Codigo.Geradores.GeradorEstruturas import GridToDic, Bau
 from Codigo.Geradores.GeradorPokemon import Pokemon
+from Codigo.Geradores.GeradorNPC import NPC
 
 Cores = None
 Fontes = None
@@ -165,6 +165,40 @@ def GerenciadorDePokemonsProximos(Parametros, Mapa):
                 k: v for k, v in pokemons_novos.items()
                 if not getattr(v, "Apagar", False)
             }
+
+            # ====== PLAYERS / NPCs ======
+            if not hasattr(Mapa, "JogadoresAtivos"):
+                Mapa.JogadoresAtivos = {}
+
+            players_novos   = {}
+            players_antigos = dict(Mapa.JogadoresAtivos)
+            recebidos_ids   = set()
+
+            for pl_info in Parametros.get("PlayersProximos", []):
+                idp = pl_info["ID"]                    # obrigatórios: vai quebrar se faltar
+                recebidos_ids.add(idp)
+
+                if idp not in Mapa.JogadoresAtivos:
+                    npc = NPC(pl_info, Outros["Skins"], Fontes[18])   # __init__(parcial_inicial, Skins, fonte_nome)
+                    # garantir consistência do ID
+                    assert getattr(npc, "ID", None) == idp, f"NPC ID mismatch: {getattr(npc,'ID',None)} != {idp}"
+                    # atualiza com o parcial também (caso o __init__ não aplique tudo)
+                    if hasattr(npc, "aplicar_dic_parcial"):
+                        npc.aplicar_dic_parcial(pl_info)
+                    players_novos[idp] = npc
+                else:
+                    npc = Mapa.JogadoresAtivos[idp]
+                    assert npc.ID == idp, f"NPC.ID diverge do dicionário: {npc.ID} != {idp}"
+                    if hasattr(npc, "aplicar_dic_parcial"):
+                        npc.aplicar_dic_parcial(pl_info)
+                    players_novos[idp] = npc
+
+                if idp in players_antigos:
+                    del players_antigos[idp]
+
+            # remover quem não veio
+            # (basta não recolocá-los em players_novos)
+            Mapa.JogadoresAtivos = players_novos
 
             # ====== BAÚS ======
             baus_novos = {}

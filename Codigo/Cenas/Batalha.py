@@ -40,7 +40,7 @@ BG = {}
 
 # animações de entrada (deslizarem para a tela)
 _anima_t0 = None
-_anima_dur_ms = 480
+_anima_dur_ms = 450
 anima = {
     "_anima_painel_aliado": None,
     "_anima_painel_inimigo": None,
@@ -49,6 +49,238 @@ anima = {
     "Y3": -200, "Y4": 0,
     "Y5": 895, "Y6": 1080
 }
+
+# ======== ESTADOS GLOBAIS ========
+EstadoEditorLog = {}            # estados genéricos (hover/click, etc. — se precisar)
+EstadoBotoesAcao = {}           # estados por botão principal (seleção de ação)
+EstadoBotoesApagar = {}         # estados por botão X (apagar ação)
+
+# ======== CORES ========
+CINZA = (180, 180, 180)
+AZUL  = (80, 150, 255)
+VERMELHO = (200, 50, 50)
+CINZA_ESC = (40, 40, 40)
+BRANCO = (255, 255, 255)
+PRETO  = (0, 0, 0)
+AZUL_ALVO = (70, 130, 255)
+ROXO_CLARO = (180, 140, 220)
+
+# def EditorLogAtual(parametros, tela, eventos, origem=(30, 200), espacamento=20):
+#     import pygame
+
+#     # ------ Cores ------
+#     CINZA       = (180, 180, 180)
+#     AZUL        = (80, 150, 255)
+#     VERMELHO    = (200, 50, 50)
+#     CINZA_ESC   = (40, 40, 40)
+#     BRANCO      = (255, 255, 255)
+#     PRETO       = (0, 0, 0)
+#     AZUL_ALVO   = (70, 130, 255)
+#     ROXO_CLARO  = (180, 140, 220)
+
+#     # ------ Helpers (SEM “get” defensivo p/ deixar falhar) ------
+#     def _obter_atacante_local(parametros, idx_num):
+#         equipe = parametros["EquipeAliada"]              # se não existir → crash
+#         if isinstance(equipe, dict):
+#             poke = equipe[idx_num]                       # idx inválido → crash
+#         else:
+#             # lista de dicts: acha por campos comuns; se não achar, gera erro no final
+#             for p in equipe:
+#                 if (p.get("Pos") == idx_num or p.get("Slot") == idx_num or
+#                     p.get("Numero") == idx_num or p.get("Idx") == idx_num):
+#                     poke = p
+#                     break
+#             else:
+#                 raise KeyError(f"Atacante idx {idx_num} não encontrado na EquipeAliada")
+#         nome = (poke["Nome"] if "Nome" in poke else poke["nome"])  # se não tiver → crash
+#         return poke, str(nome).lower()
+
+#     def _achar_movimento_local(poke, nome_mov):
+#         # se não houver MoveList/movelist → crash
+#         lista = poke["MoveList"] if "MoveList" in poke else poke["movelist"]
+#         alvo = str(nome_mov).strip().lower()
+#         for mv in lista:
+#             if str(mv["nome"]).strip().lower() == alvo:
+#                 return mv
+#         raise KeyError(f"Movimento '{nome_mov}' não encontrado em MoveList")
+
+#     def _icone_movimento_local(icones_dict, mov_estilo_ou_num):
+#         if isinstance(mov_estilo_ou_num, str):
+#             ch = mov_estilo_ou_num.strip().upper()[:1]
+#             if ch == "S": return icones_dict["CustoStatus"]   # falta → crash
+#             if ch == "E": return icones_dict["CustoEspecial"]
+#             if ch == "N": return icones_dict["CustoFisico"]
+#             raise ValueError(f"Estilo de movimento inválido: {mov_estilo_ou_num!r}")
+#         if isinstance(mov_estilo_ou_num, int):
+#             if mov_estilo_ou_num == 1: return icones_dict["mover"]
+#             if mov_estilo_ou_num == 2: return icones_dict["trocar"]
+#             raise ValueError(f"Código de movimento inválido: {mov_estilo_ou_num}")
+#         raise TypeError(f"Tipo de movimento inválido: {type(mov_estilo_ou_num)}")
+
+#     def _desenhar_alvo_local(tela, fonte, espaco, alvo, cor_fundo_padrao=CINZA_ESC):
+#         if isinstance(alvo, list):
+#             if len(alvo) > 1:
+#                 caixa_de_texto(tela, "M", fonte, espaco, cor_caixa=cor_fundo_padrao, cor_borda_caixa=BRANCO)
+#                 return
+#             elif len(alvo) == 1:
+#                 alvo = alvo[0]
+#             else:
+#                 return
+#         if isinstance(alvo, (tuple, list)) and len(alvo) >= 2:
+#             inicial = str(alvo[0]).upper()[:1]
+#             num = str(alvo[1])
+#         else:
+#             s = str(alvo).strip().upper()
+#             if not s: return
+#             inicial = s[0]
+#             num = s[1:] if len(s) > 1 else "?"
+#         if inicial == "I": cor = VERMELHO
+#         elif inicial == "A": cor = AZUL_ALVO
+#         elif inicial == "R": cor = ROXO_CLARO
+#         else: cor = cor_fundo_padrao
+#         caixa_de_texto(tela, num, fonte, espaco, cor_caixa=cor, cor_borda_caixa=BRANCO)
+
+#     # ------ Estado & área ------
+#     logs = parametros["LogAtual"]  # se não existir → crash
+
+#     # estados dos botões ficam em parametros (sem globals)
+#     estados_ui = parametros.setdefault("_EstadoEditorLog", {"acao": {}, "x": {}})
+
+#     num_existentes = len(logs)
+#     max_linhas = min(5, num_existentes)
+#     if max_linhas == 0:
+#         return  # nada pra desenhar; você removeu a mecânica de adicionar
+
+#     x0, y0 = origem
+#     btn_w, btn_h = 125, 40
+#     item_h = btn_h + espacamento
+
+#     # FUNDO SÓ DO TAMANHO DO BOTÃO + margens
+#     area_w = btn_w + 20  # 10px margens
+#     area_h = max_linhas * item_h - espacamento
+#     camada = pygame.Surface((area_w, area_h), pygame.SRCALPHA)
+#     camada.fill((0, 0, 0, 150))
+#     tela.blit(camada, (x0, y0))
+
+#     # fontes
+#     fonte_btn    = Fontes[14] if len(Fontes) > 14 else Fontes[-1]
+#     fonte_x      = Fontes[10] if len(Fontes) > 10 else Fontes[0]
+#     fonte_alvo   = Fontes[12] if len(Fontes) > 12 else Fontes[-1]
+#     fonte_titulo = Fontes[12] if len(Fontes) > 12 else Fontes[-1]
+
+#     selecionado = int(parametros.get("AcaoIDX", 0))
+
+#     for i in range(max_linhas):
+#         # se a lista foi alterada (apagou algo) durante o loop, pare para não dar IndexError
+#         if i >= len(parametros["LogAtual"]):
+#             break
+
+#         y = y0 + i * item_h
+#         btn_rect = pygame.Rect(x0 + 10, y + 10, btn_w, btn_h)
+
+#         # Título “Ação N”
+#         titulo_rect = pygame.Rect(btn_rect.left, btn_rect.top - 18, btn_rect.width, 16)
+#         caixa_de_texto(tela, f"Ação {i+1}", fonte_titulo, titulo_rect,
+#                        cor_caixa=CINZA_ESC, cor_borda_caixa=BRANCO)
+
+#         acao = parametros["LogAtual"][i]
+
+#         # Botão X (18x18) na direita do título — só se NÃO selecionada
+#         if i != selecionado:
+#             x_rect = pygame.Rect(titulo_rect.right - 18, titulo_rect.top, 18, 18)
+#             botao_x_id = f"x-{i}"
+#             if botao_x_id not in estados_ui["x"]:
+#                 estados_ui["x"][botao_x_id] = {}
+
+#             def _apagar(idx=i):
+#                 atual = int(parametros.get("AcaoIDX", 0))
+#                 # deletar
+#                 parametros["LogAtual"].pop(idx)
+#                 # manter MESMA AÇÃO lógica em edição:
+#                 # se apagou antes do selecionado, o índice do selecionado recua 1
+#                 if idx < atual:
+#                     parametros["AcaoIDX"] = atual - 1
+#                 else:
+#                     # idx > atual: mantém o mesmo índice
+#                     parametros["AcaoIDX"] = min(atual, len(parametros["LogAtual"]) - 1)
+
+#             Botao(
+#                 tela, "X",
+#                 x_rect, VERMELHO, BRANCO, (230, 80, 80),
+#                 acao=_apagar, Fonte=fonte_x,
+#                 estado_clique=estados_ui["x"][botao_x_id],
+#                 eventos=eventos, grossura=2, cor_texto=BRANCO
+#             )
+
+#         # Botão principal (sem texto sobre o botão)
+#         cor_normal = AZUL if i == selecionado else CINZA
+#         botao_id = f"acao-{i}"
+#         if botao_id not in estados_ui["acao"]:
+#             estados_ui["acao"][botao_id] = {}
+
+#         def _set_idx(idx=i):
+#             parametros["AcaoIDX"] = idx
+#             parametros["AtaqueAliadoSelecionado"] = None
+#             parametros["EstadoBotoesPainelPokemonBatalha"] = {}
+
+#         Botao(
+#             tela, "",
+#             btn_rect, cor_normal, BRANCO, (200, 200, 200),
+#             acao=_set_idx, Fonte=fonte_btn,
+#             estado_clique=estados_ui["acao"][botao_id],
+#             eventos=eventos, grossura=2, cor_texto=PRETO
+#         )
+
+#         # ===== ÍCONES SOBRE O BOTÃO (ESQ, MEIO, DIR) =====
+#         center_y = btn_rect.centery
+#         pad = 8
+
+#         # (1) ALVOS — ESQUERDA
+#         alvo_w = alvo_h = 28
+#         alvo_rect = (btn_rect.left + pad, center_y - alvo_h//2, alvo_w, alvo_h)
+#         _desenhar_alvo_local(
+#             tela, fonte_alvo,
+#             alvo_rect,
+#             acao["AlvosSelecionados"],       # se não existir → crash
+#             cor_fundo_padrao=CINZA
+#         )
+
+#         # (2) MOVIMENTO — MEIO
+#         atacante_idx = acao["Atacante"]     # se não existir → crash
+#         icone_surface = None
+#         if isinstance(atacante_idx, int):
+#             poke, nome_lower = _obter_atacante_local(parametros, atacante_idx)
+#         else:
+#             poke, nome_lower = None, None
+
+#         mov_sel = acao["MovimentoSelecionado"]  # se não existir → crash
+#         if isinstance(mov_sel, str):
+#             # precisa do atacante válido para localizar o movimento
+#             assert isinstance(atacante_idx, int) and poke is not None, \
+#                 "Movimento por nome exige atacante resolvido"
+#             mv = _achar_movimento_local(poke, mov_sel)
+#             # força a falha se a chave não existir
+#             est = mv["estilo"] if "estilo" in mv else mv["Estilo"]
+#             icone_surface = _icone_movimento_local(Icones, est)
+#         elif isinstance(mov_sel, int):
+#             icone_surface = _icone_movimento_local(Icones, mov_sel)
+#         # qualquer outro tipo cai mudo (sem ícone)
+
+#         if icone_surface is not None:
+#             iw, ih = icone_surface.get_size()
+#             esc = 26 / max(iw, ih)
+#             mov_img = pygame.transform.smoothscale(icone_surface, (max(1, int(iw*esc)), max(1, int(ih*esc))))
+#             tela.blit(mov_img, (btn_rect.centerx - mov_img.get_width()//2,
+#                                 center_y - mov_img.get_height()//2))
+
+#         # (3) ATACANTE — DIREITA (só se Atacante é int; se lookup falhar → crash)
+#         if isinstance(atacante_idx, int):
+#             img_poke = Pokemons[nome_lower]  # se nome/lower errado → KeyError
+#             iw, ih = img_poke.get_size()
+#             esc = 30 / max(iw, ih)
+#             poke_img = pygame.transform.smoothscale(img_poke, (max(1, int(iw*esc)), max(1, int(ih*esc))))
+#             x_right = btn_rect.right - pad - poke_img.get_width()
+#             tela.blit(poke_img, (x_right, center_y - poke_img.get_height()//2))
 
 def definir_ativos(equipe):
     for poke in equipe:
@@ -63,19 +295,22 @@ def definir_ativos(equipe):
     return ativos
 
 def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
-    """
-    Desenha as arenas (aliados à esquerda, inimigos à direita).
-    - Quando parametros['ModoAlvificando'] == False: comportamento normal (seleção, animações).
-    - Quando True: VISUAL com borda piscante nas casas-alvo válidas (amarelo)
-      + Botao_invisivel por casa válida que adiciona 'A#' ou 'I#' (ou linha inteira no caso de 'linha').
-    """
 
+    # ===== fontes / estados externos esperados =====
     fonte = Fontes[16]
     modo_alvo = bool(parametros.get("ModoAlvificando"))
 
+    # ===== estado global de seleção (fora da ação) =====
     aliado_sel = parametros.get("AliadoSelecionado")
     atk_sel    = parametros.get("AtaqueAliadoSelecionado")
-    mov_sel    = parametros.get("MovimentoSelecionado")  # 0/1/2 ou str
+
+    # ===== ação selecionada (AGORA É A FONTE/DESTINO DOS CAMPOS) =====
+    log = parametros["LogAtual"]             # deixa estourar se não existir
+    acao_idx = parametros["AcaoIDX"]         # idem
+    acao_sel = log[acao_idx]                 # idem
+
+    # ler o movimento a partir da AÇÃO (não mais de parametros)
+    mov_sel = acao_sel.get("MovimentoSelecionado")  # 0/1/2 ou str/None
 
     def _attack_name(a):
         if not a: return None
@@ -104,7 +339,7 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                     highlight_I = firsts
                 elif lado == 'A':
                     highlight_A = firsts
-            # qualquer outro tipo => não pisca nada
+            # outros tipos: não pisca
         else:
             # sem ataque: se está tentando mover (mov 1), pisca aliados (exceto a própria casa)
             if mov_sel == 1:
@@ -120,19 +355,19 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
 
     cor_amarelo = Cores["amarelo"]
 
-    # ======== helpers para ações invisíveis ========
-    def _add_codes_line(prefix, idx0based, p):
-        """Adiciona os 3 códigos da linha do índice 0-based."""
+    # ======== helpers (agora escrevem NA AÇÃO SELECIONADA) ========
+    def _add_codes_line(prefix, idx0based, acao):
+        """Adiciona os 3 códigos da linha do índice 0-based em acao['AlvosSelecionados']."""
         base = (idx0based // 3) * 3
         for k in (base + 1, base + 2, base + 3):
             code = f"{prefix}{k}"
-            lst = p.setdefault("AlvosSelecionados", [])
+            lst = acao.setdefault("AlvosSelecionados", [])
             if code not in lst:
                 lst.append(code)
 
-    def _add_code_single(prefix, idx0based, p):
+    def _add_code_single(prefix, idx0based, acao):
         code = f"{prefix}{idx0based + 1}"
-        lst = p.setdefault("AlvosSelecionados", [])
+        lst = acao.setdefault("AlvosSelecionados", [])
         if code not in lst:
             lst.append(code)
 
@@ -145,7 +380,7 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
             pisc = (i in highlight_A)
             cor_borda_base = cor_amarelo if pisc else (0, 0, 0)
 
-            # VISUAL somente (piscar onde pode clicar)
+            # VISUAL de highlight
             Botao_Selecao(
                 tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
                 cor_fundo=_slot_skin_aliado, cor_borda_normal=cor_borda_base,
@@ -157,31 +392,29 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
             )
 
             if pisc:
-                # clique válido em aliados
+                # clique em ALIADOS em modo alvo
                 if atk_sel:
                     nome = _attack_name(atk_sel)
                     if alvo_info.get('tipo') == 'linha':
-                        def _acao_A_linha(ii=i, p=parametros, nm=nome):
-                            _add_codes_line('A', ii, p)
-                            if nm: p["MovimentoSelecionado"] = nm
+                        def _acao_A_linha(ii=i, a=acao_sel, nm=nome):
+                            _add_codes_line('A', ii, a)
+                            if nm: a["MovimentoSelecionado"] = nm
                         Botao_invisivel(rect_anim, _acao_A_linha)
                     elif alvo_info.get('tipo') == 'celula':
-                        def _acao_A_casa(ii=i, p=parametros, nm=nome):
-                            _add_code_single('A', ii, p)
-                            if nm: p["MovimentoSelecionado"] = nm
+                        def _acao_A_casa(ii=i, a=acao_sel, nm=nome):
+                            _add_code_single('A', ii, a)
+                            if nm: a["MovimentoSelecionado"] = nm
                         Botao_invisivel(rect_anim, _acao_A_casa)
-                    else:
-                        # tipos não suportados: não cria invisível
-                        pass
                 else:
-                    # movimento 1 (mover) — só adicionar A#, não mexe no movimento
+                    # movimento 1 (mover) — adiciona A# e garante mov=1 na AÇÃO
                     if mov_sel == 1:
-                        def _acao_A_move(ii=i, p=parametros):
-                            _add_code_single('A', ii, p)
+                        def _acao_A_move(ii=i, a=acao_sel):
+                            _add_code_single('A', ii, a)
+                            a["MovimentoSelecionado"] = 1
                         Botao_invisivel(rect_anim, _acao_A_move)
 
         else:
-            # comportamento normal
+            # comportamento normal (seleção, animações)
             func_esq_ali = [
                 (lambda p=poke: parametros.update({"AliadoSelecionado": p})),
                 (lambda a=anima: a.update({
@@ -228,17 +461,15 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
             if pisc and atk_sel:
                 nome = _attack_name(atk_sel)
                 if alvo_info.get('tipo') == 'linha':
-                    def _acao_I_linha(ii=i, p=parametros, nm=nome):
-                        _add_codes_line('I', ii, p)
-                        if nm: p["MovimentoSelecionado"] = nm
+                    def _acao_I_linha(ii=i, a=acao_sel, nm=nome):
+                        _add_codes_line('I', ii, a)
+                        if nm: a["MovimentoSelecionado"] = nm
                     Botao_invisivel(rect_anim, _acao_I_linha)
                 elif alvo_info.get('tipo') == 'celula':
-                    def _acao_I_casa(ii=i, p=parametros, nm=nome):
-                        _add_code_single('I', ii, p)
-                        if nm: p["MovimentoSelecionado"] = nm
+                    def _acao_I_casa(ii=i, a=acao_sel, nm=nome):
+                        _add_code_single('I', ii, a)
+                        if nm: a["MovimentoSelecionado"] = nm
                     Botao_invisivel(rect_anim, _acao_I_casa)
-                else:
-                    pass  # outros tipos: não cria invisível
 
         else:
             func_esq_ini = [
@@ -418,11 +649,7 @@ def _parse_alvo_str(alvo_raw):
     return {'lado': None, 'tipo': 'none', 'qtd': 0}
 
 def _reserva_btn_rects(parametros):
-    """
-    Retângulos dos 3 botões de reserva usados em Desenhar_Botoes_Combate.
-    Se não houver base salva em parametros, usa (0,990,220,90) como padrão.
-    """
-    import pygame
+
     pos_base = parametros.get("PosBaseBotoesCombate", (0, 990, 220, 90))
     x, y, w, h = pos_base
     tamanho_botao = h
@@ -437,7 +664,6 @@ def _reserva_btn_rects(parametros):
 # ============================================================================
 
 def TelaAlvoBatalha(tela, estados, eventos, parametros):
-    import pygame
     global _slots_esquerda, _slots_direita, _anima_t0, _anima_dur_ms
 
     if _slots_esquerda is None or _slots_direita is None:
@@ -658,7 +884,7 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
     sw, sh = tela.get_size()
 
     # Layout fixo em tela
-    margem = 260
+    margem = 280
     gap    = 16
     tile   = 170
 
@@ -758,12 +984,12 @@ def TelaHudBatalha(tela, estados, eventos, parametros):
         txt = "Pronto!"
 
     Botao(tela, txt, (1660,1020,260,60),Texturas["amarelo"],(0,0,0),(240,240,240),lambda: parametros.update({"Pronto": True}), Fontes[35], BG, eventos)
-
-    if parametros["Atacante"] == None or parametros["MovimentoSelecionado"] == None or parametros["AlvosSelecionados"] == []:     
-        Botao(tela, "Preparar", (1660,960,260,60),Cores["vermelho"],(0,0,0),(240,240,240),lambda: tocar("Bloq"), Fontes[35], BG, eventos)
-    
-    else:
-        Botao(tela, "Preparar", (1660,960,260,60),Texturas["vermelho"],(0,0,0),(240,240,240),lambda: parametros["LogAtual"].append({"Atacante":parametros["Atacante"], "Movimento": parametros["MovimentoSelecionado"], "Alvo": parametros["AlvosSelecionados"]}), Fontes[35], BG, eventos)
+    Botao(tela, "Preparar", (1660,960,260,60),Texturas["amarelo"],(0,0,0),(240,240,240),[lambda: parametros["LogAtual"].append({
+                "Atacante": None,
+                "MovimentoSelecionado": None,
+                "AlvosSelecionados": []
+            }),
+        lambda: parametros.update({"AcaoIDX": parametros["AcaoIDX"]+1, "AtaqueAliadoSelecionado": None})], Fontes[35], BG, eventos)
     
     Desenhar_Botoes_Combate(tela,parametros)
 
@@ -807,13 +1033,16 @@ def BatalhaLoop(tela, relogio, estados, config, info):
             "AtaqueAliadoSelecionado": None,
             "AtaqueInimigoSelecionado": None,
             "ItemSelecionado": None,
-            "Atacante": None,
-            "AlvosSelecionados": [],
-            "MovimentoSelecionado": None,
             "ModoAlvificando": False,
             "Pronto": False,
             "Fuga": 0,
-            "LogAtual": [],
+            "MovimentoSelecionado": None,
+            "AcaoIDX": 0,
+            "LogAtual": [{
+                "Atacante": None,
+                "MovimentoSelecionado": None,
+                "AlvosSelecionados": []
+            }],
             "EstadoBotoesPainelPokemonBatalha": {},
         })
         parametros["AliadosAtivos"]  = definir_ativos(parametros["EquipeAliada"])
@@ -845,6 +1074,8 @@ def BatalhaLoop(tela, relogio, estados, config, info):
                 estados["Rodando"] = False
 
         TelaBatalha(tela, estados, eventos, parametros)
+
+        parametros["LogAtual"][parametros["AcaoIDX"]]["MovimentoSelecionado"] = parametros["MovimentoSelecionado"]
 
         # filtro preto proporcional à Fuga
         if parametros["Fuga"] > 0:

@@ -6,6 +6,7 @@ class Mapa:
         self.GridBiomas = GridBiomas  # matriz de números
         self.DicObjetos = DicObjetos  # dicionário global de objetos {(x, y): objeto}
         self.GridBlocos = GridBlocos
+        self.PlayerAtivos = []
 
         self.PokemonsAtivos = {}
         self.BausAtivos = {}
@@ -65,6 +66,7 @@ class CameraMundo:
         objetos = mapa.DicObjetos
         PokemonsAtivos = mapa.PokemonsAtivos
         BausAtivos = mapa.BausAtivos
+        jogadores = mapa.PlayersAtivos
 
         jogador_x, jogador_y = jogador_pos
 
@@ -96,6 +98,9 @@ class CameraMundo:
 
         # ---------- player ----------
         player.Atualizar(tela, delta_time, mapa, Fontes[20], parametros, Consumiveis)
+
+        for jogador in jogadores:
+            jogador.Atualizar(tela, delta_time, jogador_pos, Consumiveis)
 
         # ---------- estruturas ----------
         for (x, y), estrutura in objetos.items():

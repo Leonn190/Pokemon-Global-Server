@@ -176,10 +176,19 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
 
         cur_y += altura_por_time + espacamento_times
 
-    # === 3) SOMENTE QUANDO player.Pokemons mudou: (re)criar Arrastaveis ===
-    if pokemons_cache != player.Pokemons or times_cache != player.Equipes:
+        def freeze(obj):
+            if isinstance(obj, dict):
+                return tuple(sorted((k, freeze(v)) for k, v in obj.items()))
+            if isinstance(obj, list):
+                return tuple(freeze(v) for v in obj)
+            return obj
+
+    if (
+        freeze(pokemons_cache) != freeze(player.Pokemons)
+        or freeze(times_cache) != freeze(player.Equipes)
+    ):
         times_cache = copy.deepcopy(player.Equipes)
-        pokemons_cache = list(player.Pokemons)
+        pokemons_cache = copy.deepcopy(player.Pokemons)
         arrastaveis_pokemons.clear()
 
         # arrastaveis para grade principal

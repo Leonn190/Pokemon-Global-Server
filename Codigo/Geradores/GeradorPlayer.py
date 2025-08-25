@@ -14,6 +14,8 @@ class Player:
 
         self.Code = Informações["Code"]
         self.Nome = Informações["Nome"]
+        self.ID = Informações.get("ID", self.Nome + str(self.Code))
+
         self.Particulas = Particulas
 
         self.Pokemons = Informações["Pokemons"]
@@ -495,7 +497,8 @@ class Player:
             "Loc": self.Loc,
             "Velocidade": self.Velocidade,
             "Selecionado": self.Selecionado,
-            "Angulo": self.Angulo
+            "Angulo": self.Angulo,
+            "ID": self.ID
         }
     
     def ToDicTotal(self):
@@ -520,6 +523,7 @@ class Player:
             "BausAbertos": self.BausAbertos,
             "PokemonsCapturados": self.PokemonsCapturados,
             "TempoDeJogo": self.TempoDeJogo,
-            "Passos": self.Passos
+            "Passos": self.Passos,
+            "ID": self.ID
         }
     

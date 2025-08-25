@@ -26,7 +26,7 @@ pygame.display.set_icon(icone)
 relogio = pygame.time.Clock()
 
 config = {
-    "FPS": 100,
+    "FPS": 100, 
     "Volume": 0.5,
     "Claridade": 75,
     "Mudo": False,
