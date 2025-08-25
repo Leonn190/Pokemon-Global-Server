@@ -6,11 +6,10 @@ class Mapa:
         self.GridBiomas = GridBiomas  # matriz de números
         self.DicObjetos = DicObjetos  # dicionário global de objetos {(x, y): objeto}
         self.GridBlocos = GridBlocos
-        self.PlayerAtivos = []
 
         self.PokemonsAtivos = {}
         self.BausAtivos = {}
-        self.PlayerAtivos = {}
+        self.PlayersAtivos = []
 
         self.Tile = 70  # tamanho de um tile em pixels
         self.Largura = len(GridBiomas[0]) * self.Tile
