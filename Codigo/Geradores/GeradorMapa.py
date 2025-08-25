@@ -9,7 +9,7 @@ class Mapa:
 
         self.PokemonsAtivos = {}
         self.BausAtivos = {}
-        self.PlayersAtivos = []
+        self.JogadoresAtivos = []
 
         self.Tile = 70  # tamanho de um tile em pixels
         self.Largura = len(GridBiomas[0]) * self.Tile
@@ -65,7 +65,6 @@ class CameraMundo:
         objetos = mapa.DicObjetos
         PokemonsAtivos = mapa.PokemonsAtivos
         BausAtivos = mapa.BausAtivos
-        jogadores = mapa.PlayersAtivos
 
         jogador_x, jogador_y = jogador_pos
 
@@ -98,7 +97,7 @@ class CameraMundo:
         # ---------- player ----------
         player.Atualizar(tela, delta_time, mapa, Fontes[20], parametros, Consumiveis)
 
-        for jogador in jogadores:
+        for jogador in mapa.JogadoresAtivos.values():
             jogador.Atualizar(tela, delta_time, jogador_pos, Consumiveis)
 
         # ---------- estruturas ----------
