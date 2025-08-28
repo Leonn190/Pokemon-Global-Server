@@ -50,7 +50,8 @@ config.update({"Ver": 1.0})
 info = {
     "Carregado": False,
     "Alvo": "Inicio",
-    "Escuro": 100
+    "Escuro": 100,
+    "AcabouDeSairConfronto": False
 }
 
 from Outros.Discord import iniciar_discord_presence

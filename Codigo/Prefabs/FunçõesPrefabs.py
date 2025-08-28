@@ -253,51 +253,112 @@ def Slider(tela, nome, x, y, largura, valor, min_val, max_val, cor_base, cor_bot
 # Atributo estático para controlar arraste
 Slider.arrastando = None
 
-def Barra(tela, posicao, tamanho, valor_atual, valor_maximo, cor, estado_barra, chave, vertical=False):
+def Barra(tela, posicao, tamanho, valor_atual, valor_maximo, cor, estado_barra, chave,
+          vertical=False, variacao=0):
     x, y = posicao
     largura, altura = tamanho
 
-    # Inicializa o valor visível se ainda não existir
-    if chave not in estado_barra:
-        estado_barra[chave] = float(valor_atual)
+    # estado suave do valor mostrado
+    vis_key = f"{chave}__vis"
+    if vis_key not in estado_barra:
+        estado_barra[vis_key] = float(valor_atual)
 
-    # Suaviza a transição do valor visível para o atual
-    visivel = estado_barra[chave]
-    visivel += (valor_atual - visivel) * 0.15  # quanto menor, mais lenta a animação
+    visivel = estado_barra[vis_key]
+    visivel += (valor_atual - visivel) * 0.15
+    visivel = max(0.0, min(visivel, float(valor_maximo) if valor_maximo else 0.0))
+    estado_barra[vis_key] = visivel
 
-    # Garante que fique dentro dos limites
-    visivel = max(0, min(visivel, valor_maximo))
-    estado_barra[chave] = visivel
+    # frações básicas
+    frac_cor = (visivel / valor_maximo) if valor_maximo else 0.0
+    frac_branco = 0.0
+    frac_vazio = 1.0 - frac_cor
 
-    # Calcula a proporção da barra preenchida
-    proporcao = visivel / valor_maximo if valor_maximo else 0
+    # cálculo do overlay de "barreira" (variacao >= 0)
+    if variacao is not None and variacao >= 0:
+        total = visivel + variacao
+        if valor_maximo > 0:
+            if total <= valor_maximo:
+                # Cor + Branco + Vazio
+                frac_branco = variacao / valor_maximo
+                frac_vazio  = 1.0 - (frac_cor + frac_branco)
+            else:
+                # comprime para caber mantendo proporção cor:branco
+                denom = (visivel + variacao) or 1.0
+                frac_cor    = (visivel  / denom)
+                frac_branco = (variacao / denom)
+                # ocupa 100% (sem vazio)
+                frac_vazio  = 0.0
+
+    # clamp seguro
+    def _clamp01(v): return max(0.0, min(1.0, v))
+    frac_cor    = _clamp01(frac_cor)
+    frac_branco = _clamp01(frac_branco)
+    frac_vazio  = _clamp01(1.0 - (frac_cor + frac_branco))
+
+    # desenhar barra de fundo
+    fundo = (50, 50, 50)
+    borda = (0, 0, 0)
+    pygame.draw.rect(tela, fundo, (x, y, largura, altura))
+    pygame.draw.rect(tela, borda, (x, y, largura, altura), 2)
+
+    # helpers p/ desenhar segmentos em ordem: cor -> branco
+    def draw_segments_h():
+        w_cor    = int(largura * frac_cor)
+        w_branco = int(largura * frac_branco)
+        if w_cor > 0:
+            pygame.draw.rect(tela, cor, (x, y, w_cor, altura))
+        if w_branco > 0:
+            pygame.draw.rect(tela, (255, 255, 255), (x + w_cor, y, w_branco, altura))
+
+    def draw_segments_v():
+        h_cor    = int(altura * frac_cor)
+        h_branco = int(altura * frac_branco)
+        # desenha de baixo pra cima
+        if h_cor > 0:
+            pygame.draw.rect(tela, cor, (x, y + altura - h_cor, largura, h_cor))
+        if h_branco > 0:
+            pygame.draw.rect(tela, (255, 255, 255), (x, y + altura - (h_cor + h_branco), largura, h_branco))
 
     if not vertical:
-        # Barra horizontal: largura proporcional, altura fixa
-        largura_preenchida = int(largura * proporcao)
-
-        # Desenha o fundo da barra
-        pygame.draw.rect(tela, (50, 50, 50), (x, y, largura, altura))  # fundo cinza escuro
-
-        # Desenha a parte preenchida
-        pygame.draw.rect(tela, cor, (x, y, largura_preenchida, altura))
-
-        # Desenha a borda da barra
-        pygame.draw.rect(tela, (0, 0, 0), (x, y, largura, altura), 2)
+        draw_segments_h()
     else:
-        # Barra vertical: altura proporcional, largura fixa
-        altura_preenchida = int(altura * proporcao)
-        y_preenchida = y + (altura - altura_preenchida)  # desenha preenchido de baixo para cima
+        draw_segments_v()
 
-        # Desenha o fundo da barra
-        pygame.draw.rect(tela, (50, 50, 50), (x, y, largura, altura))  # fundo cinza escuro
+    # --- Pisca do desgaste (variacao < 0) ---
+    if variacao is not None and variacao < 0 and valor_maximo > 0:
+        var_abs = abs(float(variacao))
+        frac_pisca_total = var_abs / valor_maximo
+        # limitamos o pisca ao preenchido de cor (parte útil)
+        if frac_pisca_total > 0:
+            # cor do pisca: branco; se o "dano" excederia o que temos (visivel-var_abs < 0), pisca vermelho
+            excede = (visivel - var_abs) < 0
+            cor_pisca_base = (255, 80, 80) if excede else (255, 255, 255)
 
-        # Desenha a parte preenchida
-        pygame.draw.rect(tela, cor, (x, y_preenchida, largura, altura_preenchida))
+            # alpha pulsante (lento)
+            t = pygame.time.get_ticks() / 1000.0
+            alpha = int(128 + 100 * (0.5 + 0.5 * math.sin(2 * math.pi * 0.8 * t)))  # ~0.8 Hz
 
-        # Desenha a borda da barra
-        pygame.draw.rect(tela, (0, 0, 0), (x, y, largura, altura), 2)
-
+            if not vertical:
+                w_total    = int(largura * frac_pisca_total)
+                w_dispon   = int(largura * frac_cor)  # só pisca na parte preenchida
+                w_pisca    = max(0, min(w_total, w_dispon))
+                if w_pisca > 0:
+                    # pisca encostado na "ponta" direita do preenchido
+                    px = x + int(largura * frac_cor) - w_pisca
+                    s = pygame.Surface((w_pisca, altura), pygame.SRCALPHA)
+                    s.fill((*cor_pisca_base, alpha))
+                    tela.blit(s, (px, y))
+            else:
+                h_total   = int(altura * frac_pisca_total)
+                h_dispon  = int(altura * frac_cor)
+                h_pisca   = max(0, min(h_total, h_dispon))
+                if h_pisca > 0:
+                    # pisca encostado no topo do preenchido (parte superior)
+                    py = y + (altura - int(altura * frac_cor))
+                    s = pygame.Surface((largura, h_pisca), pygame.SRCALPHA)
+                    s.fill((*cor_pisca_base, alpha))
+                    tela.blit(s, (x, py))
+                    
 def texto_com_borda(tela, texto, fonte, pos, cor_texto, cor_borda, espessura=2):
 
     x, y = pos
@@ -313,8 +374,10 @@ def texto_com_borda(tela, texto, fonte, pos, cor_texto, cor_borda, espessura=2):
     tela.blit(texto_surface, (x, y))
 
 def Fluxo(tela, x1, y1, x2, y2,
-          pontos_por_100px=8, frequencia=4, velocidade=3,
-          cor_base=(0, 255, 0), raio=5, forma="bola"):
+          Pontos=40, pontos_por_100px=None,
+          frequencia=4, velocidade=3,
+          cor_base=(0, 255, 0), raio=5, forma="bola",
+          translucido=False):
 
     dx = x2 - x1
     dy = y2 - y1
@@ -322,57 +385,82 @@ def Fluxo(tela, x1, y1, x2, y2,
     if dist_total == 0:
         return
 
-    # calcula pontos relativos ao comprimento
-    num_pontos = max(2, int(pontos_por_100px * (dist_total / 100.0)))
-
     # direção normalizada e normal perpendicular
     dir_x = dx / dist_total
     dir_y = dy / dist_total
     nx, ny = -dir_y, dir_x
 
+    # escolhe quantidade de pontos
+    if isinstance(pontos_por_100px, (int, float)) and pontos_por_100px > 0:
+        num_pontos = max(2, int(pontos_por_100px * (dist_total / 100.0)))
+    else:
+        num_pontos = max(2, int(Pontos))
+
     t = pygame.time.get_ticks() / 1000.0
+
+    # helper: rotaciona um vetor (ux,uy) por ângulo (rad)
+    def rot(ux, uy, ang):
+        ca, sa = math.cos(ang), math.sin(ang)
+        return (ux*ca - uy*sa, ux*sa + uy*ca)
 
     for i in range(num_pontos):
         fator = i / num_pontos
         px = x1 + dir_x * fator * dist_total
         py = y1 + dir_y * fator * dist_total
 
-        # onda de pulsação
-        onda = 0.5 + 0.5 * math.sin(2 * math.pi * frequencia * fator - velocidade * t)
-        alpha = int(max(0, min(255, onda * 255)))
+        # calcula alpha
+        if translucido is not False:
+            alpha = int(max(0, min(255, translucido)))
+        else:
+            onda = 0.5 + 0.5 * math.sin(2 * math.pi * frequencia * fator - velocidade * t)
+            alpha = int(max(0, min(255, onda * 255)))
+
         cor = (*cor_base, alpha)
 
         if forma == "seta":
-            L = max(6, int(raio * 3.0))     # comprimento ao longo do fluxo
-            W = max(3, int(raio * 1.6))     # espessura (largura da base)
+            # seta sólida com "entalhe" central (como a imagem)
+            L = max(10, int(raio * 3.6))   # comprimento ao longo do fluxo
+            W = max(6,  int(raio * 2.2))   # espessura total
+            entalhe = 0.18                 # quão fundo o recorte entra (0..0.5) do L
 
-            bx = px - dir_x * (L / 2)
-            by = py - dir_y * (L / 2)
-            tipx = px + dir_x * (L / 2)
-            tipy = py + dir_y * (L / 2)
+            # vetores direção e normal já calculados: (dir_x, dir_y) e (nx, ny)
+            # pontos base
+            tipx  = px + dir_x * (L/2)
+            tipy  = py + dir_y * (L/2)
 
-            p1 = (bx + nx * (W / 2), by + ny * (W / 2))
-            p2 = (tipx, tipy)
-            p3 = (bx - nx * (W / 2), by - ny * (W / 2))
-            pts = [p1, p2, p3]
+            backx = px - dir_x * (L/2)
+            backy = py - dir_y * (L/2)
 
-            minx = int(min(p[0] for p in pts)) - 1
-            miny = int(min(p[1] for p in pts)) - 1
-            maxx = int(max(p[0] for p in pts)) + 1
-            maxy = int(max(p[1] for p in pts)) + 1
-            w = maxx - minx
-            h = maxy - miny
+            topx  = backx + nx * (W/2)
+            topy  = backy + ny * (W/2)
+
+            botx  = backx - nx * (W/2)
+            boty  = backy - ny * (W/2)
+
+            # ponto do entalhe (no meio da altura, recuado para dentro)
+            notchx = px - dir_x * (L * entalhe)
+            notchy = py - dir_y * (L * entalhe)
+
+            # ordem dos vértices: topo-esquerda -> entalhe -> base-inferior -> ponta
+            pts = [(topx, topy), (notchx, notchy), (botx, boty), (tipx, tipy)]
+
+            # desenha em surface local com alpha
+            minx = int(min(p[0] for p in pts)) - 2
+            miny = int(min(p[1] for p in pts)) - 2
+            maxx = int(max(p[0] for p in pts)) + 2
+            maxy = int(max(p[1] for p in pts)) + 2
+            w, h = maxx - minx, maxy - miny
 
             s = pygame.Surface((w, h), pygame.SRCALPHA)
-            pts_local = [(p[0] - minx, p[1] - miny) for p in pts]
+            pts_local = [(x - minx, y - miny) for (x, y) in pts]
             pygame.draw.polygon(s, cor, pts_local)
             tela.blit(s, (minx, miny))
 
         else:  # "bola"
-            r = raio
+            r = int(raio)
             s = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
             pygame.draw.circle(s, cor, (r, r), r)
-            tela.blit(s, (int(px) - r, int(py) - r))
+            tela.blit(s, (int(px) - r, int(py) - r))   
 
 def Scrolavel(
     rect,

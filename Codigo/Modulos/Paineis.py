@@ -1852,7 +1852,10 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
     W, H = PANEL_W, PANEL_H
 
     if pokemon in parametros["EquipeAliada"]:
-        ALIADO = True
+        if pokemon["Ativo"]:
+            ALIADO = True
+        else:
+            ALIADO = False
     else:
         ALIADO = False
 
@@ -2037,19 +2040,44 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
         ene_max    = int(pokemon.get("Ene", 1) or 1)
         estado_barras = pokemon.setdefault("_estado_barras", {})
 
+        # novas variações
+        barreira = int(pokemon.get("Barreira", 0) or 0)                  # pode ser 0+
+        custo_ene = int(parametros.get("CustoAtualEnergia", 0) or 0)     # custo sempre tratado como desgaste
+
+        # posições das barras (vida em cima, energia embaixo)
         bx = R_types.left - BARRA_TO_TYPE_GAP - BARRA_W
         by1 = ry + BARRAS_TOP_OFFSET
         by2 = by1 + BARRA_H + BARRA_GAP_Y
 
-        Barra(tela, (bx, by1), (BARRA_W, BARRA_H), vida_atual, vida_max, (190,60,60), estado_barras,
-              chave=f"vida_{pokemon.get('Nome','')}", vertical=False)
-        tv = f_mini.render(f"{vida_atual}/{vida_max}", True, (255,255,255))
-        tela.blit(tv, (bx + (BARRA_W - tv.get_width())//2, by1 + (BARRA_H - tv.get_height())//2))
+        # VIDA: variacao = +barreira (overlay branco)
+        Barra(
+            tela, (bx, by1), (BARRA_W, BARRA_H),
+            valor_atual=vida_atual, valor_maximo=vida_max,
+            cor=(190, 60, 60), estado_barra=estado_barras,
+            chave=f"vida_{pokemon.get('Nome','')}",
+            vertical=False, variacao=max(0, barreira)
+        )
+        # exibição inclui a barreira (ex.: 115/100)
+        tv_val = vida_atual + max(0, barreira)
+        tv = f_mini.render(f"{tv_val}/{vida_max}", True, (255, 255, 255))
+        tela.blit(tv, (bx + (BARRA_W - tv.get_width()) // 2, by1 + (BARRA_H - tv.get_height()) // 2))
 
-        Barra(tela, (bx, by2), (BARRA_W, BARRA_H), ene_atual, ene_max, (60,120,200), estado_barras,
-              chave=f"ene_{pokemon.get('Nome','')}", vertical=False)
-        te = f_mini.render(f"{ene_atual}/{ene_max}", True, (255,255,255))
-        tela.blit(te, (bx + (BARRA_W - te.get_width())//2, by2 + (BARRA_H - te.get_height())//2))
+        # ENERGIA: variacao = -custo (desgaste -> pisca branco/vermelho)
+        if ALIADO:
+            vari_ene = -abs(custo_ene)
+        else: 
+            vari_ene = 0
+        Barra(
+            tela, (bx, by2), (BARRA_W, BARRA_H),
+            valor_atual=ene_atual, valor_maximo=ene_max,
+            cor=(60, 120, 200), estado_barra=estado_barras,
+            chave=f"ene_{pokemon.get('Nome','')}",
+            vertical=False, variacao=vari_ene
+        )
+        # exibição considera o custo (ex.: 30-10 -> 20/ene_max)
+        te_val = ene_atual + vari_ene  # vari_ene é negativo quando há custo
+        te = f_mini.render(f"{te_val}/{ene_max}", True, (255, 255, 255))
+        tela.blit(te, (bx + (BARRA_W - te.get_width()) // 2, by2 + (BARRA_H - te.get_height()) // 2))
 
         # --- BUILD à esquerda das barras ---
         start_x_right = bx - BUILD_TO_BARRAS_GAP
@@ -2077,8 +2105,8 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
                 cor_borda_esquerda=(120,220,120), cor_borda_direita=(220,120,120),
                 cor_passagem=(230,230,230),
                 branco=True, Surface=False, grossura=2,
-                funcao_esquerdo=[lambda: parametros.update({"AtaqueAliadoSelecionado": None, "AtaqueInimigoSelecionado": None, "ItemSelecionado": item, "MovimentoSelecionado": None}), lambda: anima.update({"Y5": 1080, "Y6": 900, "_anima_painel_conteudo": pygame.time.get_ticks()})],
-                desfazer_esquerdo=[lambda: parametros.update({"AtaqueAliadoSelecionado": None, "AtaqueInimigoSelecionado": None, "ItemSelecionado": None, "MovimentoSelecionado": None}),  lambda: anima.update({"Y5": 900, "Y6": 1080, "_anima_painel_conteudo": pygame.time.get_ticks()})]
+                funcao_esquerdo=[lambda: parametros.update({"AtaqueAliadoSelecionado": None, "AtaqueInimigoSelecionado": None, "ItemSelecionado": item, "ModoAlvificando": False, "CustoAtualEnergia": 0}), lambda: anima.update({"Y5": 1080, "Y6": 900, "_anima_painel_conteudo": pygame.time.get_ticks()})],
+                desfazer_esquerdo=[lambda: parametros.update({"AtaqueAliadoSelecionado": None, "AtaqueInimigoSelecionado": None, "ItemSelecionado": None, "ModoAlvificando": False, "CustoAtualEnergia": 0}),  lambda: anima.update({"Y5": 900, "Y6": 1080, "_anima_painel_conteudo": pygame.time.get_ticks()})]
             )
             x -= (BUILD_SIZE + BUILD_GAP)
 
@@ -2207,8 +2235,12 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
                     (lambda atk=ataque_atual: parametros.update({
                         "AtaqueAliadoSelecionado": atk,
                         "AtaqueInimigoSelecionado": None,
+                        "ItemSelecionado": None,
+                        "ModoAlvificando": True,
+                        "AlvosSelecionados": [],
+                        "AtacanteSelecionado": None,
                         "MovimentoSelecionado": None,
-                        "ItemSelecionado": None
+                        "CustoAtualEnergia": atk["custo"]
                     })),
                     (lambda: anima.update({"Y5": 1080, "Y6": 900, "_anima_painel_conteudo": pygame.time.get_ticks()})),
                 ]
@@ -2217,8 +2249,9 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
                     (lambda atk=ataque_atual: parametros.update({
                         "AtaqueAliadoSelecionado": None,
                         "AtaqueInimigoSelecionado": atk,
-                        "MovimentoSelecionado": None,
-                        "ItemSelecionado": None
+                        "ItemSelecionado": None,
+                        "ModoAlvificando": False,
+                        "CustoAtualEnergia": 0
                     })),
                     (lambda: anima.update({"Y5": 1080, "Y6": 900, "_anima_painel_conteudo": pygame.time.get_ticks()})),
                 ]
@@ -2227,8 +2260,9 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
                 (lambda: parametros.update({
                     "AtaqueAliadoSelecionado": None,
                     "AtaqueInimigoSelecionado": None,
-                    "MovimentoSelecionado": None,
-                    "ItemSelecionado": None
+                    "ItemSelecionado": None,
+                    "ModoAlvificando": False,
+                    "CustoAtualEnergia": 0
                 })),
                 (lambda: anima.update({"Y5": 900, "Y6": 1080, "_anima_painel_conteudo": pygame.time.get_ticks()})),
             ]
@@ -2250,54 +2284,66 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
             btn_rect = (extra_x, extra_y, EXTRA_BTN_SZ, EXTRA_BTN_SZ)
 
             if i == 0:  # mover
-                ic = icones.get("mover")
+                if ALIADO:
+                    ic = icones.get("mover")
 
-                Botao_Selecao(
-                    tela, "", btn_rect, f_mini,
-                    cor_fundo=(120, 180, 255), cor_borda_normal=(200, 200, 255), cor_passagem=cores["branco"], cor_borda_esquerda=cores["vermelho"],
-                    id_botao=f"{'A' if ALIADO else 'I'}_mover_{pokemon.get('Nome','')}",
-                    estado_global=parametros["EstadoBotoesPainelPokemonBatalha"], eventos=eventos,
-                    funcao_esquerdo=lambda: parametros.update({
-                        "AtaqueAliadoSelecionado": None,
-                        "AtaqueInimigoSelecionado": None,
-                        "MovimentoSelecionado": 1,
-                        "ItemSelecionado": None
-                    }),
-                    desfazer_esquerdo=lambda: parametros.update({
-                        "AtaqueAliadoSelecionado": None,
-                        "AtaqueInimigoSelecionado": None,
-                        "MovimentoSelecionado": None,
-                        "ItemSelecionado": None
-                    }),
-                    arredondamento=8, grossura=2
-                )
+                    Botao_Selecao(
+                        tela, "", btn_rect, f_mini,
+                        cor_fundo=(120, 180, 255), cor_borda_normal=(200, 200, 255), cor_passagem=cores["branco"], cor_borda_esquerda=cores["vermelho"],
+                        id_botao=f"{'A' if ALIADO else 'I'}_mover_{pokemon.get('Nome','')}",
+                        estado_global=parametros["EstadoBotoesPainelPokemonBatalha"], eventos=eventos,
+                        funcao_esquerdo=lambda: parametros.update({
+                            "AtaqueAliadoSelecionado": 1,
+                            "AtaqueInimigoSelecionado": None,
+                            "ItemSelecionado": None,
+                            "ModoAlvificando": True,
+                            "AlvosSelecionados": [],
+                            "AtacanteSelecionado": None,
+                            "MovimentoSelecionado": None,
+                            "CustoAtualEnergia": min(max(3,round((pokemon["Peso"] + 8) / 5)),70)
+                        }),
+                        desfazer_esquerdo=lambda: parametros.update({
+                            "AtaqueAliadoSelecionado": None,
+                            "AtaqueInimigoSelecionado": None,
+                            "ItemSelecionado": None,
+                            "ModoAlvificando": False,
+                            "CustoAtualEnergia": 0
+                        }),
+                        arredondamento=8, grossura=2
+                    )
 
-                _blit_icon_center(btn_rect, ic, pad=6)
+                    _blit_icon_center(btn_rect, ic, pad=6)
 
             elif i == 1:  # trocar
-                ic = icones.get("trocar")
+                if ALIADO:
+                    ic = icones.get("trocar")
 
-                Botao_Selecao(
-                    tela, "", btn_rect, f_mini,
-                    cor_fundo=(120, 180, 255), cor_borda_normal=(200, 200, 255), cor_passagem=cores["branco"], cor_borda_esquerda=cores["vermelho"],
-                    id_botao=f"{'A' if ALIADO else 'I'}_trocar_{pokemon.get('Nome','')}",
-                    estado_global=parametros["EstadoBotoesPainelPokemonBatalha"], eventos=eventos,
-                    funcao_esquerdo=lambda: parametros.update({
-                        "AtaqueAliadoSelecionado": None,
-                        "AtaqueInimigoSelecionado": None,
-                        "MovimentoSelecionado": 2,
-                        "ItemSelecionado": None
-                    }),
-                    desfazer_esquerdo=lambda: parametros.update({
-                        "AtaqueAliadoSelecionado": None,
-                        "AtaqueInimigoSelecionado": None,
-                        "MovimentoSelecionado": None,
-                        "ItemSelecionado": None
-                    }),
-                    arredondamento=8, grossura=2
-                )
+                    Botao_Selecao(
+                        tela, "", btn_rect, f_mini,
+                        cor_fundo=(120, 180, 255), cor_borda_normal=(200, 200, 255), cor_passagem=cores["branco"], cor_borda_esquerda=cores["vermelho"],
+                        id_botao=f"{'A' if ALIADO else 'I'}_trocar_{pokemon.get('Nome','')}",
+                        estado_global=parametros["EstadoBotoesPainelPokemonBatalha"], eventos=eventos,
+                        funcao_esquerdo=lambda: parametros.update({
+                            "AtaqueAliadoSelecionado": 2,
+                            "AtaqueInimigoSelecionado": None,
+                            "ItemSelecionado": None,
+                            "ModoAlvificando": True,
+                            "AlvosSelecionados": [],
+                            "AtacanteSelecionado": None,
+                            "MovimentoSelecionado": None,
+                            "CustoAtualEnergia": 5 if pokemon["Nivel"] < 50 else 10
+                        }),
+                        desfazer_esquerdo=lambda: parametros.update({
+                            "AtaqueAliadoSelecionado": None,
+                            "AtaqueInimigoSelecionado": None,
+                            "ItemSelecionado": None,
+                            "ModoAlvificando": False,
+                            "CustoAtualEnergia": 0
+                        }),
+                        arredondamento=8, grossura=2
+                    )
 
-                _blit_icon_center(btn_rect, ic, pad=6)
+                    _blit_icon_center(btn_rect, ic, pad=6)
 
             else:
                 # habilidades (até 2) alinhadas nas linhas 2 e 3
@@ -2334,4 +2380,149 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
     setor_central_superior()
     setor_central_inferior()
     setor_direito()
-    
+
+
+def PainelAcao(acao, parametros):
+ 
+    # cores
+    cor_borda       = (30, 30, 30)
+    cor_header      = (235, 235, 235)
+    cor_fundo       = (248, 248, 248)
+    cor_placeholder = (220, 220, 220)
+    cor_texto       = (20, 20, 20)
+
+    # dimensões
+    W, H = 150, 70
+    HEADER_H = 24
+    ICON = 42
+    GAP = 3
+    MARG_L = 9
+    MARG_R = 9
+    RADIUS = 10
+
+    # fonte (para placeholders)
+    fontes_param = parametros.get("Fontes")
+    if isinstance(fontes_param, dict):
+        fonte = fontes_param.get(16) or pygame.font.SysFont(None, 18)
+    elif isinstance(fontes_param, (list, tuple)) and len(fontes_param) > 16:
+        fonte = fontes_param[16] or pygame.font.SysFont(None, 18)
+    else:
+        fonte = pygame.font.SysFont(None, 18)
+
+    # surface
+    surf = pygame.Surface((W, H), pygame.SRCALPHA)
+
+    # fundo arredondado
+    pygame.draw.rect(surf, cor_fundo, pygame.Rect(0, 0, W, H), border_radius=RADIUS)
+    pygame.draw.rect(surf, cor_borda, pygame.Rect(0, 0, W, H), 1, border_radius=RADIUS)
+
+    # cabeçalho (sem texto), com cantos superiores arredondados
+    header_rect = pygame.Rect(0, 0, W, HEADER_H)
+    pygame.draw.rect(surf, cor_header, header_rect, border_top_left_radius=RADIUS, border_top_right_radius=RADIUS)
+    # linha separadora do cabeçalho
+    pygame.draw.line(surf, cor_borda, (0, HEADER_H), (W, HEADER_H), 1)
+
+    # --- faixa de ícones ---
+    faixa_top = HEADER_H
+    icon_top  = faixa_top + 2
+    x_left  = MARG_L
+    x_mid   = x_left + ICON + GAP
+    x_right = x_mid + ICON + GAP
+
+    # helpers
+    def _scale_icon(img):
+        if not img: return None
+        try:
+            if img.get_width() == ICON and img.get_height() == ICON:
+                return img
+            return pygame.transform.smoothscale(img, (ICON, ICON))
+        except Exception:
+            return None
+
+    def _blit_placeholder(rect, text):
+        pygame.draw.rect(surf, cor_placeholder, rect, border_radius=6)
+        pygame.draw.rect(surf, cor_borda, rect, 1, border_radius=6)
+        t = fonte.render(str(text), True, cor_texto)
+        surf.blit(t, (rect.x + (rect.w - t.get_width()) // 2,
+                      rect.y + (rect.h - t.get_height()) // 2))
+
+    def _get_poke_icon_by_name(nome):
+        if not nome: return None
+        key = str(nome).lower()
+        try:
+            img = pokemons.get(key)
+            return _scale_icon(img)
+        except Exception:
+            return None
+
+    def _get_mov_icon(mov):
+        # mov pode ser dict (com Estilo) ou int (1/2)
+        if isinstance(mov, dict):
+            est = (mov.get("Estilo") or mov.get("estilo") or "").strip().upper()
+            try:
+                if est == "N": return _scale_icon(icones.get("CustoFisico"))
+                if est == "S": return _scale_icon(icones.get("CustoStatus"))
+                if est == "E": return _scale_icon(icones.get("CustoEspecial"))
+            except Exception:
+                pass
+        if isinstance(mov, int):
+            if mov == 1: return _scale_icon(icones.get("mover"))
+            if mov == 2: return _scale_icon(icones.get("trocar"))
+        return None
+
+    def _draw_icon_or_placeholder(x, top, image, placeholder_txt):
+        rect = pygame.Rect(x, top, ICON, ICON)
+        if image:
+            surf.blit(image, rect.topleft)
+        else:
+            _blit_placeholder(rect, placeholder_txt)
+
+    # ESQUERDA: Pokémon do Atacante (índice em EquipeAliada)
+    atacante_idx = acao.get("Atacante")
+    poke_img = None
+    if atacante_idx is not None:
+        try:
+            equipeA = parametros.get("EquipeAliada") or []
+            if 0 <= int(atacante_idx) < len(equipeA):
+                nome = equipeA[int(atacante_idx)].get("Nome") or equipeA[int(atacante_idx)].get("nome")
+                poke_img = _get_poke_icon_by_name(nome)
+        except Exception:
+            poke_img = None
+    _draw_icon_or_placeholder(x_left, icon_top, poke_img, "A")
+
+    # MEIO: Movimento
+    mov = acao.get("Movimento")
+    mov_img = _get_mov_icon(mov)
+    place_meio = "—" if not isinstance(mov, int) else str(mov)
+    _draw_icon_or_placeholder(x_mid, icon_top, mov_img, place_meio)
+
+    # DIREITA: Alvos
+    alvos = acao.get("Alvos") or []
+    if len(alvos) == 1 and isinstance(alvos[0], str):
+        code = alvos[0].strip().upper()
+        lado = code[0] if len(code) >= 2 else "A"
+        try:
+            pos = int(code[1:])
+        except Exception:
+            pos = 1
+
+        img_dir = None
+        if lado == "A":
+            equipe = parametros.get("EquipeAliada") or []
+            poke = next((p for p in equipe if int(p.get("Pos", -1)) == pos), None)
+            nome = (poke or {}).get("Nome") or (poke or {}).get("nome")
+            img_dir = _get_poke_icon_by_name(nome) if poke else None
+        elif lado == "I":
+            equipe = parametros.get("EquipeInimiga") or []
+            poke = next((p for p in equipe if int(p.get("Pos", -1)) == pos), None)
+            nome = (poke or {}).get("Nome") or (poke or {}).get("nome")
+            img_dir = _get_poke_icon_by_name(nome) if poke else None
+
+        if img_dir:
+            _draw_icon_or_placeholder(x_right, icon_top, img_dir, "?")
+        else:
+            _draw_icon_or_placeholder(x_right, icon_top, None, code)
+    else:
+        _draw_icon_or_placeholder(x_right, icon_top, None, "M")
+
+    return surf

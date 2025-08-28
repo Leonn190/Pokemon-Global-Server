@@ -292,61 +292,74 @@ def MundoLoop(tela, relogio, estados, config, info):
     if Cores == None:
         Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Consumiveis, Equipaveis, Estruturas, Animaçoes, Icones = info["Conteudo"]
 
-    parametros = {
-        "Link": info["Server"]["Link"],
-        "Code": info["Server"]["Code"],
-        "Ping": 0,
-        "Verificado": True,
-        "Running": True,   # flag para controle da thread
-        "Tela": MundoTelaPadrao,
-        "Config": config,
-        "TelaConfigurações": {"Entrou": False},
-        "PokemonsProximos": [],
-        "PokemonsRemover": [],
-        "PokemonsAtualizar": [],
-        "PlayersProximos": [],
-        "BausProximos": [],
-        "BausRemover": [],
-        "MensagemOnline": None,
-        "ModoTeclado": False,
-        "InventarioAtivo": False,
-        "Inventario": {
-            "Setor": None,
-            "ItemSelecionado": None,
-            "PokemonSelecionado": None,
-            "AtaqueSelecionado": None
-        },
-        "Confronto": {
-            "ConfrontoIniciado": False,
-            "Batalhando": False,
-            "BatalhaSimples": False,
-            "AlvoConfronto": None,
-            "Player": player
+    if not info["AcabouDeSairConfronto"]:
+        parametros = {
+            "Link": info["Server"]["Link"],
+            "Code": info["Server"]["Code"],
+            "Ping": 0,
+            "Verificado": True,
+            "Running": True,   # flag para controle da thread
+            "Tela": MundoTelaPadrao,
+            "Config": config,
+            "TelaConfigurações": {"Entrou": False},
+            "PokemonsProximos": [],
+            "PokemonsRemover": [],
+            "PokemonsAtualizar": [],
+            "PlayersProximos": [],
+            "BausProximos": [],
+            "BausRemover": [],
+            "MensagemOnline": None,
+            "ModoTeclado": False,
+            "InventarioAtivo": False,
+            "Inventario": {
+                "Setor": None,
+                "ItemSelecionado": None,
+                "PokemonSelecionado": None,
+                "AtaqueSelecionado": None
+            },
+            "Confronto": {
+                "ConfrontoIniciado": False,
+                "Batalhando": False,
+                "BatalhaSimples": False,
+                "AlvoConfronto": None,
+                "Player": player
+            }
         }
-    }
 
-    VerificaMapa(parametros)
+        VerificaMapa(parametros)
 
-    Particulas = BurstManager(70,debug=True)
-    player = Player(info["Server"]["Player"]["dados"],Outros["SkinsTodas"],Particulas)
-    mapa = Mapa(parametros["GridBlocos"],parametros["GridBiomas"],GridToDic(parametros["GridObjetos"]))
-    camera = CameraMundo(18)
-    terminal = Terminal()
+        Particulas = BurstManager(70,debug=True)
+        player = Player(info["Server"]["Player"]["dados"],Outros["SkinsTodas"],Particulas)
+        mapa = Mapa(parametros["GridBlocos"],parametros["GridBiomas"],GridToDic(parametros["GridObjetos"]))
+        camera = CameraMundo(18)
+        terminal = Terminal()
 
-    if mapa.GridBiomas[player.Loc[0]][player.Loc[1]] == 3:
+        parametros.update({"Player": player})
+
+        # Cria e inicia thread da verificação
+        threading.Thread(target=thread_verificacao_continua, args=(parametros,), daemon=True).start()
+        threading.Thread(target=AtualizarColisaoProxima, args=(mapa,player,parametros), daemon=True).start()
+        threading.Thread(target=GerenciadorDePokemonsProximos, args=(parametros, mapa), daemon=True).start()
+        threading.Thread(target=LoopRemoveBaus, args=(parametros,), daemon=True).start()
+
+    else:
+        parametros = info["ParametrosMundo"]
+        parametros.update({
+                "Confronto": {
+                "ConfrontoIniciado": False,
+                "Batalhando": False,
+                "BatalhaSimples": False,
+                "AlvoConfronto": None,
+            }})
+        
+        info["AcabouDeSairConfronto"] = False
+
+    if mapa.GridBiomas[round(player.Loc[0])][round(player.Loc[1])] == 3:
         Musica("Neve")
-    if mapa.GridBiomas[player.Loc[0]][player.Loc[1]] == 4:
+    if mapa.GridBiomas[round(player.Loc[0])][round(player.Loc[1])] == 4:
         Musica("Deserto")
     else:
         Musica("Vale")
-
-    parametros.update({"Player": player})
-
-    # Cria e inicia thread da verificação
-    threading.Thread(target=thread_verificacao_continua, args=(parametros,), daemon=True).start()
-    threading.Thread(target=AtualizarColisaoProxima, args=(mapa,player,parametros), daemon=True).start()
-    threading.Thread(target=GerenciadorDePokemonsProximos, args=(parametros, mapa), daemon=True).start()
-    threading.Thread(target=LoopRemoveBaus, args=(parametros,), daemon=True).start()
 
     while estados["Mundo"]:
         parametros["delta_time"] = relogio.tick(config["FPS"]) / 1000  # Em segundos

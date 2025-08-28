@@ -9,6 +9,7 @@ from Codigo.Funções.FunçõesConsumiveis import ConsumiveisDic
 
 df = pd.read_csv("Dados/Pokemons.csv")
 dfa = pd.read_csv("Dados/Ataques.csv")
+dfml = pd.read_csv("Dados/MoveList.csv")
 
 berries = [
     "Caxi Berry",
@@ -50,6 +51,9 @@ IGNORAR = {"IV", "IV_Vida", "IV_Atk", "IV_Def", "IV_SpA", "IV_SpD", "IV_Vel",
 def GeraPokemonBatalha(pokemon):
     dados = {}
 
+    if pokemon is None:
+        return
+
     # Status principais (base, normal e vida extra com max) como float
     for stat in STATUS_PRINCIPAIS:
         val = float(pokemon[stat])
@@ -67,6 +71,7 @@ def GeraPokemonBatalha(pokemon):
     dados["Energia"] = float(dados["Ene"]) / 2
     dados["Vamp"] = 0.0
     dados["Asse"] = 0.0
+    dados["Barreira"] = 0
 
     dados["Build"] = pokemon["Build"]
     dados["Amizade"] = float(pokemon["Amizade"])   # força amizade como float
@@ -297,48 +302,7 @@ def MaterializarPokemon(Dados):
         pokemon["XP"] = 0
     
     while None in pokemon["MoveList"]:
-        dfa["Code"] = pd.to_numeric(dfa["Code"], errors="coerce")
-        r = dfa[dfa["Code"].between(1, 451)].sample(1).iloc[0]
-
-        novoataque = {
-            "nome": r["Ataque"],
-            "tipo": r["Tipo"],
-            "custo": r["Custo"],
-            "dano": r["Dano"],
-            "estilo": r["Estilo"],
-            "assertividade": r["Assertividade"],
-            "alvo": r["Alvo"],
-            "descrição": r["Descrição"],
-        }
-
-        for i, mov in enumerate(pokemon["MoveList"]):
-            if mov is None:
-                pokemon["MoveList"][i] = novoataque
-                break  # sai do for e volta pro while, garantindo preencher 1 de cada vez
-    
-    for i, atk in enumerate(pokemon["MoveList"]):
-        if isinstance(atk,str):
-            r = dfa[dfa["Nome"] == atk]
-        elif isinstance(atk,int):
-            r = dfa[dfa["Code"] == atk]
-        else:
-            r = None
-        if r is not None:
-            novoataque = {
-            "nome": r["Ataque"],
-            "tipo": r["Tipo"],
-            "custo": r["Custo"],
-            "dano": r["Dano"],
-            "estilo": r["Estilo"],
-            "assertividade": r["Assertividade"],
-            "alvo": r["Alvo"],
-            "descrição": r["Descrição"],
-            }
-
-            for i, mov in enumerate(pokemon["MoveList"]):
-                if mov is None:
-                    pokemon["MoveList"][i] = novoataque
-                    break
+        GanhaAtaque(pokemon)
 
     # 4) Recalcular Total ao final da materialização
     _recalcular_total(pokemon)
@@ -389,10 +353,69 @@ def SubirNivel(pokemon):
         pokemon["Amizade"] = min(100, int(pokemon.get("Amizade", 0)) + 1)
 
     if random.randint(0, 100) > 75:
-        dfa["Code"] = pd.to_numeric(dfa["Code"], errors="coerce")
-        r = dfa[dfa["Code"].between(1, 451)].sample(1).iloc[0]
+        GanhaAtaque(pokemon)
 
-        novoataque = {
+    # Recalcula o Total após o up
+    _recalcular_total(pokemon)
+    return pokemon
+
+def GanhaAtaque(pokemon):
+    # todos os moves possíveis do próprio Pokémon
+    try:
+        all_moves = dfml[pokemon["Nome"]].dropna().tolist()
+        print(all_moves)
+
+        df["Linhagem"] = pd.to_numeric(df["Linhagem"], errors="coerce")
+        
+        def tenta_converter(x):
+            try:
+                return int(x)  # ou float(x)
+            except ValueError:
+                return x   # se não for número, mantém original
+
+        df["Estagio"] = df["Estagio"].apply(tenta_converter)
+
+        # linhagem e estágio atuais
+        linhagem_atual = int(float(pokemon["Linhagem"]))
+        estagio_atual  = int(float(pokemon["Estagio"]))
+
+        # garante que sejam numéricos
+        df["Estagio"]  = pd.to_numeric(df["Estagio"], errors="coerce")
+        df["Linhagem"] = pd.to_numeric(df["Linhagem"], errors="coerce")
+
+        # pré-evoluções (mesma linhagem, estágio menor)
+        familia_inferior = df[
+        (df["Linhagem"] == linhagem_atual) & 
+        (df["Estagio"].apply(lambda x: isinstance(x,int)) & (df["Estagio"] < estagio_atual))
+        ]
+
+        familia_inferior = familia_inferior.sort_values(by="Estagio", ascending=False)
+
+        familia_inferior_lista = familia_inferior.to_dict("records")
+
+        i = 0
+        ChanceAlta = all_moves
+        ChanceMedia = []
+        ChanceBaixa = []
+        for membro in familia_inferior_lista:
+            i += 1
+            MovesMembro = dfml[membro["Nome"]].dropna().tolist()
+            if i < 2:
+                ChanceAlta = [x for x in all_moves if x not in MovesMembro]
+                ChanceMedia = [x for x in all_moves if x in MovesMembro]
+            else:
+                ChanceMedia = [x for x in ChanceMedia if x not in MovesMembro]
+                ChanceBaixa = [x for x in ChanceMedia if x in MovesMembro]
+        
+        PoolFinal = ChanceAlta + ChanceAlta + ChanceAlta + ChanceMedia + ChanceMedia + ChanceBaixa
+
+        ataque = random.choice(PoolFinal)
+
+        r = dfa[dfa["Ataque"] == ataque].iloc[0]
+    except:
+        r = dfa[dfa["Code"] == random.randint(1,450)].iloc[0]
+
+    novoataque = {
             "nome": r["Ataque"],
             "tipo": r["Tipo"],
             "custo": r["Custo"],
@@ -402,29 +425,22 @@ def SubirNivel(pokemon):
             "alvo": r["Alvo"],
             "descrição": r["Descrição"],
         }
+    
+    if None in pokemon["MoveList"]:
+        for i, mov in enumerate(pokemon["MoveList"]):
+            if mov is None:
+                pokemon["MoveList"][i] = novoataque
+                break  
 
-        if None in pokemon["MoveList"]:
-            for i, mov in enumerate(pokemon["MoveList"]):
-                if mov is None:
-                    pokemon["MoveList"][i] = novoataque
-                    break  # garante que só preenche o primeiro None encontrado
-        elif None in pokemon["Memoria"]:
-            for i, mov in enumerate(pokemon["Memoria"]):
-                if mov is None:
-                    pokemon["Memoria"][i] = novoataque
-                    break
-
-    # Recalcula o Total após o up
-    _recalcular_total(pokemon)
-    return pokemon
+    elif None in pokemon["Memoria"]:
+        for i, mov in enumerate(pokemon["Memoria"]):
+            if mov is None:
+                pokemon["Memoria"][i] = novoataque
+                break
 
 class Pokemon:
     def __init__(self, Loc, string_dados, extra, Imagens, Animacoes, Parametros):
-        """
-        - Capturado e Fugiu: não são True/False; vêm como False ou número (1..30).
-          -> número aciona o gatilho da animação (captura/fuga).
-        - Movimento: ocorre automaticamente quando LocAlvo != Loc.
-        """
+
         # ---- dados base / referências externas ----
         dados = desserializar_pokemon(string_dados)
         self.Dados = dados

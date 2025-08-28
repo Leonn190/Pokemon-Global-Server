@@ -45,17 +45,25 @@ def escurecer_cor(cor, fator=0.8):
     """Retorna uma cor mais escura baseada em um fator."""
     return pygame.Color(int(cor.r * fator), int(cor.g * fator), int(cor.b * fator))
 
-def DesenharPlayer(tela, imagem_corpo, posicao):
+def DesenharPlayer(tela, imagem_corpo, posicao, nome=None, Fonte=None, AnguloCongelado=None):
     x, y = posicao
 
     # 1) Cor do braço: calcula só uma vez por imagem
     cor_braco = CacheExtrairCor(imagem_corpo)
 
-    mouse_pos = pygame.mouse.get_pos()
+    # Ângulo: mouse OU congelado
+    if AnguloCongelado is not None:
+        ang = float(AnguloCongelado)
+        # se parecer radianos (|θ| <= ~2π), converte pra graus
+        if abs(ang) <= (math.tau * 1.05):
+            angulo = math.degrees(ang)
+        else:
+            angulo = ang
+    else:
+        mouse_pos = pygame.mouse.get_pos()
+        dx, dy = mouse_pos[0] - x, mouse_pos[1] - y
+        angulo = math.degrees(math.atan2(dy, dx))
 
-    # Ângulo entre boneco e mouse
-    dx, dy = mouse_pos[0] - x, mouse_pos[1] - y
-    angulo = math.degrees(math.atan2(dy, dx))
     angulo_correcao = angulo - 90
     angulo_rad = math.radians(angulo)
 
@@ -86,7 +94,7 @@ def DesenharPlayer(tela, imagem_corpo, posicao):
     depth_y = sin_a * profundidade
 
     pos_braco_esquerdo = (x - offset_x + depth_x, y - offset_y + depth_y)
-    pos_braco_direito = (x + offset_x + depth_x, y + offset_y + depth_y)
+    pos_braco_direito  = (x + offset_x + depth_x, y + offset_y + depth_y)
 
     cor_borda = escurecer_cor(cor_braco)
 
@@ -95,6 +103,30 @@ def DesenharPlayer(tela, imagem_corpo, posicao):
 
     # Desenha os braços com borda
     pygame.draw.circle(tela, cor_borda, pos_braco_esquerdo, raio_borda)
-    pygame.draw.circle(tela, cor_braco, pos_braco_esquerdo, raio)
-    pygame.draw.circle(tela, cor_borda, pos_braco_direito, raio_borda)
-    pygame.draw.circle(tela, cor_braco, pos_braco_direito, raio)
+    pygame.draw.circle(tela, cor_braco,  pos_braco_esquerdo, raio)
+    pygame.draw.circle(tela, cor_borda,  pos_braco_direito,  raio_borda)
+    pygame.draw.circle(tela, cor_braco,  pos_braco_direito,  raio)
+
+    # 3) Nome flutuante (opcional)
+    if nome:
+        # usa a fonte passada; se vier None, tenta um fallback comum
+        fonte_nome = Fonte
+
+        if fonte_nome:
+            # movimento senoidal vertical
+            t_nome = pygame.time.get_ticks() / 600.0  # ritmo mais suave
+            amplit  = 6
+            y_base  = corpo_rect.top - 10
+            y_float = int(y_base + math.sin(t_nome) * amplit)
+
+            texto    = str(nome)
+            surf_txt = fonte_nome.render(texto, True, (255, 255, 255))
+            surf_brd = fonte_nome.render(texto, True, (0, 0, 0))
+
+            rect_txt = surf_txt.get_rect(center=(int(x), y_float))
+
+            # contorno simples (4 direções)
+            for ox, oy in ((-2, 0), (2, 0), (0, -2), (0, 2)):
+                tela.blit(surf_brd, rect_txt.move(ox, oy))
+            tela.blit(surf_txt, rect_txt) 
+            

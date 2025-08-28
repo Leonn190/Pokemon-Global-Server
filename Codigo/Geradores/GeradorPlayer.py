@@ -81,7 +81,7 @@ class Player:
         angulo = math.degrees(math.atan2(dy, dx))
         angulo_correcao = angulo - 90
         angulo_rad = math.radians(angulo)
-        self.angulo = angulo
+        self.Angulo = angulo
 
         # Imagem e cor do corpo (cacheadas)
         imagem_corpo = self.SkinRedimensionada
@@ -456,6 +456,7 @@ class Player:
                     parametros["Confronto"]["ConfrontoIniciado"] = True
                     parametros["Confronto"]["BatalhaSimples"] = True
                     parametros["Confronto"]["AlvoConfronto"] = pokemon
+                    parametros["PokemonsRemover"].append(pokemon.Dados["ID"])
 
     def AdicionarAoInventario(self, item):
         """

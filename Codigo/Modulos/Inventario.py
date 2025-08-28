@@ -176,19 +176,21 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
 
         cur_y += altura_por_time + espacamento_times
 
-        def freeze(obj):
-            if isinstance(obj, dict):
-                return tuple(sorted((k, freeze(v)) for k, v in obj.items()))
-            if isinstance(obj, list):
-                return tuple(freeze(v) for v in obj)
-            return obj
+     # ---- snapshot de equipes como IDs (ordem preservada) ----
+    def snapshot_equipes_ids(equipes):
+        # lista de listas de dicts -> tupla de tuplas de IDs
+        snapshot = []
+        for equipe in equipes:
+            ids = tuple(m["ID"] for m in equipe if m is not None)
+            snapshot.append(ids)
+        return tuple(snapshot)
 
-    if (
-        freeze(pokemons_cache) != freeze(player.Pokemons)
-        or freeze(times_cache) != freeze(player.Equipes)
-    ):
-        times_cache = copy.deepcopy(player.Equipes)
-        pokemons_cache = copy.deepcopy(player.Pokemons)
+    # ---- comparação e atualização de caches ----
+    times_now_ids = snapshot_equipes_ids(player.Equipes)
+
+    if (pokemons_cache != player.Pokemons) or (times_cache != times_now_ids):
+        times_cache    = times_now_ids
+        pokemons_cache = copy.deepcopy(player.Pokemons)  # snapshot pra detectar mutações in-place
         arrastaveis_pokemons.clear()
 
         # arrastaveis para grade principal
@@ -239,7 +241,7 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
 
         # Atualizar e desenhar arrastáveis
     for arr in arrastaveis_pokemons:
-        if parametros["PokemonSelecionado"] is None:
+        if parametros["PokemonSelecionado"] is not None:
             arr.esta_arrastando = False
         arr.atualizar(eventos)
         arr.arrastar(pygame.mouse.get_pos())
