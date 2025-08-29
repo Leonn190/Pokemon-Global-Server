@@ -3,7 +3,7 @@ import pygame, random, time, re
 from Codigo.Modulos.Outros import Clarear, Escurecer
 from Codigo.Modulos.Paineis import PainelPokemonBatalha, CriarSurfacePainelAtaque, PainelAcao, PAINEL_ATAQUE_CACHE
 from Codigo.Prefabs.BotoesPrefab import Botao_Selecao, Botao, Botao_invisivel, Botao_Tecla
-from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda, Animar, caixa_de_texto, Fluxo
+from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda, Animar, caixa_de_texto, Fluxo, Pulso
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Sonoridade import Musica, AtualizarMusica, tocar
 from Codigo.Geradores.GeradorPokemon import GerarMatilha, CarregarAnimacaoPokemon, GeraPokemonBatalha, CarregarPokemon
@@ -42,12 +42,12 @@ BG = {}
 
 # animações de entrada (deslizarem para a tela)
 _anima_t0 = None
-_anima_dur_ms = 450
+_anima_dur_ms = 460
 anima = {
     "_anima_painel_aliado": None,
     "_anima_painel_inimigo": None,
     "_anima_painel_conteudo": None,
-    "Y1": 895, "Y2": 1080,
+    "Y1": 900, "Y2": 1080,
     "Y3": -200, "Y4": 0,
     "Y5": 895, "Y6": 1080,
 
@@ -56,6 +56,8 @@ anima = {
 }
 
 Acao_surface_cache = []
+AliadoSelecionadoCache = None
+InimigoSelecionadoCache = None
 
 # ======== ESTADOS GLOBAIS ========
 EstadoEditorLog = {}            # estados genéricos (hover/click, etc. — se precisar)
@@ -178,6 +180,73 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
     elif isinstance(atk_sel, str):
         alvo_info = _parse_alvo_str(atk_sel)
 
+    # >>> ADIÇÃO 1: helpers de auto-alvo
+    def _apos_primeiro_alvo():
+        if parametros.get("AtacanteSelecionado") is None and aliado_sel:
+            parametros["AtacanteSelecionado"] = _indice_do_aliado(aliado_sel)
+        if parametros.get("MovimentoSelecionado") is None:
+            parametros["MovimentoSelecionado"] = atk_sel
+
+    def _finaliza_auto():
+        parametros["__alvo_finalizado_ok"] = True
+        parametros["__ja_limpei_estado"]   = True
+        parametros["ModoAlvificando"]      = False
+        slots_high["A"].clear()
+        slots_high["I"].clear()
+
+    def _pos_aliado_atual():
+        # tenta pelo AliadoSelecionado; se não houver, usa AtacanteSelecionado -> Pos
+        if aliado_sel and isinstance(aliado_sel, dict):
+            try:
+                return int(aliado_sel.get("Pos", 1))
+            except Exception:
+                pass
+        atk_idx = parametros.get("AtacanteSelecionado")
+        equipe  = parametros.get("EquipeAliada") or []
+        try:
+            if atk_idx is not None and 0 <= int(atk_idx) < len(equipe):
+                return int((equipe[int(atk_idx)] or {}).get("Pos", 1))
+        except Exception:
+            pass
+        return 1
+
+    # >>> ADIÇÃO 2: auto-seleção quando o movimento NÃO requer escolha manual
+    if modo_alvo:
+        alvo_raw = None
+        if isinstance(atk_sel, dict):
+            alvo_raw = (atk_sel.get("Alvo") or atk_sel.get("alvo"))
+        elif isinstance(atk_sel, str):
+            alvo_raw = atk_sel  # pode ser o próprio rótulo do alvo
+        # normaliza texto
+        alvo_txt = (str(alvo_raw).strip().lower() if alvo_raw is not None else "")
+
+        # grupos que pulam a escolha manual (guardamos o TEXTO como alvo):
+        tokens_all = {
+            "all", "todos", "all inimigos", "todos inimigos",
+            "all aliados", "todos aliados", "aleatorio", "aleatório", "random"
+        }
+        tokens_self = {"sem alvo", "sem", "self", "próprio", "proprio"}
+
+        if alvo_txt in tokens_all and alvo_raw:
+            # Apenas coloca o que está escrito como alvo e finaliza
+            if alvo_raw not in parametros["AlvosSelecionados"]:
+                parametros["AlvosSelecionados"].append(alvo_raw)
+            _apos_primeiro_alvo()
+            _finaliza_auto()
+            # não prossegue para highlights; retorna cedo
+            return
+
+        if alvo_txt in tokens_self:
+            # Alvo = o próprio pokémon aliado (casa dele)
+            pos = max(1, min(9, int(_pos_aliado_atual())))
+            code = f"A{pos}"
+            if code not in parametros["AlvosSelecionados"]:
+                parametros["AlvosSelecionados"].append(code)
+            _apos_primeiro_alvo()
+            _finaliza_auto()
+            return
+    # <<< FIM DAS ADIÇÕES DE AUTO-ALVO
+
     highlight_A, highlight_I = set(), set()
     if modo_alvo:
         if mov_especial == 1:
@@ -234,6 +303,7 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                 return i
         return None
 
+    # (mantém _apos_primeiro_alvo e _checar_finalizacao como estavam)
     def _apos_primeiro_alvo():
         if parametros.get("AtacanteSelecionado") is None and aliado_sel:
             parametros["AtacanteSelecionado"] = _indice_do_aliado(aliado_sel)
@@ -256,7 +326,7 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
 
     # ======== Aliados (esquerda) ========
     for i, rect in enumerate(_slots_esquerda):
-        poke = next((p for p in parametros.get("AliadosAtivos", []) if p.get("Pos") == i + 1), None)
+        poke = next((p for p in parametros.get("AliadosAtivos", []) if p and p.get("Pos") == i + 1), None)
         rect_anim = rect.move(dx_esq, 0)
         slots_rects["A"][i] = rect_anim.copy()
 
@@ -292,22 +362,26 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                     Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_A_cel, parametros))
         else:
             # modo normal: seleção/deseleção COM animação do painel aliado
-            func_esq_ali = [
-                (lambda p=poke: parametros.update({"AliadoSelecionado": p})),
-                (lambda a=anima: a.update({
-                    "_anima_painel_aliado": pygame.time.get_ticks(),
-                    "Y1": 1080,  # de onde sai
-                    "Y2": 895,   # alvo (par)
-                })),
-            ]
-            desf_esq_ali = [
-                (lambda: parametros.update({"AliadoSelecionado": None})),
-                (lambda a=anima: a.update({
-                    "_anima_painel_aliado": pygame.time.get_ticks(),
-                    "Y1": 895,   # de onde sai
-                    "Y2": 1080,  # alvo (par)
-                })),
-            ]
+            func_esq_ali = None
+            desf_esq_ali = None
+            if poke is not None:
+                func_esq_ali = [
+                    (lambda p=poke: parametros.update({"AliadoSelecionado": p})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_aliado": pygame.time.get_ticks(),
+                        "Y1": 1080,  # de onde sai
+                        "Y2": 900,   # alvo (par)
+                    })),
+                ]
+                desf_esq_ali = [
+                    (lambda: parametros.update({"AliadoSelecionado": None})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_aliado": pygame.time.get_ticks(),
+                        "Y1": 900,   # de onde sai
+                        "Y2": 1080,  # alvo (par)
+                    })),
+                ]
+
             Botao_Selecao(
                 tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
                 cor_fundo=_slot_skin_aliado, cor_borda_normal=(0, 0, 0),
@@ -320,7 +394,7 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
 
     # ======== Inimigos (direita) ========
     for i, rect in enumerate(_slots_direita):
-        poke = next((p for p in parametros.get("InimigosAtivos", []) if p.get("Pos") == i + 1), None)
+        poke = next((p for p in parametros.get("InimigosAtivos", []) if p and p.get("Pos") == i + 1), None)
         rect_anim = rect.move(dx_dir, 0)
         slots_rects["I"][i] = rect_anim.copy()
 
@@ -350,22 +424,26 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                     Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_I_cel, parametros))
         else:
             # modo normal: seleção/deseleção COM animação do painel inimigo
-            func_esq_ini = [
-                (lambda p=poke: parametros.update({"InimigoSelecionado": p})),
-                (lambda a=anima: a.update({
-                    "_anima_painel_inimigo": pygame.time.get_ticks(),
-                    "Y3": -200,  # de onde sai
-                    "Y4": 0,     # alvo (par)
-                })),
-            ]
-            desf_esq_ini = [
-                (lambda: parametros.update({"InimigoSelecionado": None})),
-                (lambda a=anima: a.update({
-                    "_anima_painel_inimigo": pygame.time.get_ticks(),
-                    "Y3": 0,     # de onde sai
-                    "Y4": -200,  # alvo (par)
-                })),
-            ]
+            func_esq_ini = None
+            desf_esq_ini = None
+            if poke is not None:
+                func_esq_ini = [
+                    (lambda p=poke: parametros.update({"InimigoSelecionado": p})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_inimigo": pygame.time.get_ticks(),
+                        "Y3": -200,  # de onde sai
+                        "Y4": 0,     # alvo (par)
+                    })),
+                ]
+                desf_esq_ini = [
+                    (lambda: parametros.update({"InimigoSelecionado": None})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_inimigo": pygame.time.get_ticks(),
+                        "Y3": 0,     # de onde sai
+                        "Y4": -200,  # alvo (par)
+                    })),
+                ]
+
             Botao_Selecao(
                 tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
                 cor_fundo=_slot_skin_inimigo, cor_borda_normal=(0, 0, 0),
@@ -379,18 +457,15 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
 def Desenhar_Botoes_Combate(tela, parametros):
     BTN = 70
     BORDER = 3
-    SW, SH = 1920, 1080  # layout fixo
+    SW, SH = 1920, 1080
 
-    # recursos globais esperados: Fontes, Icones, Pokemons, CarregarPokemon, pygame
     fonte = Fontes[30]
-
-    # eventos/estado para Botao (normal)
     eventos = parametros.get("Eventos") or parametros.get("eventos") or []
     estado_clique = parametros.setdefault("EstadoBotoesCombateSimples", {})
 
-    # ---------- helpers locais ----------
+    # ===== helpers =====
     def _blit_center_scaled(rect_tuple, surf, pad=6):
-        if not isinstance(surf, pygame.Surface):
+        if not surf or not hasattr(surf, "get_size"):
             return
         rx, ry, rw, rh = rect_tuple
         max_w = max(1, rw - pad * 2)
@@ -408,37 +483,18 @@ def Desenhar_Botoes_Combate(tela, parametros):
     def _sprite_por_nome(nome_key):
         if not nome_key:
             return None
-        spr = Pokemons.get(nome_key)
+        key = str(nome_key).lower()
+        spr = Pokemons.get(key)
         if spr is None:
-            spr = CarregarPokemon(nome_key, Pokemons)
+            spr = CarregarPokemon(key, Pokemons)
         return spr
-
-    # ---------- dados ----------
-    equipe_a = parametros.get("EquipeAliada", [])
-    reserva_a = [p for p in equipe_a if not p.get("Ativo", True)]
-
-    equipe_i = (parametros.get("EquipeInimiga")
-                or parametros.get("EquipeInimigos")
-                or [])
-    reserva_i = [p for p in equipe_i if not p.get("Ativo", True)]
-
-    # controle de alvo/estado
-    modo_alvo = bool(parametros.get("ModoAlvificando"))
-    atk_sel   = parametros.get("AtaqueAliadoSelecionado")
-    troca_ativa = (atk_sel == 2)
-
-    # para finalizar igual Arena quando clica no alvo de troca
-    def _finaliza_alvo_reserva():
-        parametros["__alvo_finalizado_ok"] = True
-        parametros["__ja_limpei_estado"]   = True
-        parametros["ModoAlvificando"]      = False
 
     def _indice_do_aliado(aliado_dict):
         equipe = parametros.get("EquipeAliada") or []
         try:
             pos = int(aliado_dict.get("Pos", -1))
             for i, p in enumerate(equipe):
-                if int(p.get("Pos", -2)) == pos:
+                if p and int(p.get("Pos", -2)) == pos:
                     return i
         except Exception:
             pass
@@ -447,17 +503,59 @@ def Desenhar_Botoes_Combate(tela, parametros):
                 return i
         return None
 
-    # ======== GRUPO ALIADOS (inferior esquerdo) ========
+    def _finaliza_alvo_reserva():
+        parametros["__alvo_finalizado_ok"] = True
+        parametros["__ja_limpei_estado"] = True
+        parametros["ModoAlvificando"] = False
+
+    # ===== preparar SlotsRects / SlotsDestaque para magnetismo das reservas =====
+    slots_rects = parametros.setdefault("SlotsRects", {"A": [None]*9, "I": [None]*9})
+    slots_high  = parametros.setdefault("SlotsDestaque", {"A": set(), "I": set()})
+    # garante espaço para 3 reservas após os 9 slots (índices 9,10,11)
+    for lado in ("A", "I"):
+        arr = slots_rects.get(lado)
+        if not isinstance(arr, list):
+            slots_rects[lado] = [None]*9
+        if len(slots_rects[lado]) < 12:
+            slots_rects[lado].extend([None] * (12 - len(slots_rects[lado])))
+    # limpa highlights antigos de reserva (≥9), preservando 0..8 da arena
+    slots_high["A"] = set(idx for idx in (slots_high.get("A") or set()) if idx < 9)
+    slots_high["I"] = set(idx for idx in (slots_high.get("I") or set()) if idx < 9)
+    # zera rects de reserva (serão reescritos abaixo)
+    for j in range(9, 12):
+        slots_rects["A"][j] = None
+        slots_rects["I"][j] = None
+
+    # ===== dados (filtrando None) =====
+    equipe_a_raw = (parametros.get("EquipeAliada") or [])
+    equipe_i_raw = (parametros.get("EquipeInimiga") or parametros.get("EquipeInimigos") or [])
+    equipe_a = [p for p in equipe_a_raw if p is not None]
+    equipe_i = [p for p in equipe_i_raw if p is not None]
+
+    # reservas = itens válidos e não ativos
+    reserva_a = [p for p in equipe_a if not p.get("Ativo", True)]
+    reserva_i = [p for p in equipe_i if not p.get("Ativo", True)]
+
+    parametros.setdefault("AlvosSelecionados", [])
+
+    modo_alvo  = bool(parametros.get("ModoAlvificando"))
+    aliado_sel = parametros.get("AliadoSelecionado")
+    atk_sel    = parametros.get("AtaqueAliadoSelecionado")
+    troca_ativa = (atk_sel == 2)
+
+    cor_amarelo = Cores["amarelo"]
+
+    # ===== ALIADOS (baixo) =====
     base_ax = 0
     base_ay = SH - BTN
     rects_a = [
-        (base_ax + BTN * 0, base_ay, BTN, BTN),  # Fugir (normal)
+        (base_ax + BTN * 0, base_ay, BTN, BTN),  # Fugir
         (base_ax + BTN * 1, base_ay, BTN, BTN),  # Reserva A0
         (base_ax + BTN * 2, base_ay, BTN, BTN),  # Reserva A1
         (base_ax + BTN * 3, base_ay, BTN, BTN),  # Reserva A2
     ]
 
-    # 0) Fugir — BOTAO (normal)
+    # Fugir (sempre botão simples)
     Botao(
         tela, "", rects_a[0],
         cor_normal=(200, 200, 200), cor_borda=(0, 0, 0), cor_passagem=(255, 255, 255),
@@ -468,18 +566,26 @@ def Desenhar_Botoes_Combate(tela, parametros):
     ic_fugir = Icones.get("fugir")
     _blit_center_scaled(rects_a[0], ic_fugir, pad=6)
 
-    # 1..3) Reservas Aliadas
+    # Reservas Aliadas
     for i in range(3):
         r = rects_a[i + 1]
         tem_poke = i < len(reserva_a)
-        pisc = (modo_alvo and troca_ativa and tem_poke)  # só Troca, só aliados
 
-        if modo_alvo and troca_ativa:
-            # igual Arena: botão falso + piscância + invisível com guarda de energia
+        # MAGNETISMO: salva o Rect da reserva A em SlotsRects["A"][9+i]
+        rect_obj_a = pygame.Rect(r)
+        slots_rects["A"][9 + i] = rect_obj_a
+        # se estiver em alvo+troca e há poke, marca highlight (9..11)
+        if modo_alvo and troca_ativa and tem_poke:
+            slots_high["A"].add(9 + i)
+
+        if modo_alvo:
+            # Seleção falso; destaque só se Troca(2) e existe poke.
+            pisc = tem_poke and troca_ativa
             Botao_Selecao(
                 tela=tela, texto=("-" if not tem_poke else ""), espaço=r, Fonte=fonte,
                 cor_fundo=(200, 200, 200),
-                cor_borda_normal=(Cores["amarelo"] if pisc else (0, 0, 0)),
+                cor_borda_normal=(cor_amarelo if pisc else (0, 0, 0)),
+                cor_borda_esquerda=None, cor_borda_direita=None,
                 cor_passagem=None, grossura=BORDER,
                 id_botao=f"resA-{i}",
                 estado_global=EstadoArenaFalso, eventos=None,
@@ -487,124 +593,131 @@ def Desenhar_Botoes_Combate(tela, parametros):
             )
             if tem_poke and pisc:
                 def _acao_resA(ii=i):
-                    alvos = parametros.setdefault("AlvosSelecionados", [])
-                    code = f"RA{ii+1}"  # reserva aliada
+                    alvos = parametros["AlvosSelecionados"]
+                    code = f"RA{ii+1}"
                     if code not in alvos:
                         alvos.append(code)
-
-                    # setar atacante e movimento (mesma lógica da Arena)
                     if parametros.get("MovimentoSelecionado") is None:
                         parametros["MovimentoSelecionado"] = 2
-                    ali = parametros.get("AliadoSelecionado")
-                    if ali is not None and parametros.get("AtacanteSelecionado") is None:
-                        idx = _indice_do_aliado(ali)
+                    if parametros.get("AtacanteSelecionado") is None and aliado_sel:
+                        idx = _indice_do_aliado(aliado_sel)
                         if idx is not None:
                             parametros["AtacanteSelecionado"] = idx
-
                     _finaliza_alvo_reserva()
-
                 Botao_invisivel(r, _wrap_energy_guard(_acao_resA, parametros))
 
         else:
-            # modo normal: usa AliadoSelecionado (sem var reserva separada) + anima igual Arena
-            selecionado = (parametros.get("AliadoSelecionado") is reserva_a[i]) if tem_poke else False
+            # Seleção normal + anima (listas de lambdas; sem helpers)
+            print(5)
+            selecionado = (tem_poke and (parametros.get("AliadoSelecionado") is reserva_a[i]))
             cor_borda = (Cores["azul"] if selecionado else (0, 0, 0))
 
-            def _seleciona_resA(ii=i):
-                if ii >= len(reserva_a):
-                    return
-                atual = parametros.get("AliadoSelecionado")
-                novo  = reserva_a[ii]
-                if atual is novo:
-                    # desseleciona + anima saída
-                    parametros["AliadoSelecionado"] = None
-                    anima.update({
+            func_esq = None
+            desf_esq = None
+            if tem_poke:
+                print(6)
+                func_esq = [
+                    (lambda ii=i: parametros.update({"AliadoSelecionado": reserva_a[ii]})),
+                    (lambda a=anima: a.update({
                         "_anima_painel_aliado": pygame.time.get_ticks(),
-                        "Y1": 895,   # onde está
-                        "Y2": 1080,  # sai
-                    })
-                else:
-                    # seleciona + anima entrada
-                    parametros["AliadoSelecionado"] = novo
-                    anima.update({
+                        "Y1": 1080,
+                        "Y2": 895,
+                    })),
+                ]
+                desf_esq = [
+                    lambda: parametros.update({"AliadoSelecionado": None}),
+                    lambda a=anima: a.update({
                         "_anima_painel_aliado": pygame.time.get_ticks(),
-                        "Y1": 1080,  # entra de baixo
-                        "Y2": 895,   # alvo
-                    })
+                        "Y1": 895,
+                        "Y2": 1080,
+                    })]
 
             Botao_Selecao(
                 tela=tela, texto=("-" if not tem_poke else ""), espaço=r, Fonte=fonte,
                 cor_fundo=(200, 200, 200), cor_borda_normal=cor_borda,
+                cor_borda_esquerda=Cores["azul"],
+                cor_borda_direita=None,
                 cor_passagem=(255, 255, 255), grossura=BORDER,
                 id_botao=f"resA-{i}",
                 eventos=eventos, estado_global=EstadoArenaBotoesAliado,
-                funcao_esquerdo=[_wrap_energy_guard(_seleciona_resA, parametros)],  # guarda de energia tb aqui
-                desfazer_esquerdo=None
+                funcao_esquerdo=func_esq,
+                desfazer_esquerdo=desf_esq
             )
 
         if tem_poke:
-            nome_key = reserva_a[i].get("Nome", "")
-            spr = _sprite_por_nome(nome_key)
+            spr = _sprite_por_nome(reserva_a[i].get("Nome", ""))
             _blit_center_scaled(r, spr, pad=4)
 
-    # ======== GRUPO INIMIGOS (superior direito) ========
+    # ===== INIMIGOS (topo) =====
     base_ix = SW - BTN * 4
     base_iy = 0
     rects_i = [
-        (base_ix + BTN * 0, base_iy, BTN, BTN),  # Inimigo reserva(?) 0 (visual idêntico)
-        (base_ix + BTN * 1, base_iy, BTN, BTN),  # Inimigo reserva 1
-        (base_ix + BTN * 2, base_iy, BTN, BTN),  # Inimigo reserva 2
-        (base_ix + BTN * 3, base_iy, BTN, BTN),  # Trégua (normal)
+        (base_ix + BTN * 0, base_iy, BTN, BTN),
+        (base_ix + BTN * 1, base_iy, BTN, BTN),
+        (base_ix + BTN * 2, base_iy, BTN, BTN),
+        (base_ix + BTN * 3, base_iy, BTN, BTN),  # Trégua
     ]
 
-    # 0..2) Seleções inimigos — MODO NORMAL apenas (você pediu destaque só nas aliadas)
     for i in range(3):
         r = rects_i[i]
         tem_poke = i < len(reserva_i)
 
-        # usar InimigoSelecionado (sem “reserva” separado) + anima igual Arena
-        selecionado = (parametros.get("InimigoSelecionado") is reserva_i[i]) if tem_poke else False
-        cor_borda = (Cores["vermelho"] if selecionado else (0, 0, 0))
+        # MAGNETISMO: salva o Rect da reserva I em SlotsRects["I"][9+i]
+        rect_obj_i = pygame.Rect(r)
+        slots_rects["I"][9 + i] = rect_obj_i
+        # (sem highlight para inimigos na Troca)
 
-        def _seleciona_resI(ii=i):
-            if ii >= len(reserva_i):
-                return
-            atual = parametros.get("InimigoSelecionado")
-            novo  = reserva_i[ii]
-            if atual is novo:
-                # desseleciona + anima saída inimigo
-                parametros["InimigoSelecionado"] = None
-                anima.update({
-                    "_anima_painel_inimigo": pygame.time.get_ticks(),
-                    "Y3": 0,     # onde está
-                    "Y4": -200,  # sai para cima
-                })
-            else:
-                # seleciona + anima entrada inimigo
-                parametros["InimigoSelecionado"] = novo
-                anima.update({
-                    "_anima_painel_inimigo": pygame.time.get_ticks(),
-                    "Y3": -200,  # entra de cima
-                    "Y4": 0,     # alvo
-                })
+        if modo_alvo:
+            Botao_Selecao(
+                tela=tela, texto=("-" if not tem_poke else ""), espaço=r, Fonte=fonte,
+                cor_fundo=(200, 200, 200), cor_borda_normal=(0, 0, 0),
+                cor_borda_esquerda=None, cor_borda_direita=None,
+                cor_passagem=None, grossura=BORDER,
+                id_botao=f"resI-{i}",
+                estado_global=EstadoArenaFalso, eventos=None,
+                Piscante=False
+            )
+        else:
+            selecionado = (tem_poke and (parametros.get("InimigoSelecionado") is reserva_i[i]))
+            cor_borda = (Cores["vermelho"] if selecionado else (0, 0, 0))
 
-        # quando Troca ativa, NÃO há destaque em inimigos e continuam clicáveis normais
-        Botao_Selecao(
-            tela=tela, texto=("-" if not tem_poke else ""), espaço=r, Fonte=fonte,
-            cor_fundo=(200, 200, 200), cor_borda_normal=cor_borda,
-            cor_passagem=(255, 255, 255), grossura=BORDER,
-            id_botao=f"resI-{i}",
-            eventos=eventos, estado_global=EstadoArenaBotoesInimigo,
-            funcao_esquerdo=[_wrap_energy_guard(_seleciona_resI, parametros)],
-            desfazer_esquerdo=None
-        )
+            func_esq = None
+            desf_esq = None
+            if tem_poke:
+                func_esq = [
+                    (lambda ii=i: parametros.__setitem__("InimigoSelecionado", reserva_i[ii])),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_inimigo": pygame.time.get_ticks(),
+                        "Y3": -200,
+                        "Y4": 0,
+                    })),
+                ]
+                desf_esq = [
+                    (lambda: parametros.__setitem__("InimigoSelecionado", None)),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_inimigo": pygame.time.get_ticks(),
+                        "Y3": 0,
+                        "Y4": -200,
+                    })),
+                ]
+
+            Botao_Selecao(
+                tela=tela, texto=("-" if not tem_poke else ""), espaço=r, Fonte=fonte,
+                cor_fundo=(200, 200, 200), cor_borda_normal=cor_borda,
+                cor_borda_esquerda=Cores["vermelho"],
+                cor_borda_direita=None,
+                cor_passagem=(255, 255, 255), grossura=BORDER,
+                id_botao=f"resI-{i}",
+                eventos=eventos, estado_global=EstadoArenaBotoesInimigo,
+                funcao_esquerdo=func_esq,
+                desfazer_esquerdo=desf_esq
+            )
 
         if tem_poke:
-            nome_key = reserva_i[i].get("Nome", "")
-            spr = _sprite_por_nome(nome_key)
+            spr = _sprite_por_nome(reserva_i[i].get("Nome", ""))
             _blit_center_scaled(r, spr, pad=4)
 
-    # 3) Trégua — BOTAO (normal)
+    # Trégua
     Botao(
         tela, "", rects_i[3],
         cor_normal=(200, 200, 200), cor_borda=(0, 0, 0), cor_passagem=(255, 255, 255),
@@ -615,10 +728,8 @@ def Desenhar_Botoes_Combate(tela, parametros):
     _blit_center_scaled(rects_i[3], ic_tregua, pad=6)
 
 def TelaAlvoBatalha(tela, estados, eventos, parametros):
-
     # ===== helpers gerais =====
     def _slot_center(lado, idx1based):
-        """Retorna (cx,cy) do centro da casa lado 'A'/'I' índice 1..9. Usa parametros['SlotsRects']"""
         slots = parametros.get("SlotsRects", {})
         arr = slots.get(lado) or []
         i0 = max(1, min(9, int(idx1based))) - 1
@@ -628,7 +739,6 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
         return None
 
     def _mouse_over_highlight():
-        """Se mouse está sobre um slot destacado, retorna ('A'|'I', idx1based, (cx,cy)); senão None."""
         mx, my = pygame.mouse.get_pos()
         slots = parametros.get("SlotsRects", {})
         hi    = parametros.get("SlotsDestaque", {"A": set(), "I": set()})
@@ -636,56 +746,50 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
             arr = slots.get(lado) or []
             for i0, r in enumerate(arr):
                 if i0 in (hi.get(lado) or set()) and isinstance(r, pygame.Rect) and r.collidepoint(mx, my):
-                    return lado, (i0 + 1), (r.centerx, r.centery)
+                    return lado, (i0 + 1), (r.centerx, r.centery)  # idx1based (10..12 = reservas)
         return None
 
+    def _is_reserva_idx(idx1based: int) -> bool:
+        # nossos botões de reserva foram mapeados em SlotsRects nas posições 10..12 (1-based)
+        try:
+            return int(idx1based) > 9
+        except Exception:
+            return False
+
     def _cor_por_mov(mov):
-        """Define cor conforme estilo/tipo de movimento."""
-        # Mapas de cor
         ROXO   = (160, 90, 255)
         LARAN  = (255, 150, 40)
         AZUL   = (60, 160, 255)
         VERDE  = (70, 220, 120)
         ROSA   = (255, 110, 200)
-
         if isinstance(mov, int):
             if mov == 1:  # mover
                 return VERDE
-            if mov == 2:  # trocar (R) — não usamos alvos R agora, mas cor reservada
+            if mov == 2:  # trocar
                 return ROSA
             return (255,255,255)
-
         if isinstance(mov, dict):
             est = (mov.get("Estilo") or mov.get("estilo") or "").strip().lower()
-            if est == "e":  # especial
-                return ROXO
-            if est == "n":  # normal/físico (pela sua nomenclatura)
-                return LARAN
-            if est == "s":  # suporte/status
-                return AZUL
-        # fallback
+            if est == "e": return ROXO      # especial
+            if est == "n": return LARAN     # físico
+            if est == "s": return AZUL      # suporte
         return (255,255,255)
 
     def _parse_code(code):
-        """'A4' -> ('A', 4). Retorna None se inválido."""
-        if not code or not isinstance(code, str):
-            return None
+        # Só aceita A/I1..9 — reservas (RA1..3) NÃO entram aqui (logo, sem fluxos/pulsos de "atuais")
+        if not code or not isinstance(code, str): return None
         code = code.strip().upper()
-        if len(code) < 2:
-            return None
+        if len(code) < 2: return None
         lado = code[0]
         try:
             idx = int(code[1:])
         except ValueError:
             return None
-        if lado not in ("A", "I"):
-            return None
-        if not (1 <= idx <= 9):
-            return None
+        if lado not in ("A", "I"): return None
+        if not (1 <= idx <= 9): return None
         return lado, idx
 
     def _ponto_do_atacante(atacante_idx):
-        """atacante_idx é índice na EquipeAliada (0..n-1) -> pega 'Pos' e devolve centro do slot aliado."""
         equipe = parametros.get("EquipeAliada") or []
         if atacante_idx is None or not (0 <= int(atacante_idx) < len(equipe)):
             return None
@@ -696,7 +800,7 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
     def _desenha_fluxo(x1, y1, x2, y2, cor, translucido=False, raio=5):
         Fluxo(
             tela, x1, y1, x2, y2,
-            Pontos=40, pontos_por_100px=8,
+            Pontos=40, pontos_por_100px=5,
             frequencia=4, velocidade=3,
             cor_base=cor, raio=raio, forma="seta",
             translucido=translucido
@@ -710,7 +814,7 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
         if not aliado_sel:
             return
 
-        # ponto de origem: centro do slot do aliado selecionado (usa Pos dele)
+        # origem = centro do slot do aliado selecionado
         try:
             pos_ali = int(aliado_sel.get("Pos", 1))
         except Exception:
@@ -719,25 +823,32 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
         if not origem:
             return
 
-        # destino: mouse; se sobre slot destacado, 'gruda' no centro do slot destacado
+        # destino = mouse ou slot destacado sob o mouse
         mx, my = pygame.mouse.get_pos()
         alvo_hover = _mouse_over_highlight()
         if alvo_hover:
-            _, _, (cx, cy) = alvo_hover
+            _, idx1b, (cx, cy) = alvo_hover
             dest = (cx, cy)
+            reserva_hover = _is_reserva_idx(idx1b)
         else:
             dest = (mx, my)
+            reserva_hover = False
 
-        # --- checa energia ---
+        # cor: vermelho se sem energia, senão amarelo
         ene = int(aliado_sel.get("Energia", aliado_sel.get("EneAtual", 0)) or 0)
         custo = int(parametros.get("CustoAtualEnergia", 0) or 0)
-        if (ene - custo) < -5:
-            cor_fluxo = (255, 80, 80)   # vermelho (bloqueado)
-        else:
-            cor_fluxo = (255, 210, 80)  # amarelo (em construção normal)
+        cor_fluxo = (255, 80, 80) if (ene - custo) < -5 else (255, 210, 80)
 
-        _desenha_fluxo(origem[0], origem[1], dest[0], dest[1],
-                    cor_fluxo, translucido=False, raio=6)
+        # desenha fluxo DINÂMICO só se NÃO estiver apontando para reserva
+        if not reserva_hover:
+            _desenha_fluxo(origem[0], origem[1], dest[0], dest[1], cor_fluxo, translucido=False, raio=6)
+
+        # PULSO no slot destacado sob o mouse (menor se for reserva)
+        if alvo_hover:
+            if reserva_hover:
+                Pulso(tela, dest, cor=cor_fluxo, raio_base=18, variacao=0.35, velocidade=1.6, alpha_base=95)
+            else:
+                Pulso(tela, dest, cor=cor_fluxo, raio_base=32, variacao=0.40, velocidade=1.6, alpha_base=95)
 
     # ===== 2) FluxosAtuais =====
     def FluxosAtuais():
@@ -756,12 +867,18 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
         for code in alvos:
             parsed = _parse_code(code)
             if not parsed:
+                # RA1/RA2/RA3 (reservas) caem aqui → sem fluxo/pulso estável
                 continue
             lado, idx = parsed
             destino = _slot_center(lado, idx)
             if not destino:
                 continue
+
+            # fluxo "estável" da ação atual (somente A/I1..9)
             _desenha_fluxo(origem[0], origem[1], destino[0], destino[1], cor, translucido=False, raio=6)
+
+            # PULSO no alvo selecionado (tamanho padrão de slot de arena)
+            Pulso(tela, destino, cor=cor, raio_base=22, variacao=0.30, velocidade=1.35, alpha_base=85)
 
     # ===== 3) FluxosLog =====
     def FluxosLog():
@@ -769,9 +886,7 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
         if not isinstance(logs, list) or not logs:
             return
 
-        # alpha bem baixo para “fantasma”
-        alpha_soft = 50  # ~quase invisível
-
+        alpha_soft = 80  # menos transparente que antes, e ESTÁTICO
         for item in logs:
             if not isinstance(item, dict):
                 continue
@@ -787,15 +902,14 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
             for code in alvos:
                 parsed = _parse_code(code)
                 if not parsed:
+                    # mesmo critério: reservas não recebem fluxo de log
                     continue
                 lado, idx = parsed
                 destino = _slot_center(lado, idx)
                 if not destino:
                     continue
-                _desenha_fluxo(
-                    origem[0], origem[1], destino[0], destino[1],
-                    cor, translucido=alpha_soft, raio=5
-                )
+                # fluxo de log ESTÁTICO (alpha constante), sem pulso
+                _desenha_fluxo(origem[0], origem[1], destino[0], destino[1], cor, translucido=alpha_soft, raio=5)
 
     # ==== chamada das três etapas ====
     FluxoAlvificando()
@@ -849,6 +963,7 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
     dx_dir = Animar((sw - dir_first.left), 0, _anima_t0, tempo=_anima_dur_ms)
 
     Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir)
+    Desenhar_Botoes_Combate(tela,parametros)
 
     # Sprites animados (1x para criar; depois só atualizar posição)
     if _anim_inimigos is None or _anim_aliados is None:
@@ -914,12 +1029,21 @@ def BatalhaTelaOpçoes(tela, estados, eventos, parametros):
 
 # ==================== HUD ====================
 def TelaHudBatalha(tela, estados, eventos, parametros):
+    global AliadoSelecionadoCache, InimigoSelecionadoCache
 
-    YA = Animar(anima["Y1"], anima["Y2"], anima["_anima_painel_aliado"])
-    PainelPokemonBatalha(parametros["AliadoSelecionado"], tela, (360, YA), eventos, parametros, anima)
+    if parametros["AliadoSelecionado"] != None:
+        AliadoSelecionadoCache = parametros["AliadoSelecionado"]
 
-    YI = Animar(anima["Y3"], anima["Y4"], anima["_anima_painel_inimigo"])
-    PainelPokemonBatalha(parametros["InimigoSelecionado"], tela, (360, YI), eventos, parametros, anima)
+    if parametros["InimigoSelecionado"] != None:
+        InimigoSelecionadoCache = parametros["InimigoSelecionado"]
+
+    if AliadoSelecionadoCache is not None:
+        YA = Animar(anima["Y1"], anima["Y2"], anima["_anima_painel_aliado"])
+        PainelPokemonBatalha(AliadoSelecionadoCache, tela, (330, YA), eventos, parametros, anima)
+
+    if InimigoSelecionadoCache is not None:
+        YI = Animar(anima["Y3"], anima["Y4"], anima["_anima_painel_inimigo"])
+        PainelPokemonBatalha(InimigoSelecionadoCache, tela, (680, YI), eventos, parametros, anima)
 
     Conteudo = None; atk = False
     if parametros["AtaqueAliadoSelecionado"] is not None:
@@ -949,14 +1073,13 @@ def TelaHudBatalha(tela, estados, eventos, parametros):
     if parametros["AlvosSelecionados"] is not [] and parametros["AtacanteSelecionado"] is not None and parametros["MovimentoSelecionado"] is not None:
         Botao(tela, "Preparar", (1660,960,260,60),Texturas["vermelho"],(0,0,0),(240,240,240),
               [lambda: parametros["LogAtual"].append({"Atacante": parametros["AtacanteSelecionado"], "Movimento": parametros["MovimentoSelecionado"], "Alvos": parametros["AlvosSelecionados"]}),
-               lambda: parametros.update({ "AtaqueAliadoSelecionado": None, "AlvosSelecionados": [],
+               lambda: parametros["AliadoSelecionado"].update({"Energia": parametros["AliadoSelecionado"]["Energia"] - parametros["CustoAtualEnergia"], "PreGasto": parametros["CustoAtualEnergia"]}),
+               lambda: parametros.update({ "AtaqueAliadoSelecionado": None, "AlvosSelecionados": [], "CustoAtualEnergia": 0,
             "AtacanteSelecionado": None, "MovimentoSelecionado": None, "EstadoBotoesPainelPokemonBatalha": {}, "ModoAlvificando": False}),
             anima.update({"_anima_painel_acao": pygame.time.get_ticks()})], 
               Fontes[35], BG, eventos)
     else:
         Botao(tela, "Preparar", (1660,960,260,60),Cores["cinza"],(0,0,0),(240,240,240),lambda: tocar("Bloq"), Fontes[35], BG, eventos)
-    
-    Desenhar_Botoes_Combate(tela,parametros)
 
     for i, acao in enumerate(parametros["LogAtual"]):
         if len(Acao_surface_cache) <= i:
@@ -973,8 +1096,9 @@ def TelaHudBatalha(tela, estados, eventos, parametros):
 
         # botão remover
         Botao(tela, "X", (x+128, y+2, 20, 20), Cores["vermelho"], (0,0,0), (240,240,240),
-            [lambda: (parametros["LogAtual"].pop(i), Acao_surface_cache.pop(i))],
-            Fontes[10], BG, eventos)
+            [lambda: parametros["EquipeAliada"][acao["Atacante"]].update({"Energia": parametros["EquipeAliada"][acao["Atacante"]]["Energia"] + parametros["EquipeAliada"][acao["Atacante"]]["PreGasto"]}),
+            lambda: (parametros["LogAtual"].pop(i), Acao_surface_cache.pop(i))],
+            Fontes[10], BG, eventos, grossura=1)
 
 def BatalhaTelaPadrao(tela, estados, eventos, parametros):
 
@@ -985,7 +1109,15 @@ def BatalhaTelaPadrao(tela, estados, eventos, parametros):
 
 def BatalhaLoop(tela, relogio, estados, config, info):
     global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, Player
+    global _anim_aliados, _anim_inimigos, AliadoSelecionadoCache, InimigoSelecionadoCache, Acao_surface_cache
     from Codigo.Cenas.Mundo import player
+
+    _anim_inimigos = None
+    _anim_aliados = None
+
+    InimigoSelecionadoCache = None
+    AliadoSelecionadoCache = None
+    Acao_surface_cache = []
 
     Player = player
 

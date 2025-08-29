@@ -419,9 +419,9 @@ def Fluxo(tela, x1, y1, x2, y2,
 
         if forma == "seta":
             # seta sólida com "entalhe" central (como a imagem)
-            L = max(10, int(raio * 3.6))   # comprimento ao longo do fluxo
-            W = max(6,  int(raio * 2.2))   # espessura total
-            entalhe = 0.18                 # quão fundo o recorte entra (0..0.5) do L
+            L = max(10, int(raio * 3.5))   # comprimento ao longo do fluxo
+            W = max(6,  int(raio * 3.2))   # espessura total
+            entalhe = 0.2                 # quão fundo o recorte entra (0..0.5) do L
 
             # vetores direção e normal já calculados: (dir_x, dir_y) e (nx, ny)
             # pontos base
@@ -461,6 +461,35 @@ def Fluxo(tela, x1, y1, x2, y2,
             s = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
             pygame.draw.circle(s, cor, (r, r), r)
             tela.blit(s, (int(px) - r, int(py) - r))   
+
+def Pulso(tela, pos, cor=(0, 255, 0), raio_base=40,
+          variacao=0.3, velocidade=2.0, alpha_base=80):
+    """
+    Desenha um círculo pulsante (expande/contrai) em torno de 'pos'.
+
+    - pos: (x, y) centro do círculo
+    - cor: cor base (R,G,B)
+    - raio_base: raio médio do pulso
+    - variacao: fração do raio que oscila (ex: 0.3 → ±30%)
+    - velocidade: velocidade da oscilação (Hz aprox)
+    - alpha_base: transparência máxima (0..255)
+    """
+    t = pygame.time.get_ticks() / 1000.0
+
+    # seno oscilando entre -1..1
+    osc = math.sin(2 * math.pi * velocidade * t)
+
+    # raio varia em torno do base
+    raio = int(raio_base * (1 + variacao * osc * 0.5))
+
+    # alpha também oscila suavemente (0.5..1.0 do base)
+    alpha = int(alpha_base * (0.5 + 0.5 * (osc + 1) / 2))
+
+    # surface auxiliar com canal alpha
+    s = pygame.Surface((raio * 2, raio * 2), pygame.SRCALPHA)
+    pygame.draw.circle(s, (*cor, alpha), (raio, raio), raio)
+
+    tela.blit(s, (pos[0] - raio, pos[1] - raio))
 
 def Scrolavel(
     rect,
