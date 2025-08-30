@@ -454,13 +454,12 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                 desfazer_esquerdo=desf_esq_ini
             )
 
-def Desenhar_Botoes_Combate(tela, parametros):
+def Desenhar_Botoes_Combate(tela, parametros, eventos):
     BTN = 70
     BORDER = 3
     SW, SH = 1920, 1080
 
     fonte = Fontes[30]
-    eventos = parametros.get("Eventos") or parametros.get("eventos") or []
     estado_clique = parametros.setdefault("EstadoBotoesCombateSimples", {})
 
     # ===== helpers =====
@@ -608,14 +607,12 @@ def Desenhar_Botoes_Combate(tela, parametros):
 
         else:
             # Seleção normal + anima (listas de lambdas; sem helpers)
-            print(5)
             selecionado = (tem_poke and (parametros.get("AliadoSelecionado") is reserva_a[i]))
             cor_borda = (Cores["azul"] if selecionado else (0, 0, 0))
 
             func_esq = None
             desf_esq = None
             if tem_poke:
-                print(6)
                 func_esq = [
                     (lambda ii=i: parametros.update({"AliadoSelecionado": reserva_a[ii]})),
                     (lambda a=anima: a.update({
@@ -645,6 +642,7 @@ def Desenhar_Botoes_Combate(tela, parametros):
             )
 
         if tem_poke:
+            reserva_a[i]["ReservaPos"] = i + 1
             spr = _sprite_por_nome(reserva_a[i].get("Nome", ""))
             _blit_center_scaled(r, spr, pad=4)
 
@@ -714,6 +712,7 @@ def Desenhar_Botoes_Combate(tela, parametros):
             )
 
         if tem_poke:
+            reserva_a[i]["ReservaPos"] = (i + 1) * -1
             spr = _sprite_por_nome(reserva_i[i].get("Nome", ""))
             _blit_center_scaled(r, spr, pad=4)
 
@@ -727,12 +726,12 @@ def Desenhar_Botoes_Combate(tela, parametros):
     ic_tregua = Icones.get("tregua")
     _blit_center_scaled(rects_i[3], ic_tregua, pad=6)
 
-def TelaAlvoBatalha(tela, estados, eventos, parametros):
+def TelaAlvosBatalha(tela, estados, eventos, parametros):
     # ===== helpers gerais =====
     def _slot_center(lado, idx1based):
         slots = parametros.get("SlotsRects", {})
         arr = slots.get(lado) or []
-        i0 = max(1, min(9, int(idx1based))) - 1
+        i0 = max(1, min(12, int(idx1based))) - 1
         if 0 <= i0 < len(arr) and isinstance(arr[i0], pygame.Rect):
             r = arr[i0]
             return (r.centerx, r.centery)
@@ -750,11 +749,57 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
         return None
 
     def _is_reserva_idx(idx1based: int) -> bool:
-        # nossos botões de reserva foram mapeados em SlotsRects nas posições 10..12 (1-based)
         try:
             return int(idx1based) > 9
         except Exception:
             return False
+
+    def _norm_parse(res):
+        """Aceita _parse_code retornando (lado, idx) ou (lado, idx, is_reserva)."""
+        if not res or not isinstance(res, tuple):
+            return None
+        if len(res) == 2:
+            lado, idx = res
+            return lado, idx, (int(idx) > 9)
+        if len(res) >= 3:
+            lado, idx, is_reserva = res[0], res[1], bool(res[2])
+            return lado, idx, is_reserva
+        return None
+    
+    def _parse_code(code):
+        """
+        Aceita:
+        - A/I1..12  (onde 10..12 são reservas)
+        - RA1..3 / RI1..3  (mapeados para 10..12)
+        Retorna (lado, idx1based, is_reserva) ou None.
+        """
+        if not code or not isinstance(code, str):
+            return None
+        s = code.strip().upper()
+
+        # RA1..3 / RI1..3  → idx 10..12
+        if len(s) >= 3 and s[0] == "R" and s[1] in ("A", "I"):
+            lado = s[1]
+            try:
+                k = int(s[2:])
+            except ValueError:
+                return None
+            if 1 <= k <= 3:
+                idx = 9 + k  # 10..12
+                return lado, idx, True
+            return None
+
+        # A1..12 / I1..12
+        if s[0] in ("A", "I"):
+            lado = s[0]
+            try:
+                idx = int(s[1:])
+            except ValueError:
+                return None
+            if 1 <= idx <= 12:
+                return lado, idx, (idx > 9)
+
+        return None
 
     def _cor_por_mov(mov):
         ROXO   = (160, 90, 255)
@@ -767,27 +812,13 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
                 return VERDE
             if mov == 2:  # trocar
                 return ROSA
-            return (255,255,255)
+            return (255, 255, 255)
         if isinstance(mov, dict):
             est = (mov.get("Estilo") or mov.get("estilo") or "").strip().lower()
             if est == "e": return ROXO      # especial
             if est == "n": return LARAN     # físico
             if est == "s": return AZUL      # suporte
-        return (255,255,255)
-
-    def _parse_code(code):
-        # Só aceita A/I1..9 — reservas (RA1..3) NÃO entram aqui (logo, sem fluxos/pulsos de "atuais")
-        if not code or not isinstance(code, str): return None
-        code = code.strip().upper()
-        if len(code) < 2: return None
-        lado = code[0]
-        try:
-            idx = int(code[1:])
-        except ValueError:
-            return None
-        if lado not in ("A", "I"): return None
-        if not (1 <= idx <= 9): return None
-        return lado, idx
+        return (255, 255, 255)
 
     def _ponto_do_atacante(atacante_idx):
         equipe = parametros.get("EquipeAliada") or []
@@ -814,7 +845,7 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
         if not aliado_sel:
             return
 
-        # origem = centro do slot do aliado selecionado
+        # origem: centro do slot do aliado selecionado
         try:
             pos_ali = int(aliado_sel.get("Pos", 1))
         except Exception:
@@ -823,7 +854,7 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
         if not origem:
             return
 
-        # destino = mouse ou slot destacado sob o mouse
+        # destino: mouse ou slot destacado sob o mouse
         mx, my = pygame.mouse.get_pos()
         alvo_hover = _mouse_over_highlight()
         if alvo_hover:
@@ -839,11 +870,10 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
         custo = int(parametros.get("CustoAtualEnergia", 0) or 0)
         cor_fluxo = (255, 80, 80) if (ene - custo) < -5 else (255, 210, 80)
 
-        # desenha fluxo DINÂMICO só se NÃO estiver apontando para reserva
-        if not reserva_hover:
-            _desenha_fluxo(origem[0], origem[1], dest[0], dest[1], cor_fluxo, translucido=False, raio=6)
+        # fluxo dinâmico (inclui reservas)
+        _desenha_fluxo(origem[0], origem[1], dest[0], dest[1], cor_fluxo, translucido=False, raio=6)
 
-        # PULSO no slot destacado sob o mouse (menor se for reserva)
+        # pulso menor se for reserva
         if alvo_hover:
             if reserva_hover:
                 Pulso(tela, dest, cor=cor_fluxo, raio_base=18, variacao=0.35, velocidade=1.6, alpha_base=95)
@@ -865,50 +895,48 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
         cor = _cor_por_mov(mov)
 
         for code in alvos:
-            parsed = _parse_code(code)
+            parsed = _norm_parse(_parse_code(code))
             if not parsed:
-                # RA1/RA2/RA3 (reservas) caem aqui → sem fluxo/pulso estável
                 continue
-            lado, idx = parsed
+            lado, idx, is_reserva = parsed
             destino = _slot_center(lado, idx)
             if not destino:
                 continue
 
-            # fluxo "estável" da ação atual (somente A/I1..9)
+            # fluxo estável da ação atual (A/I1..12, incluindo reservas)
             _desenha_fluxo(origem[0], origem[1], destino[0], destino[1], cor, translucido=False, raio=6)
 
-            # PULSO no alvo selecionado (tamanho padrão de slot de arena)
-            Pulso(tela, destino, cor=cor, raio_base=22, variacao=0.30, velocidade=1.35, alpha_base=85)
+            # pulso: menor nas reservas
+            if is_reserva:
+                Pulso(tela, destino, cor=cor, raio_base=16, variacao=0.28, velocidade=1.35, alpha_base=85)
+            else:
+                Pulso(tela, destino, cor=cor, raio_base=22, variacao=0.30, velocidade=1.35, alpha_base=85)
 
     # ===== 3) FluxosLog =====
     def FluxosLog():
         logs = parametros.get("LogAtual") or []
         if not isinstance(logs, list) or not logs:
             return
+        alpha_soft = 80  # estático
 
-        alpha_soft = 80  # menos transparente que antes, e ESTÁTICO
         for item in logs:
             if not isinstance(item, dict):
                 continue
-            atacante_idx = item.get("Atacante")
-            origem = _ponto_do_atacante(atacante_idx)
+            origem = _ponto_do_atacante(item.get("Atacante"))
             if not origem:
                 continue
 
-            mov = item.get("Movimento")
-            cor = _cor_por_mov(mov)
-            alvos = item.get("Alvos") or []
-
-            for code in alvos:
-                parsed = _parse_code(code)
+            cor = _cor_por_mov(item.get("Movimento"))
+            for code in (item.get("Alvos") or []):
+                parsed = _norm_parse(_parse_code(code))
                 if not parsed:
-                    # mesmo critério: reservas não recebem fluxo de log
                     continue
-                lado, idx = parsed
+                lado, idx, _is_res = parsed
                 destino = _slot_center(lado, idx)
                 if not destino:
                     continue
-                # fluxo de log ESTÁTICO (alpha constante), sem pulso
+
+                # fluxo de log estático (sem pulso)
                 _desenha_fluxo(origem[0], origem[1], destino[0], destino[1], cor, translucido=alpha_soft, raio=5)
 
     # ==== chamada das três etapas ====
@@ -963,7 +991,7 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
     dx_dir = Animar((sw - dir_first.left), 0, _anima_t0, tempo=_anima_dur_ms)
 
     Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir)
-    Desenhar_Botoes_Combate(tela,parametros)
+    Desenhar_Botoes_Combate(tela,parametros,eventos)
 
     # Sprites animados (1x para criar; depois só atualizar posição)
     if _anim_inimigos is None or _anim_aliados is None:
@@ -987,8 +1015,7 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
                             (cx, cy), tamanho=1.1, intervalo=30, inverted=True)
             _anim_aliados.append((anim, (cx, cy)))
 
-    TelaAlvoBatalha(tela, estados, eventos, parametros)
-
+    TelaAlvosBatalha(tela, estados, eventos, parametros)
 
     DesenharPlayer(tela,Player.Skin,(50,850),nome=Player.Nome,Fonte=Fontes[18])
 

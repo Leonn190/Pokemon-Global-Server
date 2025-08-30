@@ -2034,15 +2034,15 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
         R_types = pygame.Rect(rx + rw - TYPE_COL_W, ry, TYPE_COL_W, rh)
 
         # --- BARRAS à esquerda da faixa de tipos ---
-        vida_atual = int(pokemon.get("Vida", 0) or 0)
-        vida_max   = int(pokemon.get("VidaMax", pokemon.get("Vida", 1)) or 1)
-        ene_atual  = int(pokemon.get("Energia", pokemon.get("EneAtual", 0)) or 0)
-        ene_max    = int(pokemon.get("Ene", 1) or 1)
+        vida_atual = round(pokemon.get("Vida", 0) or 0)
+        vida_max   = round(pokemon.get("VidaMax", pokemon.get("Vida", 1)) or 1)
+        ene_atual  = round(pokemon.get("Energia", pokemon.get("EneAtual", 0)) or 0)
+        ene_max    = round(pokemon.get("EnE", 1) or 1)
         estado_barras = pokemon.setdefault("_estado_barras", {})
 
         # novas variações
-        barreira = int(pokemon.get("Barreira", 0) or 0)                  # pode ser 0+
-        custo_ene = int(parametros.get("CustoAtualEnergia", 0) or 0)     # custo sempre tratado como desgaste
+        barreira = round(pokemon.get("Barreira", 0) or 0)              # pode ser 0+
+        custo_ene = round(parametros.get("CustoAtualEnergia", 0) or 0) # custo sempre tratado como desgaste
 
         # posições das barras (vida em cima, energia embaixo)
         bx = R_types.left - BARRA_TO_TYPE_GAP - BARRA_W
@@ -2383,15 +2383,21 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
 
 
 def PainelAcao(acao, parametros):
- 
-    # cores
+    import pygame
+
+    # ======= Cores =======
     cor_borda       = (30, 30, 30)
     cor_header      = (235, 235, 235)
     cor_fundo       = (248, 248, 248)
     cor_placeholder = (220, 220, 220)
     cor_texto       = (20, 20, 20)
 
-    # dimensões
+    # cores de área/pos
+    COR_ALIADO   = (80, 140, 255)   # azul
+    COR_INIMIGO  = (230, 80, 80)    # vermelho
+    COR_RESERVA  = (160, 90, 200)   # roxo
+
+    # ======= Dimensões =======
     W, H = 150, 70
     HEADER_H = 24
     ICON = 42
@@ -2400,7 +2406,7 @@ def PainelAcao(acao, parametros):
     MARG_R = 9
     RADIUS = 10
 
-    # fonte (para placeholders)
+    # ======= Fontes =======
     fontes_param = parametros.get("Fontes")
     if isinstance(fontes_param, dict):
         fonte = fontes_param.get(16) or pygame.font.SysFont(None, 18)
@@ -2409,29 +2415,33 @@ def PainelAcao(acao, parametros):
     else:
         fonte = pygame.font.SysFont(None, 18)
 
-    # surface
-    surf = pygame.Surface((W, H), pygame.SRCALPHA)
+    # ======= Imagens globais esperadas =======
+    pokemons = parametros.get("ImagensPokemons") or parametros.get("Imagens") or {}
 
-    # fundo arredondado
+    # ======= Surface base =======
+    surf = pygame.Surface((W, H), pygame.SRCALPHA)
     pygame.draw.rect(surf, cor_fundo, pygame.Rect(0, 0, W, H), border_radius=RADIUS)
     pygame.draw.rect(surf, cor_borda, pygame.Rect(0, 0, W, H), 1, border_radius=RADIUS)
 
-    # cabeçalho (sem texto), com cantos superiores arredondados
+    # Cabeçalho (sem texto)
     header_rect = pygame.Rect(0, 0, W, HEADER_H)
-    pygame.draw.rect(surf, cor_header, header_rect, border_top_left_radius=RADIUS, border_top_right_radius=RADIUS)
-    # linha separadora do cabeçalho
+    pygame.draw.rect(
+        surf, cor_header, header_rect,
+        border_top_left_radius=RADIUS, border_top_right_radius=RADIUS
+    )
     pygame.draw.line(surf, cor_borda, (0, HEADER_H), (W, HEADER_H), 1)
 
-    # --- faixa de ícones ---
+    # Área dos ícones
     faixa_top = HEADER_H
     icon_top  = faixa_top + 2
     x_left  = MARG_L
     x_mid   = x_left + ICON + GAP
     x_right = x_mid + ICON + GAP
 
-    # helpers
+    # ======= Helpers =======
     def _scale_icon(img):
-        if not img: return None
+        if img is None:
+            return None
         try:
             if img.get_width() == ICON and img.get_height() == ICON:
                 return img
@@ -2439,24 +2449,36 @@ def PainelAcao(acao, parametros):
         except Exception:
             return None
 
-    def _blit_placeholder(rect, text):
+    def _blit_placeholder(rect, texto):
         pygame.draw.rect(surf, cor_placeholder, rect, border_radius=6)
         pygame.draw.rect(surf, cor_borda, rect, 1, border_radius=6)
-        t = fonte.render(str(text), True, cor_texto)
+        t = fonte.render(str(texto), True, cor_texto)
+        surf.blit(t, (rect.x + (rect.w - t.get_width()) // 2,
+                      rect.y + (rect.h - t.get_height()) // 2))
+
+    def _blit_placeholder_colorido(rect, texto, cor_bg):
+        # retângulo cheio com cor de fundo específica e número no centro
+        pygame.draw.rect(surf, cor_bg, rect, border_radius=6)
+        pygame.draw.rect(surf, cor_borda, rect, 1, border_radius=6)
+        # escolher cor do texto conforme contraste simples
+        brilho = (cor_bg[0]*0.299 + cor_bg[1]*0.587 + cor_bg[2]*0.114)
+        cor_num = (20, 20, 20) if brilho > 160 else (245, 245, 245)
+        t = fonte.render(str(texto), True, cor_num)
         surf.blit(t, (rect.x + (rect.w - t.get_width()) // 2,
                       rect.y + (rect.h - t.get_height()) // 2))
 
     def _get_poke_icon_by_name(nome):
-        if not nome: return None
+        if not nome:
+            return None
         key = str(nome).lower()
         try:
-            img = pokemons.get(key)
+            img = pokemons.get(key) or pokemons.get(nome)  # tenta duas chaves
             return _scale_icon(img)
         except Exception:
             return None
 
     def _get_mov_icon(mov):
-        # mov pode ser dict (com Estilo) ou int (1/2)
+        icones = parametros.get("Icones") or parametros.get("icones") or {}
         if isinstance(mov, dict):
             est = (mov.get("Estilo") or mov.get("estilo") or "").strip().upper()
             try:
@@ -2466,8 +2488,8 @@ def PainelAcao(acao, parametros):
             except Exception:
                 pass
         if isinstance(mov, int):
-            if mov == 1: return _scale_icon(icones.get("mover"))
-            if mov == 2: return _scale_icon(icones.get("trocar"))
+            if mov == 1: return _scale_icon(icones.get("mover") or icones.get("Mover"))
+            if mov == 2: return _scale_icon(icones.get("trocar") or icones.get("Trocar"))
         return None
 
     def _draw_icon_or_placeholder(x, top, image, placeholder_txt):
@@ -2477,52 +2499,114 @@ def PainelAcao(acao, parametros):
         else:
             _blit_placeholder(rect, placeholder_txt)
 
-    # ESQUERDA: Pokémon do Atacante (índice em EquipeAliada)
+    def _parse_alvo(code: str):
+        """
+        Aceita: 'A5', 'I3', 'RA2', 'RI1' (case-insensitive).
+        Retorna: (lado, pos, reserva_bool)
+        """
+        s = (code or "").strip().upper()
+        if not s:
+            return "A", 1, False
+        reserva = s.startswith("R")
+        if reserva:
+            # RA3 / RI2
+            lado = "A" if "RA" in s else ("I" if "RI" in s else ("A" if "A" in s else "I"))
+            digitos = "".join(ch for ch in s if ch.isdigit())
+            pos = int(digitos) if digitos else 1
+            return lado, pos, True
+        else:
+            # A5 / I4
+            lado = "A" if s[0] == "A" else "I"
+            digitos = "".join(ch for ch in s[1:] if ch.isdigit())
+            pos = int(digitos) if digitos else 1
+            return lado, pos, False
+
+    def _achar_pokemon_por_pos(lado, pos, reserva):
+        """
+        Busca primeiro em ativos por Pos quando reserva=False.
+        Quando reserva=True, busca por ReservaPos em pokémons inativos (Ativo=False).
+        Se não achar exatamente pelo flag, tenta fallback simétrico (ex: alvo A5 mas só existe em reserva).
+        """
+        equipe_a_raw = (parametros.get("EquipeAliada") or [])
+        equipe_i_raw = (parametros.get("EquipeInimiga") or parametros.get("EquipeInimigos") or [])
+        equipe_a = [p for p in equipe_a_raw if p is not None]
+        equipe_i = [p for p in equipe_i_raw if p is not None]
+
+        if lado == "A":
+            ativos = [p for p in equipe_a if p.get("Ativo", True)]
+            reserva_a = [p for p in equipe_a if not p.get("Ativo", True)]
+            if reserva:
+                poke = next((p for p in reserva_a if int(p.get("ReservaPos", -1)) == int(pos)), None)
+                if poke: return poke
+                # fallback: talvez o dado não marque Ativo=False mas tenha ReservaPos
+                poke = next((p for p in equipe_a if int(p.get("ReservaPos", -1)) == int(pos)), None)
+                if poke: return poke
+                # último recurso: tentar por Pos (caso o parser tenha enviado RA mas está ativo)
+                return next((p for p in ativos if int(p.get("Pos", -1)) == int(pos)), None)
+            else:
+                poke = next((p for p in ativos if int(p.get("Pos", -1)) == int(pos)), None)
+                if poke: return poke
+                # fallback: talvez esteja na reserva mas alvo veio sem 'R'
+                return next((p for p in equipe_a if int(p.get("ReservaPos", -1)) == int(pos)), None)
+
+        else:  # lado == "I"
+            ativos = [p for p in equipe_i if p.get("Ativo", True)]
+            reserva_i = [p for p in equipe_i if not p.get("Ativo", True)]
+            if reserva:
+                poke = next((p for p in reserva_i if int(p.get("ReservaPos", -1)) == int(pos)), None)
+                if poke: return poke
+                poke = next((p for p in equipe_i if int(p.get("ReservaPos", -1)) == int(pos)), None)
+                if poke: return poke
+                return next((p for p in ativos if int(p.get("Pos", -1)) == int(pos)), None)
+            else:
+                poke = next((p for p in ativos if int(p.get("Pos", -1)) == int(pos)), None)
+                if poke: return poke
+                return next((p for p in equipe_i if int(p.get("ReservaPos", -1)) == int(pos)), None)
+
+    # ======= ESQUERDA: Pokémon Atacante =======
     atacante_idx = acao.get("Atacante")
     poke_img = None
     if atacante_idx is not None:
         try:
             equipeA = parametros.get("EquipeAliada") or []
             if 0 <= int(atacante_idx) < len(equipeA):
-                nome = equipeA[int(atacante_idx)].get("Nome") or equipeA[int(atacante_idx)].get("nome")
+                nome = (equipeA[int(atacante_idx)] or {}).get("Nome") or (equipeA[int(atacante_idx)] or {}).get("nome")
                 poke_img = _get_poke_icon_by_name(nome)
         except Exception:
             poke_img = None
     _draw_icon_or_placeholder(x_left, icon_top, poke_img, "A")
 
-    # MEIO: Movimento
+    # ======= MEIO: Movimento =======
     mov = acao.get("Movimento")
     mov_img = _get_mov_icon(mov)
     place_meio = "—" if not isinstance(mov, int) else str(mov)
     _draw_icon_or_placeholder(x_mid, icon_top, mov_img, place_meio)
 
-    # DIREITA: Alvos
+    # ======= DIREITA: Alvo (com suporte a reserva + cor de fundo por área) =======
+    rect_dir = pygame.Rect(x_right, icon_top, ICON, ICON)
     alvos = acao.get("Alvos") or []
-    if len(alvos) == 1 and isinstance(alvos[0], str):
-        code = alvos[0].strip().upper()
-        lado = code[0] if len(code) >= 2 else "A"
-        try:
-            pos = int(code[1:])
-        except Exception:
-            pos = 1
 
-        img_dir = None
-        if lado == "A":
-            equipe = parametros.get("EquipeAliada") or []
-            poke = next((p for p in equipe if int(p.get("Pos", -1)) == pos), None)
-            nome = (poke or {}).get("Nome") or (poke or {}).get("nome")
-            img_dir = _get_poke_icon_by_name(nome) if poke else None
-        elif lado == "I":
-            equipe = parametros.get("EquipeInimiga") or []
-            poke = next((p for p in equipe if int(p.get("Pos", -1)) == pos), None)
-            nome = (poke or {}).get("Nome") or (poke or {}).get("nome")
-            img_dir = _get_poke_icon_by_name(nome) if poke else None
+    if len(alvos) == 1 and isinstance(alvos[0], str):
+        code = (alvos[0] or "").strip()
+        lado, pos, is_reserva = _parse_alvo(code)
+
+        # tenta achar o pokémon (ativo ou reserva) pela posição correta
+        poke = _achar_pokemon_por_pos(lado, pos, is_reserva)
+        nome = (poke or {}).get("Nome") or (poke or {}).get("nome")
+        img_dir = _get_poke_icon_by_name(nome) if poke else None
 
         if img_dir:
-            _draw_icon_or_placeholder(x_right, icon_top, img_dir, "?")
+            # Se existe pokémon (inclusive na reserva), mostre o sprite dele
+            surf.blit(img_dir, rect_dir.topleft)
+            pygame.draw.rect(surf, cor_borda, rect_dir, 1, border_radius=6)
         else:
-            _draw_icon_or_placeholder(x_right, icon_top, None, code)
+            # Sem pokémon: fundo colorido por área + número da casa (sem A/I/RA/RI)
+            if is_reserva:
+                _blit_placeholder_colorido(rect_dir, pos, COR_RESERVA)
+            else:
+                _blit_placeholder_colorido(rect_dir, pos, COR_ALIADO if lado == "A" else COR_INIMIGO)
     else:
-        _draw_icon_or_placeholder(x_right, icon_top, None, "M")
+        # múltiplos alvos ou vazio → marcador simples
+        _blit_placeholder(rect_dir, "M")
 
     return surf
