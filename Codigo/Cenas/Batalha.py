@@ -715,13 +715,285 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                 desfazer_esquerdo=desf_esq_ini
             )
 
+def Desenhar_Botoes_Combate(tela, parametros):
+    BTN = 70
+    BORDER = 3
+    SW, SH = 1920, 1080
 
-def AlvosBatalha(tela, estados, eventos, parametros):
+    fonte = Fontes[30]
+    eventos = parametros.get("Eventos") or parametros.get("eventos") or []
+    estado_clique = parametros.setdefault("EstadoBotoesCombateSimples", {})
+
+    # ===== helpers =====
+    def _blit_center_scaled(rect_tuple, surf, pad=6):
+        if not surf or not hasattr(surf, "get_size"):
+            return
+        rx, ry, rw, rh = rect_tuple
+        max_w = max(1, rw - pad * 2)
+        max_h = max(1, rh - pad * 2)
+        iw, ih = surf.get_size()
+        if iw <= 0 or ih <= 0:
+            return
+        esc = min(max_w / iw, max_h / ih)
+        nw = max(1, int(iw * esc))
+        nh = max(1, int(ih * esc))
+        img = pygame.transform.smoothscale(surf, (nw, nh))
+        dst = img.get_rect(center=(rx + rw // 2, ry + rh // 2))
+        tela.blit(img, dst)
+
+    def _sprite_por_nome(nome_key):
+        if not nome_key:
+            return None
+        key = str(nome_key).lower()
+        spr = Pokemons.get(key)
+        if spr is None:
+            spr = CarregarPokemon(key, Pokemons)
+        return spr
+
+    def _indice_do_aliado(aliado_dict):
+        equipe = parametros.get("EquipeAliada") or []
+        try:
+            pos = int(aliado_dict.get("Pos", -1))
+            for i, p in enumerate(equipe):
+                if p and int(p.get("Pos", -2)) == pos:
+                    return i
+        except Exception:
+            pass
+        for i, p in enumerate(equipe):
+            if p is aliado_dict or p == aliado_dict:
+                return i
+        return None
+
+    def _finaliza_alvo_reserva():
+        parametros["__alvo_finalizado_ok"] = True
+        parametros["__ja_limpei_estado"] = True
+        parametros["ModoAlvificando"] = False
+
+    # ===== preparar SlotsRects / SlotsDestaque para magnetismo das reservas =====
+    slots_rects = parametros.setdefault("SlotsRects", {"A": [None]*9, "I": [None]*9})
+    slots_high  = parametros.setdefault("SlotsDestaque", {"A": set(), "I": set()})
+    # garante espaço para 3 reservas após os 9 slots (índices 9,10,11)
+    for lado in ("A", "I"):
+        arr = slots_rects.get(lado)
+        if not isinstance(arr, list):
+            slots_rects[lado] = [None]*9
+        if len(slots_rects[lado]) < 12:
+            slots_rects[lado].extend([None] * (12 - len(slots_rects[lado])))
+    # limpa highlights antigos de reserva (≥9), preservando 0..8 da arena
+    slots_high["A"] = set(idx for idx in (slots_high.get("A") or set()) if idx < 9)
+    slots_high["I"] = set(idx for idx in (slots_high.get("I") or set()) if idx < 9)
+    # zera rects de reserva (serão reescritos abaixo)
+    for j in range(9, 12):
+        slots_rects["A"][j] = None
+        slots_rects["I"][j] = None
+
+    # ===== dados (filtrando None) =====
+    equipe_a_raw = (parametros.get("EquipeAliada") or [])
+    equipe_i_raw = (parametros.get("EquipeInimiga") or parametros.get("EquipeInimigos") or [])
+    equipe_a = [p for p in equipe_a_raw if p is not None]
+    equipe_i = [p for p in equipe_i_raw if p is not None]
+
+    # reservas = itens válidos e não ativos
+    reserva_a = [p for p in equipe_a if not p.get("Ativo", True)]
+    reserva_i = [p for p in equipe_i if not p.get("Ativo", True)]
+
+    parametros.setdefault("AlvosSelecionados", [])
+
+    modo_alvo  = bool(parametros.get("ModoAlvificando"))
+    aliado_sel = parametros.get("AliadoSelecionado")
+    atk_sel    = parametros.get("AtaqueAliadoSelecionado")
+    troca_ativa = (atk_sel == 2)
+
+    cor_amarelo = Cores["amarelo"]
+
+    # ===== ALIADOS (baixo) =====
+    base_ax = 0
+    base_ay = SH - BTN
+    rects_a = [
+        (base_ax + BTN * 0, base_ay, BTN, BTN),  # Fugir
+        (base_ax + BTN * 1, base_ay, BTN, BTN),  # Reserva A0
+        (base_ax + BTN * 2, base_ay, BTN, BTN),  # Reserva A1
+        (base_ax + BTN * 3, base_ay, BTN, BTN),  # Reserva A2
+    ]
+
+    # Fugir (sempre botão simples)
+    Botao(
+        tela, "", rects_a[0],
+        cor_normal=(200, 200, 200), cor_borda=(0, 0, 0), cor_passagem=(255, 255, 255),
+        acao=lambda: parametros.__setitem__("Fuga", parametros.get("Fuga", 0) + 10),
+        Fonte=fonte, estado_clique=estado_clique, eventos=eventos,
+        grossura=BORDER, cor_texto=(0, 0, 0)
+    )
+    ic_fugir = Icones.get("fugir")
+    _blit_center_scaled(rects_a[0], ic_fugir, pad=6)
+
+    # Reservas Aliadas
+    for i in range(3):
+        r = rects_a[i + 1]
+        tem_poke = i < len(reserva_a)
+
+        # MAGNETISMO: salva o Rect da reserva A em SlotsRects["A"][9+i]
+        rect_obj_a = pygame.Rect(r)
+        slots_rects["A"][9 + i] = rect_obj_a
+        # se estiver em alvo+troca e há poke, marca highlight (9..11)
+        if modo_alvo and troca_ativa and tem_poke:
+            slots_high["A"].add(9 + i)
+
+        if modo_alvo:
+            # Seleção falso; destaque só se Troca(2) e existe poke.
+            pisc = tem_poke and troca_ativa
+            Botao_Selecao(
+                tela=tela, texto=("-" if not tem_poke else ""), espaço=r, Fonte=fonte,
+                cor_fundo=(200, 200, 200),
+                cor_borda_normal=(cor_amarelo if pisc else (0, 0, 0)),
+                cor_borda_esquerda=None, cor_borda_direita=None,
+                cor_passagem=None, grossura=BORDER,
+                id_botao=f"resA-{i}",
+                estado_global=EstadoArenaFalso, eventos=None,
+                Piscante=pisc
+            )
+            if tem_poke and pisc:
+                def _acao_resA(ii=i):
+                    alvos = parametros["AlvosSelecionados"]
+                    code = f"RA{ii+1}"
+                    if code not in alvos:
+                        alvos.append(code)
+                    if parametros.get("MovimentoSelecionado") is None:
+                        parametros["MovimentoSelecionado"] = 2
+                    if parametros.get("AtacanteSelecionado") is None and aliado_sel:
+                        idx = _indice_do_aliado(aliado_sel)
+                        if idx is not None:
+                            parametros["AtacanteSelecionado"] = idx
+                    _finaliza_alvo_reserva()
+                Botao_invisivel(r, _wrap_energy_guard(_acao_resA, parametros))
+
+        else:
+            # Seleção normal + anima (listas de lambdas; sem helpers)
+            print(5)
+            selecionado = (tem_poke and (parametros.get("AliadoSelecionado") is reserva_a[i]))
+            cor_borda = (Cores["azul"] if selecionado else (0, 0, 0))
+
+            func_esq = None
+            desf_esq = None
+            if tem_poke:
+                print(6)
+                func_esq = [
+                    (lambda ii=i: parametros.update({"AliadoSelecionado": reserva_a[ii]})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_aliado": pygame.time.get_ticks(),
+                        "Y1": 1080,
+                        "Y2": 895,
+                    })),
+                ]
+                desf_esq = [
+                    lambda: parametros.update({"AliadoSelecionado": None}),
+                    lambda a=anima: a.update({
+                        "_anima_painel_aliado": pygame.time.get_ticks(),
+                        "Y1": 895,
+                        "Y2": 1080,
+                    })]
+
+            Botao_Selecao(
+                tela=tela, texto=("-" if not tem_poke else ""), espaço=r, Fonte=fonte,
+                cor_fundo=(200, 200, 200), cor_borda_normal=cor_borda,
+                cor_borda_esquerda=Cores["azul"],
+                cor_borda_direita=None,
+                cor_passagem=(255, 255, 255), grossura=BORDER,
+                id_botao=f"resA-{i}",
+                eventos=eventos, estado_global=EstadoArenaBotoesAliado,
+                funcao_esquerdo=func_esq,
+                desfazer_esquerdo=desf_esq
+            )
+
+        if tem_poke:
+            spr = _sprite_por_nome(reserva_a[i].get("Nome", ""))
+            _blit_center_scaled(r, spr, pad=4)
+
+    # ===== INIMIGOS (topo) =====
+    base_ix = SW - BTN * 4
+    base_iy = 0
+    rects_i = [
+        (base_ix + BTN * 0, base_iy, BTN, BTN),
+        (base_ix + BTN * 1, base_iy, BTN, BTN),
+        (base_ix + BTN * 2, base_iy, BTN, BTN),
+        (base_ix + BTN * 3, base_iy, BTN, BTN),  # Trégua
+    ]
+
+    for i in range(3):
+        r = rects_i[i]
+        tem_poke = i < len(reserva_i)
+
+        # MAGNETISMO: salva o Rect da reserva I em SlotsRects["I"][9+i]
+        rect_obj_i = pygame.Rect(r)
+        slots_rects["I"][9 + i] = rect_obj_i
+        # (sem highlight para inimigos na Troca)
+
+        if modo_alvo:
+            Botao_Selecao(
+                tela=tela, texto=("-" if not tem_poke else ""), espaço=r, Fonte=fonte,
+                cor_fundo=(200, 200, 200), cor_borda_normal=(0, 0, 0),
+                cor_borda_esquerda=None, cor_borda_direita=None,
+                cor_passagem=None, grossura=BORDER,
+                id_botao=f"resI-{i}",
+                estado_global=EstadoArenaFalso, eventos=None,
+                Piscante=False
+            )
+        else:
+            selecionado = (tem_poke and (parametros.get("InimigoSelecionado") is reserva_i[i]))
+            cor_borda = (Cores["vermelho"] if selecionado else (0, 0, 0))
+
+            func_esq = None
+            desf_esq = None
+            if tem_poke:
+                func_esq = [
+                    (lambda ii=i: parametros.__setitem__("InimigoSelecionado", reserva_i[ii])),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_inimigo": pygame.time.get_ticks(),
+                        "Y3": -200,
+                        "Y4": 0,
+                    })),
+                ]
+                desf_esq = [
+                    (lambda: parametros.__setitem__("InimigoSelecionado", None)),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_inimigo": pygame.time.get_ticks(),
+                        "Y3": 0,
+                        "Y4": -200,
+                    })),
+                ]
+
+            Botao_Selecao(
+                tela=tela, texto=("-" if not tem_poke else ""), espaço=r, Fonte=fonte,
+                cor_fundo=(200, 200, 200), cor_borda_normal=cor_borda,
+                cor_borda_esquerda=Cores["vermelho"],
+                cor_borda_direita=None,
+                cor_passagem=(255, 255, 255), grossura=BORDER,
+                id_botao=f"resI-{i}",
+                eventos=eventos, estado_global=EstadoArenaBotoesInimigo,
+                funcao_esquerdo=func_esq,
+                desfazer_esquerdo=desf_esq
+            )
+
+        if tem_poke:
+            spr = _sprite_por_nome(reserva_i[i].get("Nome", ""))
+            _blit_center_scaled(r, spr, pad=4)
+
+    # Trégua
+    Botao(
+        tela, "", rects_i[3],
+        cor_normal=(200, 200, 200), cor_borda=(0, 0, 0), cor_passagem=(255, 255, 255),
+        acao=(lambda: None), Fonte=fonte, estado_clique=estado_clique, eventos=eventos,
+        grossura=BORDER, cor_texto=(0, 0, 0)
+    )
+    ic_tregua = Icones.get("tregua")
+    _blit_center_scaled(rects_i[3], ic_tregua, pad=6)
+
+def TelaAlvoBatalha(tela, estados, eventos, parametros):
     # ===== helpers gerais =====
     def _slot_center(lado, idx1based):
         slots = parametros.get("SlotsRects", {})
         arr = slots.get(lado) or []
-        i0 = max(1, min(9, int(idx1based))) - 1
+        i0 = max(1, min(12, int(idx1based))) - 1
         if 0 <= i0 < len(arr) and isinstance(arr[i0], pygame.Rect):
             r = arr[i0]
             return (r.centerx, r.centery)
@@ -739,11 +1011,57 @@ def AlvosBatalha(tela, estados, eventos, parametros):
         return None
 
     def _is_reserva_idx(idx1based: int) -> bool:
-        # nossos botões de reserva foram mapeados em SlotsRects nas posições 10..12 (1-based)
         try:
             return int(idx1based) > 9
         except Exception:
             return False
+
+    def _norm_parse(res):
+        """Aceita _parse_code retornando (lado, idx) ou (lado, idx, is_reserva)."""
+        if not res or not isinstance(res, tuple):
+            return None
+        if len(res) == 2:
+            lado, idx = res
+            return lado, idx, (int(idx) > 9)
+        if len(res) >= 3:
+            lado, idx, is_reserva = res[0], res[1], bool(res[2])
+            return lado, idx, is_reserva
+        return None
+    
+    def _parse_code(code):
+        """
+        Aceita:
+        - A/I1..12  (onde 10..12 são reservas)
+        - RA1..3 / RI1..3  (mapeados para 10..12)
+        Retorna (lado, idx1based, is_reserva) ou None.
+        """
+        if not code or not isinstance(code, str):
+            return None
+        s = code.strip().upper()
+
+        # RA1..3 / RI1..3  → idx 10..12
+        if len(s) >= 3 and s[0] == "R" and s[1] in ("A", "I"):
+            lado = s[1]
+            try:
+                k = int(s[2:])
+            except ValueError:
+                return None
+            if 1 <= k <= 3:
+                idx = 9 + k  # 10..12
+                return lado, idx, True
+            return None
+
+        # A1..12 / I1..12
+        if s[0] in ("A", "I"):
+            lado = s[0]
+            try:
+                idx = int(s[1:])
+            except ValueError:
+                return None
+            if 1 <= idx <= 12:
+                return lado, idx, (idx > 9)
+
+        return None
 
     def _cor_por_mov(mov):
         ROXO   = (160, 90, 255)
@@ -756,27 +1074,13 @@ def AlvosBatalha(tela, estados, eventos, parametros):
                 return VERDE
             if mov == 2:  # trocar
                 return ROSA
-            return (255,255,255)
+            return (255, 255, 255)
         if isinstance(mov, dict):
             est = (mov.get("Estilo") or mov.get("estilo") or "").strip().lower()
             if est == "e": return ROXO      # especial
             if est == "n": return LARAN     # físico
             if est == "s": return AZUL      # suporte
-        return (255,255,255)
-
-    def _parse_code(code):
-        # Só aceita A/I1..9 — reservas (RA1..3) NÃO entram aqui (logo, sem fluxos/pulsos de "atuais")
-        if not code or not isinstance(code, str): return None
-        code = code.strip().upper()
-        if len(code) < 2: return None
-        lado = code[0]
-        try:
-            idx = int(code[1:])
-        except ValueError:
-            return None
-        if lado not in ("A", "I"): return None
-        if not (1 <= idx <= 9): return None
-        return lado, idx
+        return (255, 255, 255)
 
     def _ponto_do_atacante(atacante_idx):
         equipe = parametros.get("EquipeAliada") or []
@@ -803,7 +1107,7 @@ def AlvosBatalha(tela, estados, eventos, parametros):
         if not aliado_sel:
             return
 
-        # origem = centro do slot do aliado selecionado
+        # origem: centro do slot do aliado selecionado
         try:
             pos_ali = int(aliado_sel.get("Pos", 1))
         except Exception:
@@ -812,7 +1116,7 @@ def AlvosBatalha(tela, estados, eventos, parametros):
         if not origem:
             return
 
-        # destino = mouse ou slot destacado sob o mouse
+        # destino: mouse ou slot destacado sob o mouse
         mx, my = pygame.mouse.get_pos()
         alvo_hover = _mouse_over_highlight()
         if alvo_hover:
@@ -828,11 +1132,10 @@ def AlvosBatalha(tela, estados, eventos, parametros):
         custo = int(parametros.get("CustoAtualEnergia", 0) or 0)
         cor_fluxo = (255, 80, 80) if (ene - custo) < -5 else (255, 210, 80)
 
-        # desenha fluxo DINÂMICO só se NÃO estiver apontando para reserva
-        if not reserva_hover:
-            _desenha_fluxo(origem[0], origem[1], dest[0], dest[1], cor_fluxo, translucido=False, raio=6)
+        # fluxo dinâmico (inclui reservas)
+        _desenha_fluxo(origem[0], origem[1], dest[0], dest[1], cor_fluxo, translucido=False, raio=6)
 
-        # PULSO no slot destacado sob o mouse (menor se for reserva)
+        # pulso menor se for reserva
         if alvo_hover:
             if reserva_hover:
                 Pulso(tela, dest, cor=cor_fluxo, raio_base=18, variacao=0.35, velocidade=1.6, alpha_base=95)
@@ -854,50 +1157,48 @@ def AlvosBatalha(tela, estados, eventos, parametros):
         cor = _cor_por_mov(mov)
 
         for code in alvos:
-            parsed = _parse_code(code)
+            parsed = _norm_parse(_parse_code(code))
             if not parsed:
-                # RA1/RA2/RA3 (reservas) caem aqui → sem fluxo/pulso estável
                 continue
-            lado, idx = parsed
+            lado, idx, is_reserva = parsed
             destino = _slot_center(lado, idx)
             if not destino:
                 continue
 
-            # fluxo "estável" da ação atual (somente A/I1..9)
+            # fluxo estável da ação atual (A/I1..12, incluindo reservas)
             _desenha_fluxo(origem[0], origem[1], destino[0], destino[1], cor, translucido=False, raio=6)
 
-            # PULSO no alvo selecionado (tamanho padrão de slot de arena)
-            Pulso(tela, destino, cor=cor, raio_base=22, variacao=0.30, velocidade=1.35, alpha_base=85)
+            # pulso: menor nas reservas
+            if is_reserva:
+                Pulso(tela, destino, cor=cor, raio_base=16, variacao=0.28, velocidade=1.35, alpha_base=85)
+            else:
+                Pulso(tela, destino, cor=cor, raio_base=22, variacao=0.30, velocidade=1.35, alpha_base=85)
 
     # ===== 3) FluxosLog =====
     def FluxosLog():
         logs = parametros.get("LogAtual") or []
         if not isinstance(logs, list) or not logs:
             return
+        alpha_soft = 80  # estático
 
-        alpha_soft = 80  # menos transparente que antes, e ESTÁTICO
         for item in logs:
             if not isinstance(item, dict):
                 continue
-            atacante_idx = item.get("Atacante")
-            origem = _ponto_do_atacante(atacante_idx)
+            origem = _ponto_do_atacante(item.get("Atacante"))
             if not origem:
                 continue
 
-            mov = item.get("Movimento")
-            cor = _cor_por_mov(mov)
-            alvos = item.get("Alvos") or []
-
-            for code in alvos:
-                parsed = _parse_code(code)
+            cor = _cor_por_mov(item.get("Movimento"))
+            for code in (item.get("Alvos") or []):
+                parsed = _norm_parse(_parse_code(code))
                 if not parsed:
-                    # mesmo critério: reservas não recebem fluxo de log
                     continue
-                lado, idx = parsed
+                lado, idx, _is_res = parsed
                 destino = _slot_center(lado, idx)
                 if not destino:
                     continue
-                # fluxo de log ESTÁTICO (alpha constante), sem pulso
+
+                # fluxo de log estático (sem pulso)
                 _desenha_fluxo(origem[0], origem[1], destino[0], destino[1], cor, translucido=alpha_soft, raio=5)
 
     # ==== chamada das três etapas ====
@@ -951,7 +1252,7 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
     dx_dir = Animar((sw - dir_first.left), 0, _anima_t0, tempo=_anima_dur_ms)
 
     Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir)
-    Desenhar_Botoes_Combate(tela,parametros)
+    Desenhar_Botoes_Combate(tela,parametros,eventos)
 
     # Sprites animados (1x para criar; depois só atualizar posição)
     if _anim_inimigos is None or _anim_aliados is None:
@@ -975,9 +1276,10 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
                             (cx, cy), tamanho=1.1, intervalo=30, inverted=True)
             _anim_aliados.append((anim, (cx, cy)))
 
-    AlvosBatalha(tela, estados, eventos, parametros)
+    TelaAlvoBatalha(tela, estados, eventos, parametros)
 
-    DesenharPlayer(tela,Player.Skin,(70,850),nome=Player.Nome,Fonte=Fontes[18])
+
+    DesenharPlayer(tela,Player.Skin,(50,850),nome=Player.Nome,Fonte=Fontes[18])
 
     if not parametros["BatalhaSimples"]:
         pass

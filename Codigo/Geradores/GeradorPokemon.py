@@ -68,10 +68,11 @@ def GeraPokemonBatalha(pokemon):
             continue
         dados[campo] = pokemon.get(campo)
 
-    dados["Energia"] = float(dados["Ene"]) / 2
+    dados["Energia"] = round(float(dados["Ene"]) / 2)
     dados["Vamp"] = 0.0
     dados["Asse"] = 0.0
     dados["Barreira"] = 0
+    dados["ReservaPos"] = 0
 
     dados["Build"] = pokemon["Build"]
     dados["Amizade"] = float(pokemon["Amizade"])   # força amizade como float
