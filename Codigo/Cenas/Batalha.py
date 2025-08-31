@@ -10,6 +10,7 @@ from Codigo.Geradores.GeradorPokemon import GerarMatilha, CarregarAnimacaoPokemo
 from Codigo.Modulos.Config import TelaConfigurações
 from Codigo.Modulos.DesenhoPlayer import DesenharPlayer
 from Codigo.Server.ServerMundo import SairConta, SalvarConta
+from Codigo.Localidades.EstabilizadorBatalhaLocal import IniciarBatalhaLocal
 
 Cores = None
 Fontes = None
@@ -64,6 +65,10 @@ EstadoEditorLog = {}            # estados genéricos (hover/click, etc. — se p
 EstadoBotoesAcao = {}           # estados por botão principal (seleção de ação)
 EstadoBotoesApagar = {}         # estados por botão X (apagar ação)
 
+def VerificaçãoCombate(parametros):
+    if parametros.get("BatalhaSimples"):
+
+
 def definir_ativos(equipe):
     # Filtra apenas os Pokémon válidos (não None)
     validos = [poke for poke in equipe if poke is not None]
@@ -84,7 +89,6 @@ def definir_ativos(equipe):
 
     return ativos
 
-# --- util interno: interpreta "inimigo", "aliado", "linha", "linha aliado", "inimigo x2" etc.
 def _parse_alvo_str(s):
     """
     Retorna dict: {'tipo': 'celula'|'linha', 'lado': 'I'|'A'|None, 'qtd': int}
@@ -122,7 +126,6 @@ def _parse_alvo_str(s):
 
     return {'tipo': tipo, 'lado': lado, 'qtd': qtd}
 
-# Guarda de energia para botões invisíveis
 def _wrap_energy_guard(callback, parametros):
     def _cb():
         ali = parametros.get("AliadoSelecionado")
@@ -137,322 +140,6 @@ def _wrap_energy_guard(callback, parametros):
         callback()
     return _cb
 
-def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
-    fonte = Fontes[16]
-    modo_alvo = bool(parametros.get("ModoAlvificando"))
-
-    aliado_sel = parametros.get("AliadoSelecionado")
-    atk_sel    = parametros.get("AtaqueAliadoSelecionado")
-
-    slots_rects = parametros.setdefault("SlotsRects", {"A": [None]*9, "I": [None]*9})
-    slots_high  = parametros.setdefault("SlotsDestaque", {"A": set(), "I": set()})
-    slots_rects["A"] = [None]*9
-    slots_rects["I"] = [None]*9
-    slots_high["A"]  = set()
-    slots_high["I"]  = set()
-
-    parametros.setdefault("AlvosSelecionados", [])
-
-    # --- controle de reset (preserva quando finalizado ok) ---
-    if not modo_alvo:
-        if parametros.pop("__alvo_finalizado_ok", False):
-            slots_high["A"].clear()
-            slots_high["I"].clear()
-            parametros["__ja_limpei_estado"] = True
-        else:
-            if parametros.get("__ja_limpei_estado", False) is False:
-                parametros["AlvosSelecionados"]   = []
-                parametros["AtacanteSelecionado"] = None
-                parametros["MovimentoSelecionado"]= None
-                parametros["__ja_limpei_estado"]  = True
-            slots_high["A"].clear()
-            slots_high["I"].clear()
-    else:
-        parametros["__ja_limpei_estado"] = False
-
-    # ===== alvo/quantidade =====
-    alvo_info = {'lado': None, 'tipo': 'none', 'qtd': 1}
-    mov_especial = None
-    if isinstance(atk_sel, int):
-        mov_especial = atk_sel
-    elif isinstance(atk_sel, dict):
-        alvo_info = _parse_alvo_str(atk_sel.get("Alvo") or atk_sel.get("alvo"))
-    elif isinstance(atk_sel, str):
-        alvo_info = _parse_alvo_str(atk_sel)
-
-    # >>> ADIÇÃO 1: helpers de auto-alvo
-    def _apos_primeiro_alvo():
-        if parametros.get("AtacanteSelecionado") is None and aliado_sel:
-            parametros["AtacanteSelecionado"] = _indice_do_aliado(aliado_sel)
-        if parametros.get("MovimentoSelecionado") is None:
-            parametros["MovimentoSelecionado"] = atk_sel
-
-    def _finaliza_auto():
-        parametros["__alvo_finalizado_ok"] = True
-        parametros["__ja_limpei_estado"]   = True
-        parametros["ModoAlvificando"]      = False
-        slots_high["A"].clear()
-        slots_high["I"].clear()
-
-    def _pos_aliado_atual():
-        # tenta pelo AliadoSelecionado; se não houver, usa AtacanteSelecionado -> Pos
-        if aliado_sel and isinstance(aliado_sel, dict):
-            try:
-                return int(aliado_sel.get("Pos", 1))
-            except Exception:
-                pass
-        atk_idx = parametros.get("AtacanteSelecionado")
-        equipe  = parametros.get("EquipeAliada") or []
-        try:
-            if atk_idx is not None and 0 <= int(atk_idx) < len(equipe):
-                return int((equipe[int(atk_idx)] or {}).get("Pos", 1))
-        except Exception:
-            pass
-        return 1
-
-    # >>> ADIÇÃO 2: auto-seleção quando o movimento NÃO requer escolha manual
-    if modo_alvo:
-        alvo_raw = None
-        if isinstance(atk_sel, dict):
-            alvo_raw = (atk_sel.get("Alvo") or atk_sel.get("alvo"))
-        elif isinstance(atk_sel, str):
-            alvo_raw = atk_sel  # pode ser o próprio rótulo do alvo
-        # normaliza texto
-        alvo_txt = (str(alvo_raw).strip().lower() if alvo_raw is not None else "")
-
-        # grupos que pulam a escolha manual (guardamos o TEXTO como alvo):
-        tokens_all = {
-            "all", "todos", "all inimigos", "todos inimigos",
-            "all aliados", "todos aliados", "aleatorio", "aleatório", "random"
-        }
-        tokens_self = {"sem alvo", "sem", "self", "próprio", "proprio"}
-
-        if alvo_txt in tokens_all and alvo_raw:
-            # Apenas coloca o que está escrito como alvo e finaliza
-            if alvo_raw not in parametros["AlvosSelecionados"]:
-                parametros["AlvosSelecionados"].append(alvo_raw)
-            _apos_primeiro_alvo()
-            _finaliza_auto()
-            # não prossegue para highlights; retorna cedo
-            return
-
-        if alvo_txt in tokens_self:
-            # Alvo = o próprio pokémon aliado (casa dele)
-            pos = max(1, min(9, int(_pos_aliado_atual())))
-            code = f"A{pos}"
-            if code not in parametros["AlvosSelecionados"]:
-                parametros["AlvosSelecionados"].append(code)
-            _apos_primeiro_alvo()
-            _finaliza_auto()
-            return
-    # <<< FIM DAS ADIÇÕES DE AUTO-ALVO
-
-    highlight_A, highlight_I = set(), set()
-    if modo_alvo:
-        if mov_especial == 1:
-            highlight_A = set(range(9))
-        elif mov_especial == 2:
-            pass
-        else:
-            t = alvo_info['tipo']
-            lado = alvo_info['lado']
-            if t == 'celula':
-                if lado == 'I': highlight_I = set(range(9))
-                elif lado == 'A': highlight_A = set(range(9))
-            elif t == 'linha':
-                firsts = {0, 3, 6}
-                if lado == 'I': highlight_I = firsts
-                elif lado == 'A': highlight_A = firsts
-
-    if modo_alvo and highlight_A and aliado_sel:
-        try:
-            pos_ali = max(1, min(9, int(aliado_sel.get("Pos", 1))))
-            highlight_A.discard(pos_ali - 1)
-        except Exception:
-            pass
-
-    slots_high["A"] = set(highlight_A)
-    slots_high["I"] = set(highlight_I)
-
-    cor_amarelo = Cores["amarelo"]
-
-    # ==== helpers ====
-    def _add_codes_line(prefix, idx0):
-        base = (idx0 // 3) * 3
-        for k in (base + 1, base + 2, base + 3):
-            code = f"{prefix}{k}"
-            if code not in parametros["AlvosSelecionados"]:
-                parametros["AlvosSelecionados"].append(code)
-
-    def _add_code_single(prefix, idx0):
-        code = f"{prefix}{idx0 + 1}"
-        if code not in parametros["AlvosSelecionados"]:
-            parametros["AlvosSelecionados"].append(code)
-
-    def _indice_do_aliado(aliado_dict):
-        equipe = parametros.get("EquipeAliada") or []
-        try:
-            pos = int(aliado_dict.get("Pos", -1))
-            for i, p in enumerate(equipe):
-                if int(p.get("Pos", -2)) == pos:
-                    return i
-        except Exception:
-            pass
-        for i, p in enumerate(equipe):
-            if p is aliado_dict or p == aliado_dict:
-                return i
-        return None
-
-    # (mantém _apos_primeiro_alvo e _checar_finalizacao como estavam)
-    def _apos_primeiro_alvo():
-        if parametros.get("AtacanteSelecionado") is None and aliado_sel:
-            parametros["AtacanteSelecionado"] = _indice_do_aliado(aliado_sel)
-        if parametros.get("MovimentoSelecionado") is None:
-            parametros["MovimentoSelecionado"] = atk_sel
-
-    def _checar_finalizacao():
-        if mov_especial == 1:
-            qtd = 1
-        elif mov_especial == 2:
-            qtd = 1
-        else:
-            qtd = max(1, int(alvo_info.get('qtd', 1)))
-        if len(parametros["AlvosSelecionados"]) >= qtd:
-            parametros["__alvo_finalizado_ok"] = True
-            parametros["__ja_limpei_estado"] = True
-            parametros["ModoAlvificando"] = False
-            slots_high["A"].clear()
-            slots_high["I"].clear()
-
-    # ======== Aliados (esquerda) ========
-    for i, rect in enumerate(_slots_esquerda):
-        poke = next((p for p in parametros.get("AliadosAtivos", []) if p and p.get("Pos") == i + 1), None)
-        rect_anim = rect.move(dx_esq, 0)
-        slots_rects["A"][i] = rect_anim.copy()
-
-        if modo_alvo:
-            pisc = (i in highlight_A)
-            Botao_Selecao(
-                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
-                cor_fundo=_slot_skin_aliado, cor_borda_normal=(cor_amarelo if pisc else (0, 0, 0)),
-                cor_borda_esquerda=None, cor_borda_direita=None, cor_passagem=None,
-                id_botao=f"ali-{i}",
-                estado_global=EstadoArenaFalso, eventos=None,
-                funcao_esquerdo=None, desfazer_esquerdo=None,
-                Piscante=pisc
-            )
-            if pisc:
-                if mov_especial == 1:
-                    def _acao_A_move(ii=i):
-                        _add_code_single('A', ii)
-                        _apos_primeiro_alvo()
-                        _checar_finalizacao()
-                    Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_A_move, parametros))
-                elif alvo_info['tipo'] == 'linha':
-                    def _acao_A_linha(ii=i):
-                        _add_codes_line('A', ii)
-                        _apos_primeiro_alvo()
-                        _checar_finalizacao()
-                    Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_A_linha, parametros))
-                elif alvo_info['tipo'] == 'celula':
-                    def _acao_A_cel(ii=i):
-                        _add_code_single('A', ii)
-                        _apos_primeiro_alvo()
-                        _checar_finalizacao()
-                    Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_A_cel, parametros))
-        else:
-            # modo normal: seleção/deseleção COM animação do painel aliado
-            func_esq_ali = None
-            desf_esq_ali = None
-            if poke is not None:
-                func_esq_ali = [
-                    (lambda p=poke: parametros.update({"AliadoSelecionado": p})),
-                    (lambda a=anima: a.update({
-                        "_anima_painel_aliado": pygame.time.get_ticks(),
-                        "Y1": 1080,  # de onde sai
-                        "Y2": 900,   # alvo (par)
-                    })),
-                ]
-                desf_esq_ali = [
-                    (lambda: parametros.update({"AliadoSelecionado": None})),
-                    (lambda a=anima: a.update({
-                        "_anima_painel_aliado": pygame.time.get_ticks(),
-                        "Y1": 900,   # de onde sai
-                        "Y2": 1080,  # alvo (par)
-                    })),
-                ]
-
-            Botao_Selecao(
-                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
-                cor_fundo=_slot_skin_aliado, cor_borda_normal=(0, 0, 0),
-                cor_passagem=(200, 200, 200), cor_borda_esquerda=Cores["azul"],
-                id_botao=f"ali-{i}",
-                eventos=eventos, estado_global=EstadoArenaBotoesAliado,
-                funcao_esquerdo=func_esq_ali,
-                desfazer_esquerdo=desf_esq_ali
-            )
-
-    # ======== Inimigos (direita) ========
-    for i, rect in enumerate(_slots_direita):
-        poke = next((p for p in parametros.get("InimigosAtivos", []) if p and p.get("Pos") == i + 1), None)
-        rect_anim = rect.move(dx_dir, 0)
-        slots_rects["I"][i] = rect_anim.copy()
-
-        if modo_alvo:
-            pisc = (i in highlight_I)
-            Botao_Selecao(
-                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
-                cor_fundo=_slot_skin_inimigo, cor_borda_normal=(cor_amarelo if pisc else (0, 0, 0)),
-                cor_borda_esquerda=None, cor_borda_direita=None, cor_passagem=None,
-                id_botao=f"ini-{i}",
-                estado_global=EstadoArenaFalso, eventos=None,
-                funcao_esquerdo=None, desfazer_esquerdo=None,
-                Piscante=pisc
-            )
-            if pisc and mov_especial != 1:
-                if alvo_info['tipo'] == 'linha':
-                    def _acao_I_linha(ii=i):
-                        _add_codes_line('I', ii)
-                        _apos_primeiro_alvo()
-                        _checar_finalizacao()
-                    Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_I_linha, parametros))
-                elif alvo_info['tipo'] == 'celula':
-                    def _acao_I_cel(ii=i):
-                        _add_code_single('I', ii)
-                        _apos_primeiro_alvo()
-                        _checar_finalizacao()
-                    Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_I_cel, parametros))
-        else:
-            # modo normal: seleção/deseleção COM animação do painel inimigo
-            func_esq_ini = None
-            desf_esq_ini = None
-            if poke is not None:
-                func_esq_ini = [
-                    (lambda p=poke: parametros.update({"InimigoSelecionado": p})),
-                    (lambda a=anima: a.update({
-                        "_anima_painel_inimigo": pygame.time.get_ticks(),
-                        "Y3": -200,  # de onde sai
-                        "Y4": 0,     # alvo (par)
-                    })),
-                ]
-                desf_esq_ini = [
-                    (lambda: parametros.update({"InimigoSelecionado": None})),
-                    (lambda a=anima: a.update({
-                        "_anima_painel_inimigo": pygame.time.get_ticks(),
-                        "Y3": 0,     # de onde sai
-                        "Y4": -200,  # alvo (par)
-                    })),
-                ]
-
-            Botao_Selecao(
-                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
-                cor_fundo=_slot_skin_inimigo, cor_borda_normal=(0, 0, 0),
-                cor_passagem=(200, 200, 200), cor_borda_esquerda=Cores["vermelho"],
-                id_botao=f"ini-{i}",
-                eventos=eventos, estado_global=EstadoArenaBotoesInimigo,
-                funcao_esquerdo=func_esq_ini,
-                desfazer_esquerdo=desf_esq_ini
-            )
 
 def Desenhar_Botoes_Combate(tela, parametros):
     BTN = 70
@@ -727,7 +414,309 @@ def Desenhar_Botoes_Combate(tela, parametros):
     ic_tregua = Icones.get("tregua")
     _blit_center_scaled(rects_i[3], ic_tregua, pad=6)
 
-def TelaAlvoBatalha(tela, estados, eventos, parametros):
+def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
+    fonte = Fontes[16]
+    modo_alvo = bool(parametros.get("ModoAlvificando"))
+
+    aliado_sel = parametros.get("AliadoSelecionado")
+    atk_sel    = parametros.get("AtaqueAliadoSelecionado")
+
+    slots_rects = parametros.setdefault("SlotsRects", {"A": [None]*9, "I": [None]*9})
+    slots_high  = parametros.setdefault("SlotsDestaque", {"A": set(), "I": set()})
+    slots_rects["A"] = [None]*9
+    slots_rects["I"] = [None]*9
+    slots_high["A"]  = set()
+    slots_high["I"]  = set()
+
+    parametros.setdefault("AlvosSelecionados", [])
+
+    # --- controle de reset (preserva quando finalizado ok) ---
+    if not modo_alvo:
+        if parametros.pop("__alvo_finalizado_ok", False):
+            slots_high["A"].clear()
+            slots_high["I"].clear()
+            parametros["__ja_limpei_estado"] = True
+        else:
+            if parametros.get("__ja_limpei_estado", False) is False:
+                parametros["AlvosSelecionados"]   = []
+                parametros["AtacanteSelecionado"] = None
+                parametros["MovimentoSelecionado"]= None
+                parametros["__ja_limpei_estado"]  = True
+            slots_high["A"].clear()
+            slots_high["I"].clear()
+    else:
+        parametros["__ja_limpei_estado"] = False
+
+    # ===== alvo/quantidade =====
+    alvo_info = {'lado': None, 'tipo': 'none', 'qtd': 1}
+    mov_especial = None
+    if isinstance(atk_sel, int):
+        mov_especial = atk_sel
+    elif isinstance(atk_sel, dict):
+        alvo_info = _parse_alvo_str(atk_sel.get("Alvo") or atk_sel.get("alvo"))
+    elif isinstance(atk_sel, str):
+        alvo_info = _parse_alvo_str(atk_sel)
+
+    # >>> helpers auto-alvo
+    def _apos_primeiro_alvo():
+        if parametros.get("AtacanteSelecionado") is None and aliado_sel:
+            parametros["AtacanteSelecionado"] = _indice_do_aliado(aliado_sel)
+        if parametros.get("MovimentoSelecionado") is None:
+            parametros["MovimentoSelecionado"] = atk_sel
+
+    def _finaliza_auto():
+        parametros["__alvo_finalizado_ok"] = True
+        parametros["__ja_limpei_estado"]   = True
+        parametros["ModoAlvificando"]      = False
+        slots_high["A"].clear()
+        slots_high["I"].clear()
+
+    def _pos_aliado_atual():
+        if aliado_sel and isinstance(aliado_sel, dict):
+            try:
+                return int(aliado_sel.get("Pos", 1))
+            except Exception:
+                pass
+        atk_idx = parametros.get("AtacanteSelecionado")
+        equipe  = parametros.get("EquipeAliada") or []
+        try:
+            if atk_idx is not None and 0 <= int(atk_idx) < len(equipe):
+                return int((equipe[int(atk_idx)] or {}).get("Pos", 1))
+        except Exception:
+            pass
+        return 1
+
+    # >>> auto-seleção quando não precisa escolha manual
+    if modo_alvo:
+        alvo_raw = None
+        if isinstance(atk_sel, dict):
+            alvo_raw = (atk_sel.get("Alvo") or atk_sel.get("alvo"))
+        elif isinstance(atk_sel, str):
+            alvo_raw = atk_sel
+        alvo_txt = (str(alvo_raw).strip().lower() if alvo_raw is not None else "")
+
+        tokens_all = {
+            "all", "todos", "all inimigos", "todos inimigos",
+            "all aliados", "todos aliados", "aleatorio", "aleatório", "random"
+        }
+        tokens_self = {"sem alvo", "sem", "self", "próprio", "proprio"}
+
+        if alvo_txt in tokens_all and alvo_raw:
+            if alvo_raw not in parametros["AlvosSelecionados"]:
+                parametros["AlvosSelecionados"].append(alvo_raw)
+            _apos_primeiro_alvo()
+            _finaliza_auto()
+            return
+
+        if alvo_txt in tokens_self:
+            pos = max(1, min(9, int(_pos_aliado_atual())))
+            code = f"A{pos}"
+            if code not in parametros["AlvosSelecionados"]:
+                parametros["AlvosSelecionados"].append(code)
+            _apos_primeiro_alvo()
+            _finaliza_auto()
+            return
+
+    highlight_A, highlight_I = set(), set()
+    if modo_alvo:
+        if mov_especial == 1:
+            highlight_A = set(range(9))
+        elif mov_especial == 2:
+            pass
+        else:
+            t = alvo_info['tipo']
+            lado = alvo_info['lado']
+            if t == 'celula':
+                if lado == 'I': highlight_I = set(range(9))
+                elif lado == 'A': highlight_A = set(range(9))
+            elif t == 'linha':
+                firsts = {0, 3, 6}
+                if lado == 'I': highlight_I = firsts
+                elif lado == 'A': highlight_A = firsts
+
+    if modo_alvo and highlight_A and aliado_sel:
+        try:
+            pos_ali = max(1, min(9, int(aliado_sel.get("Pos", 1))))
+            highlight_A.discard(pos_ali - 1)
+        except Exception:
+            pass
+
+    slots_high["A"] = set(highlight_A)
+    slots_high["I"] = set(highlight_I)
+
+    cor_amarelo = Cores["amarelo"]
+
+    # ==== helpers ====
+    def _add_codes_line(prefix, idx0):
+        base = (idx0 // 3) * 3
+        for k in (base + 1, base + 2, base + 3):
+            code = f"{prefix}{k}"
+            if code not in parametros["AlvosSelecionados"]:
+                parametros["AlvosSelecionados"].append(code)
+
+    def _add_code_single(prefix, idx0):
+        code = f"{prefix}{idx0 + 1}"
+        if code not in parametros["AlvosSelecionados"]:
+            parametros["AlvosSelecionados"].append(code)
+
+    def _indice_do_aliado(aliado_dict):
+        equipe = parametros.get("EquipeAliada") or []
+        try:
+            pos = int(aliado_dict.get("Pos", -1))
+            for i, p in enumerate(equipe):
+                if int(p.get("Pos", -2)) == pos:
+                    return i
+        except Exception:
+            pass
+        for i, p in enumerate(equipe):
+            if p is aliado_dict or p == aliado_dict:
+                return i
+        return None
+
+    def _checar_finalizacao():
+        if mov_especial == 1:
+            qtd = 1
+        elif mov_especial == 2:
+            qtd = 1
+        else:
+            qtd = max(1, int(alvo_info.get('qtd', 1)))
+        if len(parametros["AlvosSelecionados"]) >= qtd:
+            parametros["__alvo_finalizado_ok"] = True
+            parametros["__ja_limpei_estado"] = True
+            parametros["ModoAlvificando"] = False
+            slots_high["A"].clear()
+            slots_high["I"].clear()
+
+    # ======== Aliados (esquerda) ========
+    for i, rect in enumerate(_slots_esquerda):
+        poke = next((p for p in parametros.get("AliadosAtivos", []) if p and p.get("Pos") == i + 1), None)
+        rect_anim = rect.move(dx_esq, 0)
+        slots_rects["A"][i] = rect_anim.copy()
+
+        if modo_alvo:
+            pisc = (i in highlight_A)
+            Botao_Selecao(
+                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
+                cor_fundo=_slot_skin_aliado, cor_borda_normal=(cor_amarelo if pisc else (0, 0, 0)),
+                cor_borda_esquerda=None, cor_borda_direita=None, cor_passagem=None,
+                id_botao=f"ali-{i}",
+                estado_global=EstadoArenaFalso, eventos=None,
+                funcao_esquerdo=None, desfazer_esquerdo=None,
+                Piscante=pisc
+            )
+            if pisc:
+                if mov_especial == 1:
+                    def _acao_A_move(ii=i):
+                        _add_code_single('A', ii)
+                        _apos_primeiro_alvo()
+                        _checar_finalizacao()
+                    Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_A_move, parametros))
+                elif alvo_info['tipo'] == 'linha':
+                    def _acao_A_linha(ii=i):
+                        _add_codes_line('A', ii)
+                        _apos_primeiro_alvo()
+                        _checar_finalizacao()
+                    Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_A_linha, parametros))
+                elif alvo_info['tipo'] == 'celula':
+                    def _acao_A_cel(ii=i):
+                        _add_code_single('A', ii)
+                        _apos_primeiro_alvo()
+                        _checar_finalizacao()
+                    Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_A_cel, parametros))
+        else:
+            func_esq_ali = None
+            desf_esq_ali = None
+            if poke is not None:
+                func_esq_ali = [
+                    (lambda p=poke: parametros.update({"AliadoSelecionado": p})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_aliado": pygame.time.get_ticks(),
+                        "Y1": 1080,
+                        "Y2": 900,
+                    })),
+                ]
+                desf_esq_ali = [
+                    (lambda: parametros.update({"AliadoSelecionado": None})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_aliado": pygame.time.get_ticks(),
+                        "Y1": 900,
+                        "Y2": 1080,
+                    })),
+                ]
+
+            Botao_Selecao(
+                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
+                cor_fundo=_slot_skin_aliado, cor_borda_normal=(0, 0, 0),
+                cor_passagem=(200, 200, 200), cor_borda_esquerda=Cores["azul"],
+                id_botao=f"ali-{i}",
+                eventos=eventos, estado_global=EstadoArenaBotoesAliado,
+                funcao_esquerdo=func_esq_ali,
+                desfazer_esquerdo=desf_esq_ali
+            )
+
+    # ======== Inimigos (direita) ========
+    for i, rect in enumerate(_slots_direita):
+        poke = next((p for p in parametros.get("InimigosAtivos", []) if p and p.get("Pos") == i + 1), None)
+        rect_anim = rect.move(dx_dir, 0)
+        slots_rects["I"][i] = rect_anim.copy()
+
+        if modo_alvo:
+            pisc = (i in highlight_I)
+            Botao_Selecao(
+                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
+                cor_fundo=_slot_skin_inimigo, cor_borda_normal=(cor_amarelo if pisc else (0, 0, 0)),
+                cor_borda_esquerda=None, cor_borda_direita=None, cor_passagem=None,
+                id_botao=f"ini-{i}",
+                estado_global=EstadoArenaFalso, eventos=None,
+                funcao_esquerdo=None, desfazer_esquerdo=None,
+                Piscante=pisc
+            )
+            if pisc and mov_especial != 1:
+                if alvo_info['tipo'] == 'linha':
+                    def _acao_I_linha(ii=i):
+                        _add_codes_line('I', ii)
+                        _apos_primeiro_alvo()
+                        _checar_finalizacao()
+                    Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_I_linha, parametros))
+                elif alvo_info['tipo'] == 'celula':
+                    def _acao_I_cel(ii=i):
+                        _add_code_single('I', ii)
+                        _apos_primeiro_alvo()
+                        _checar_finalizacao()
+                    Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_I_cel, parametros))
+        else:
+            func_esq_ini = None
+            desf_esq_ini = None
+            if poke is not None:
+                func_esq_ini = [
+                    (lambda p=poke: parametros.update({"InimigoSelecionado": p})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_inimigo": pygame.time.get_ticks(),
+                        "Y3": -200,
+                        "Y4": 0,
+                    })),
+                ]
+                desf_esq_ini = [
+                    (lambda: parametros.update({"InimigoSelecionado": None})),
+                    (lambda a=anima: a.update({
+                        "_anima_painel_inimigo": pygame.time.get_ticks(),
+                        "Y3": 0,
+                        "Y4": -200,
+                    })),
+                ]
+
+            Botao_Selecao(
+                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
+                cor_fundo=_slot_skin_inimigo, cor_borda_normal=(0, 0, 0),
+                cor_passagem=(200, 200, 200), cor_borda_esquerda=Cores["vermelho"],
+                id_botao=f"ini-{i}",
+                eventos=eventos, estado_global=EstadoArenaBotoesInimigo,
+                funcao_esquerdo=func_esq_ini,
+                desfazer_esquerdo=desf_esq_ini
+            )
+
+
+def AlvosBatalha(tela, estados, eventos, parametros):
     # ===== helpers gerais =====
     def _slot_center(lado, idx1based):
         slots = parametros.get("SlotsRects", {})
@@ -916,7 +905,6 @@ def TelaAlvoBatalha(tela, estados, eventos, parametros):
     FluxosAtuais()
     FluxosLog()
 
-# ==================== FUNDO/GRIDS/POKÉMONS (SEM CÂMERA) ====================
 def TelaFundoBatalha(tela, estados, eventos, parametros):
     global _slots_esquerda, _slots_direita, _anim_inimigos, _anim_aliados
     global _slot_skin_aliado, _slot_skin_inimigo, _anima_t0
@@ -987,10 +975,9 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
                             (cx, cy), tamanho=1.1, intervalo=30, inverted=True)
             _anim_aliados.append((anim, (cx, cy)))
 
-    TelaAlvoBatalha(tela, estados, eventos, parametros)
+    AlvosBatalha(tela, estados, eventos, parametros)
 
-
-    DesenharPlayer(tela,Player.Skin,(50,850),nome=Player.Nome,Fonte=Fontes[18])
+    DesenharPlayer(tela,Player.Skin,(70,850),nome=Player.Nome,Fonte=Fontes[18])
 
     if not parametros["BatalhaSimples"]:
         pass
@@ -1001,33 +988,6 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
     for anim_obj, (cx, cy) in _anim_aliados:
         anim_obj.atualizar(tela, nova_pos=(int(cx + dx_esq), int(cy)), multiplicador=1.0)
 
-def BatalhaTelaOpçoes(tela, estados, eventos, parametros):
-
-    if parametros["TelaConfigurações"]["Entrou"]:
-        if pygame.mouse.get_pressed()[0]:
-            return
-        else:
-            parametros["TelaConfigurações"]["Entrou"] = False
-
-    Botao(
-        tela, "Voltar", (710, 300, 500, 150), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
-        lambda: parametros.update({"Tela": BatalhaTelaPadrao}),
-        Fontes[40], BG, eventos, som="Clique", cor_texto=Cores["branco"]
-    )
-
-    Botao(
-        tela, "Configurações", (710, 500, 500, 150), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
-        lambda: parametros.update({"Tela": TelaConfigurações, "TelaConfigurações": {"Voltar":lambda: parametros.update({"Tela": BatalhaTelaOpçoes}), "Entrou": True}}),
-        Fontes[40], BG, eventos, som="Clique", cor_texto=Cores["branco"]
-    )
-
-    Botao(
-        tela, "Salvar e Sair", (710, 700, 500, 150), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
-        lambda: [SalvarConta(parametros), SairConta(parametros), estados.update({"Mundo": False, "Inicio": True})],
-        Fontes[40], BG, eventos, som="Clique", cor_texto=Cores["branco"]
-    )
-
-# ==================== HUD ====================
 def TelaHudBatalha(tela, estados, eventos, parametros):
     global AliadoSelecionadoCache, InimigoSelecionadoCache
 
@@ -1100,6 +1060,33 @@ def TelaHudBatalha(tela, estados, eventos, parametros):
             lambda: (parametros["LogAtual"].pop(i), Acao_surface_cache.pop(i))],
             Fontes[10], BG, eventos, grossura=1)
 
+
+def BatalhaTelaOpçoes(tela, estados, eventos, parametros):
+
+    if parametros["TelaConfigurações"]["Entrou"]:
+        if pygame.mouse.get_pressed()[0]:
+            return
+        else:
+            parametros["TelaConfigurações"]["Entrou"] = False
+
+    Botao(
+        tela, "Voltar", (710, 300, 500, 150), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
+        lambda: parametros.update({"Tela": BatalhaTelaPadrao}),
+        Fontes[40], BG, eventos, som="Clique", cor_texto=Cores["branco"]
+    )
+
+    Botao(
+        tela, "Configurações", (710, 500, 500, 150), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
+        lambda: parametros.update({"Tela": TelaConfigurações, "TelaConfigurações": {"Voltar":lambda: parametros.update({"Tela": BatalhaTelaOpçoes}), "Entrou": True}}),
+        Fontes[40], BG, eventos, som="Clique", cor_texto=Cores["branco"]
+    )
+
+    Botao(
+        tela, "Salvar e Sair", (710, 700, 500, 150), Texturas["Cosmico"], Cores["preto"], Cores["branco"],
+        lambda: [SalvarConta(parametros), SairConta(parametros), estados.update({"Mundo": False, "Inicio": True})],
+        Fontes[40], BG, eventos, som="Clique", cor_texto=Cores["branco"]
+    )
+
 def BatalhaTelaPadrao(tela, estados, eventos, parametros):
 
     TelaFundoBatalha(tela, estados, eventos, parametros)
@@ -1162,8 +1149,11 @@ def BatalhaLoop(tela, relogio, estados, config, info):
             "TelaConfigurações": {"Entrou": False},
             "Config": config,
         })
+
         parametros["AliadosAtivos"]  = definir_ativos(parametros["EquipeAliada"])
         parametros["InimigosAtivos"] = definir_ativos(parametros["EquipeInimiga"])
+
+        parametros["PartidaLocal"] = IniciarBatalhaLocal(parametros["EquipeAliada"],parametros["EquipeInimiga"])
 
     # --- antes do loop: taxa de decaimento (1 a cada 0,05s = 20/s)
     DECAY_PER_SEC = 20.0

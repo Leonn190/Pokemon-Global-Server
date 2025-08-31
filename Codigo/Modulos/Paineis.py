@@ -2381,7 +2381,6 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
     setor_central_inferior()
     setor_direito()
 
-
 def PainelAcao(acao, parametros):
  
     # cores
