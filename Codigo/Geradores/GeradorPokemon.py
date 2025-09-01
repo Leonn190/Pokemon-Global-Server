@@ -7,7 +7,6 @@ import pandas as pd
 from Codigo.Prefabs.FunçõesPrefabs import Carregar_Frames, Carregar_Imagem
 from Codigo.Funções.FunçõesConsumiveis import ConsumiveisDic
 
-df = pd.read_csv("Dados/Pokemons.csv")
 dfa = pd.read_csv("Dados/Ataques.csv")
 dfml = pd.read_csv("Dados/MoveList.csv")
 
@@ -39,6 +38,21 @@ CAMPOS_POKEMON = [
     "Nivel", "Linhagem", "IV",
     "IV_Vida", "IV_Atk", "IV_Def", "IV_SpA", "IV_SpD", "IV_Vel",
     "IV_Mag", "IV_Per", "IV_Ene", "IV_EnR", "IV_CrD", "IV_CrC", "ID"]
+
+campos_str = {"Nome", "Tipo1", "Tipo2", "Tipo3", "FF", "ID"}
+campos_int = {"Estagio"}  # se quiser manter estágio como inteiro
+
+df = pd.read_csv(
+    "Dados/Pokemons.csv",
+    decimal=",",                          # aceita vírgula decimal
+    na_values=["", " ", "NaN", "#NUM!"],  # trata lixo como NaN
+    skipinitialspace=True
+)
+
+# Depois converte todas as colunas que deveriam ser float
+for c in df.columns:
+    if c not in {"Nome", "Tipo1", "Tipo2", "Tipo3", "FF", "ID", "Estagio"}:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
 
 STATUS_PRINCIPAIS = [
     "Vida", "Atk", "Def", "SpA", "SpD", "Vel",
@@ -81,43 +95,68 @@ def GeraPokemonBatalha(pokemon):
     return dados
 
 def GerarMatilha(pokemon, max=6):
-    """
-    Gera uma matilha de pokemons incluindo o pokemon inicial.
-    max: número máximo de pokemons na matilha (default 6)
-    Nenhum pokemon adicional pode ter Estagio maior que o pokemon inicial.
-    """
 
     pokemon = MaterializarPokemon(pokemon)
+    if not pokemon:
+        print("[ERRO] Pokemon inicial inválido:", pokemon)
+        return []
 
-    global df  # usa o df global já carregado
-    matilha = [pokemon]  # inclui o pokemon inicial
+    global df
+    matilha = [pokemon]
     linhagem = pokemon.get("Linhagem", None)
     estagio_inicial = int(pokemon.get("Estagio", 0))
 
-    if not linhagem:
-        return matilha  # se não tiver linhagem, retorna só ele
+    print("\n=== Gerando Matilha ===")
+    print("Pokemon inicial:", pokemon.get("Nome"), "| Linhagem:", linhagem, "| Estagio:", estagio_inicial)
 
-    # garante que a coluna Estagio seja numérica
+    if not linhagem:
+        print("[AVISO] Sem linhagem -> retorna só o inicial")
+        return matilha
+
+    # garante que Estagio é numérico
     df["Estagio"] = pd.to_numeric(df["Estagio"], errors="coerce").fillna(0).astype(int)
 
-    # pega todos os pokemons da mesma linhagem e com Estagio <= do inicial
-    pokemons_da_linhagem = df[
-        (df["Linhagem"] == linhagem) &
-        (df["Estagio"] <= estagio_inicial)
-    ]
-    nomes_possiveis = pokemons_da_linhagem["Nome"].tolist()
+    # pega candidatos válidos (mesma linhagem e estágio <= inicial)
+    candidatos = df[(df["Linhagem"] == linhagem) & (df["Estagio"] <= estagio_inicial)]
+    nomes_possiveis = candidatos["Nome"].tolist()
+    print("Candidatos encontrados:", nomes_possiveis)
+
+    if not nomes_possiveis:
+        print("[AVISO] Nenhum candidato encontrado")
+        return matilha
 
     # gera pokemons até atingir o máximo
     while len(matilha) < max:
-        if not nomes_possiveis:
-            break  # se não houver nomes válidos, para
-        nome = random.choice(nomes_possiveis)  # pode repetir
-        compactado = criar_pokemon_especifico(nome)
-        if compactado:
-            Dados = desserializar_pokemon(compactado)
-            materializado = MaterializarPokemon(Dados)
-            matilha.append(materializado)
+        # chance de parar antes de atingir o limite (quanto mais perto do limite, menor a chance de parar)
+        chance_parar = 0.3 + (len(matilha) / max) * 0.5
+        if random.random() < chance_parar:
+            print("Parando cedo com", len(matilha), "pokemons")
+            break
 
+        # escolhe um candidato com mais peso para estágios inferiores
+        pesos = []
+        for nome in nomes_possiveis:
+            est = int(df.loc[df["Nome"] == nome, "Estagio"].values[0])
+            peso = (estagio_inicial - est + 1)  # quanto menor o estágio, maior o peso
+            pesos.append(peso)
+
+        nome = random.choices(nomes_possiveis, weights=pesos, k=1)[0]
+        print("Escolhido:", nome, "| Pesos:", dict(zip(nomes_possiveis, pesos)))
+
+        compactado = criar_pokemon_especifico(nome)
+        if not compactado:
+            print("[ERRO] criar_pokemon_especifico falhou para", nome)
+            continue
+
+        Dados = desserializar_pokemon(compactado)
+        materializado = MaterializarPokemon(Dados)
+        if materializado:
+            matilha.append(materializado)
+            print("Adicionado:", materializado.get("Nome"))
+        else:
+            print("[ERRO] MaterializarPokemon falhou para", nome)
+
+    print("Matilha final:", [p["Nome"] for p in matilha])
     return matilha
 
 def CarregarPokemon(nome_pokemon, dic):
@@ -137,27 +176,56 @@ def CarregarAnimacaoPokemon(nome_pokemon, dic):
 def desserializar_pokemon(string):
     partes = string.split(",")
     info = {}
+
+    # valores que devem ser interpretados como vazios/NaN
+    _nulos = {"", " ", "NaN", "nan", "#NUM!", "-", "--"}
+
     for i, campo in enumerate(CAMPOS_POKEMON):
-        if i < len(partes):
-            valor = partes[i].replace(";", ",")  # reverter a substituição
-            if campo in ["Vida", "Atk", "Def", "SpA", "SpD", "Vel",
-                         "Mag", "Per", "Ene", "EnR", "CrD", "CrC",
-                         "Sinergia", "Habilidades", "Equipaveis", "Total",
-                         "Estagio", "Code", "Nivel"]:
-                try:
-                    valor = int(valor)
-                except:
-                    pass
-            elif campo in ["Poder R1", "Poder R2", "Poder R3",
-                           "%1", "%2", "%3", "Altura", "Peso",
-                           "IV", "IV_Vida", "IV_Atk", "IV_Def", "IV_SpA", "IV_SpD", "IV_Vel",
-                           "IV_Mag", "IV_Per", "IV_Ene", "IV_EnR", "IV_CrD", "IV_CrC"]:
-                try:
-                    valor = float(valor)
-                except:
-                    pass
-            info[campo] = valor
-    
+        if i >= len(partes):
+            break
+
+        # reverter substituição de vírgula, tirar espaços
+        bruto = partes[i].replace(";", ",").strip()
+
+        # normaliza: vírgula decimal -> ponto; vazios/lixo -> None
+        if bruto in _nulos:
+            normalizado = None
+        else:
+            normalizado = bruto.replace(",", ".")
+
+        if campo in campos_str:
+            # manter como string (preserva texto original, com vírgulas reais)
+            info[campo] = "" if normalizado is None else bruto
+
+        elif campo in campos_int:
+            # int seguro (aceita "1", "1.0", "1,0"); fallback = 0
+            try:
+                info[campo] = int(float(normalizado))
+            except Exception:
+                info[campo] = 0
+
+        else:
+            # por padrão: float (aceita "1,9", "2.0"); fallback = 0.0
+            try:
+                info[campo] = float(normalizado)
+            except Exception:
+                info[campo] = 0.0
+
+    # garante chaves usadas depois no código, caso não venham na string
+    # (deixa em tipos coerentes para evitar TypeError em somas)
+    defaults_float = {"Vida","Atk","Def","SpA","SpD","Vel","Mag","Per","Ene","EnR","CrD","CrC",
+                      "Sinergia","Habilidades","Equipaveis","Total","Nivel","Code","Amizade",
+                      "Poder R1","Poder R2","Poder R3","%1","%2","%3","Altura","Peso","IV",
+                      "IV_Vida","IV_Atk","IV_Def","IV_SpA","IV_SpD","IV_Vel","IV_Mag","IV_Per",
+                      "IV_Ene","IV_EnR","IV_CrD","IV_CrC"}
+    for k in defaults_float:
+        if k not in info and k not in campos_str and k not in campos_int:
+            info[k] = 0.0
+    for k in campos_int:
+        info.setdefault(k, 0)
+    for k in campos_str:
+        info.setdefault(k, "")
+
     return info
 
 def CompactarPokemon(info):
@@ -283,7 +351,7 @@ def MaterializarPokemon(Dados):
     pokemon["MoveList"] = pokemon.get("MoveList", [None] * 4)
     pokemon["Memoria"] = pokemon.get("Memoria", [None] * 8)
 
-    pokemon["Build"] = [None] * pokemon["Equipaveis"]
+    pokemon["Build"] = [None] * int(float(pokemon["Equipaveis"]))
 
     for _ in range(nivel_alvo):
         SubirNivel(pokemon)

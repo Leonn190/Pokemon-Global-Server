@@ -2037,7 +2037,7 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
         vida_atual = round(pokemon.get("Vida", 0) or 0)
         vida_max   = round(pokemon.get("VidaMax", pokemon.get("Vida", 1)) or 1)
         ene_atual  = round(pokemon.get("Energia", pokemon.get("EneAtual", 0)) or 0)
-        ene_max    = round(pokemon.get("EnE", 1) or 1)
+        ene_max    = round(pokemon.get("Ene", 1) or 1)
         estado_barras = pokemon.setdefault("_estado_barras", {})
 
         # novas variações
@@ -2382,7 +2382,6 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
     setor_direito()
 
 def PainelAcao(acao, parametros):
-    import pygame
 
     # ======= Cores =======
     cor_borda       = (30, 30, 30)
@@ -2405,17 +2404,7 @@ def PainelAcao(acao, parametros):
     MARG_R = 9
     RADIUS = 10
 
-    # ======= Fontes =======
-    fontes_param = parametros.get("Fontes")
-    if isinstance(fontes_param, dict):
-        fonte = fontes_param.get(16) or pygame.font.SysFont(None, 18)
-    elif isinstance(fontes_param, (list, tuple)) and len(fontes_param) > 16:
-        fonte = fontes_param[16] or pygame.font.SysFont(None, 18)
-    else:
-        fonte = pygame.font.SysFont(None, 18)
-
-    # ======= Imagens globais esperadas =======
-    pokemons = parametros.get("ImagensPokemons") or parametros.get("Imagens") or {}
+    fonte = fontes[16]
 
     # ======= Surface base =======
     surf = pygame.Surface((W, H), pygame.SRCALPHA)
@@ -2438,28 +2427,58 @@ def PainelAcao(acao, parametros):
     x_right = x_mid + ICON + GAP
 
     # ======= Helpers =======
-    def _scale_icon(img):
+    def _scale_icon(img, target_size):
         if img is None:
             return None
         try:
-            if img.get_width() == ICON and img.get_height() == ICON:
+            if img.get_width() == target_size and img.get_height() == target_size:
                 return img
-            return pygame.transform.smoothscale(img, (ICON, ICON))
+            return pygame.transform.smoothscale(img, (target_size, target_size))
         except Exception:
             return None
 
-    def _blit_placeholder(rect, texto):
-        pygame.draw.rect(surf, cor_placeholder, rect, border_radius=6)
+    def _center_blit(img, rect):
+        if not img:
+            return
+        dx = rect.x + (rect.w - img.get_width()) // 2
+        dy = rect.y + (rect.h - img.get_height()) // 2
+        surf.blit(img, (dx, dy))
+
+    def _draw_cell(x, top, image=None, placeholder_txt=None, bg_color=None, shrink_px=0):
+        """
+        Desenha um quadrado SEMPRE com borda. Se bg_color for dado, pinta o fundo.
+        Se image existir, centraliza dentro do quadrado (com shrink opcional).
+        Caso contrário, mostra placeholder_txt.
+        """
+        rect = pygame.Rect(x, top, ICON, ICON)
+        # fundo
+        if bg_color is not None:
+            pygame.draw.rect(surf, bg_color, rect, border_radius=6)
+        else:
+            # preenche com o fundo do painel para destacar o contorno do quadrado
+            pygame.draw.rect(surf, cor_fundo, rect, border_radius=6)
+
+        # conteúdo
+        if image:
+            size = max(8, ICON - shrink_px) if shrink_px > 0 else ICON
+            img2 = _scale_icon(image, size)
+            _center_blit(img2, rect)
+        else:
+            # placeholder simples
+            pygame.draw.rect(surf, cor_placeholder, rect, border_radius=6)
+            if placeholder_txt is not None:
+                t = fonte.render(str(placeholder_txt), True, cor_texto)
+                surf.blit(t, (rect.x + (rect.w - t.get_width()) // 2,
+                              rect.y + (rect.h - t.get_height()) // 2))
+
+        # borda SEMPRE
         pygame.draw.rect(surf, cor_borda, rect, 1, border_radius=6)
-        t = fonte.render(str(texto), True, cor_texto)
-        surf.blit(t, (rect.x + (rect.w - t.get_width()) // 2,
-                      rect.y + (rect.h - t.get_height()) // 2))
+        return rect
 
     def _blit_placeholder_colorido(rect, texto, cor_bg):
-        # retângulo cheio com cor de fundo específica e número no centro
+        # retângulo cheio com cor de fundo específica e número no centro + borda
         pygame.draw.rect(surf, cor_bg, rect, border_radius=6)
         pygame.draw.rect(surf, cor_borda, rect, 1, border_radius=6)
-        # escolher cor do texto conforme contraste simples
         brilho = (cor_bg[0]*0.299 + cor_bg[1]*0.587 + cor_bg[2]*0.114)
         cor_num = (20, 20, 20) if brilho > 160 else (245, 245, 245)
         t = fonte.render(str(texto), True, cor_num)
@@ -2471,32 +2490,25 @@ def PainelAcao(acao, parametros):
             return None
         key = str(nome).lower()
         try:
-            img = pokemons.get(key) or pokemons.get(nome)  # tenta duas chaves
-            return _scale_icon(img)
+            img = pokemons.get(key) or pokemons.get(nome)
+            return img
         except Exception:
             return None
 
     def _get_mov_icon(mov):
-        icones = parametros.get("Icones") or parametros.get("icones") or {}
+        # Inteiros 1/2 são especiais (Mover/Trocar) e devem ficar 4 px menores
         if isinstance(mov, dict):
             est = (mov.get("Estilo") or mov.get("estilo") or "").strip().upper()
             try:
-                if est == "N": return _scale_icon(icones.get("CustoFisico"))
-                if est == "S": return _scale_icon(icones.get("CustoStatus"))
-                if est == "E": return _scale_icon(icones.get("CustoEspecial"))
+                if est == "N": return icones.get("CustoFisico")
+                if est == "S": return icones.get("CustoStatus")
+                if est == "E": return icones.get("CustoEspecial")
             except Exception:
                 pass
         if isinstance(mov, int):
-            if mov == 1: return _scale_icon(icones.get("mover") or icones.get("Mover"))
-            if mov == 2: return _scale_icon(icones.get("trocar") or icones.get("Trocar"))
+            if mov == 1: return (icones.get("mover") or icones.get("Mover"))
+            if mov == 2: return (icones.get("trocar") or icones.get("Trocar"))
         return None
-
-    def _draw_icon_or_placeholder(x, top, image, placeholder_txt):
-        rect = pygame.Rect(x, top, ICON, ICON)
-        if image:
-            surf.blit(image, rect.topleft)
-        else:
-            _blit_placeholder(rect, placeholder_txt)
 
     def _parse_alvo(code: str):
         """
@@ -2508,23 +2520,28 @@ def PainelAcao(acao, parametros):
             return "A", 1, False
         reserva = s.startswith("R")
         if reserva:
-            # RA3 / RI2
             lado = "A" if "RA" in s else ("I" if "RI" in s else ("A" if "A" in s else "I"))
             digitos = "".join(ch for ch in s if ch.isdigit())
             pos = int(digitos) if digitos else 1
             return lado, pos, True
         else:
-            # A5 / I4
             lado = "A" if s[0] == "A" else "I"
             digitos = "".join(ch for ch in s[1:] if ch.isdigit())
             pos = int(digitos) if digitos else 1
             return lado, pos, False
 
+    def _lado_do_pokemon(poke):
+        equipe_a = (parametros.get("EquipeAliada") or [])
+        equipe_i = (parametros.get("EquipeInimiga") or parametros.get("EquipeInimigos") or [])
+        if any(p is poke or p == poke for p in equipe_a): return "A"
+        if any(p is poke or p == poke for p in equipe_i): return "I"
+        return None
+
     def _achar_pokemon_por_pos(lado, pos, reserva):
         """
         Busca primeiro em ativos por Pos quando reserva=False.
         Quando reserva=True, busca por ReservaPos em pokémons inativos (Ativo=False).
-        Se não achar exatamente pelo flag, tenta fallback simétrico (ex: alvo A5 mas só existe em reserva).
+        Se não achar, tenta fallbacks simétricos.
         """
         equipe_a_raw = (parametros.get("EquipeAliada") or [])
         equipe_i_raw = (parametros.get("EquipeInimiga") or parametros.get("EquipeInimigos") or [])
@@ -2537,15 +2554,12 @@ def PainelAcao(acao, parametros):
             if reserva:
                 poke = next((p for p in reserva_a if int(p.get("ReservaPos", -1)) == int(pos)), None)
                 if poke: return poke
-                # fallback: talvez o dado não marque Ativo=False mas tenha ReservaPos
                 poke = next((p for p in equipe_a if int(p.get("ReservaPos", -1)) == int(pos)), None)
                 if poke: return poke
-                # último recurso: tentar por Pos (caso o parser tenha enviado RA mas está ativo)
                 return next((p for p in ativos if int(p.get("Pos", -1)) == int(pos)), None)
             else:
                 poke = next((p for p in ativos if int(p.get("Pos", -1)) == int(pos)), None)
                 if poke: return poke
-                # fallback: talvez esteja na reserva mas alvo veio sem 'R'
                 return next((p for p in equipe_a if int(p.get("ReservaPos", -1)) == int(pos)), None)
 
         else:  # lado == "I"
@@ -2564,22 +2578,31 @@ def PainelAcao(acao, parametros):
 
     # ======= ESQUERDA: Pokémon Atacante =======
     atacante_idx = acao.get("Atacante")
-    poke_img = None
+    poke_img_esq = None
+    bg_esq = None
     if atacante_idx is not None:
         try:
             equipeA = parametros.get("EquipeAliada") or []
             if 0 <= int(atacante_idx) < len(equipeA):
-                nome = (equipeA[int(atacante_idx)] or {}).get("Nome") or (equipeA[int(atacante_idx)] or {}).get("nome")
-                poke_img = _get_poke_icon_by_name(nome)
+                poke_esq = (equipeA[int(atacante_idx)] or {})
+                nome_esq = poke_esq.get("Nome") or poke_esq.get("nome")
+                poke_img_esq = _get_poke_icon_by_name(nome_esq)
+                # cor de fundo se for de fato um pokémon
+                if poke_img_esq:
+                    is_res = (not poke_esq.get("Ativo", True)) or bool(poke_esq.get("ReservaPos"))
+                    bg_esq = (COR_RESERVA if is_res else COR_ALIADO)  # atacante da EquipeAliada
         except Exception:
-            poke_img = None
-    _draw_icon_or_placeholder(x_left, icon_top, poke_img, "A")
+            poke_img_esq = None
+            bg_esq = None
+
+    _draw_cell(x_left, icon_top, image=poke_img_esq, placeholder_txt="A", bg_color=bg_esq)
 
     # ======= MEIO: Movimento =======
     mov = acao.get("Movimento")
     mov_img = _get_mov_icon(mov)
+    shrink = 4 if isinstance(mov, int) and mov in (1, 2) else 0
     place_meio = "—" if not isinstance(mov, int) else str(mov)
-    _draw_icon_or_placeholder(x_mid, icon_top, mov_img, place_meio)
+    _draw_cell(x_mid, icon_top, image=mov_img, placeholder_txt=place_meio, bg_color=None, shrink_px=shrink)
 
     # ======= DIREITA: Alvo (com suporte a reserva + cor de fundo por área) =======
     rect_dir = pygame.Rect(x_right, icon_top, ICON, ICON)
@@ -2594,10 +2617,18 @@ def PainelAcao(acao, parametros):
         nome = (poke or {}).get("Nome") or (poke or {}).get("nome")
         img_dir = _get_poke_icon_by_name(nome) if poke else None
 
+        # Determina cor de fundo (se houver pokémon real)
+        bg_dir = None
         if img_dir:
-            # Se existe pokémon (inclusive na reserva), mostre o sprite dele
-            surf.blit(img_dir, rect_dir.topleft)
-            pygame.draw.rect(surf, cor_borda, rect_dir, 1, border_radius=6)
+            lado_eff = _lado_do_pokemon(poke) or lado
+            is_res_eff = is_reserva or (not (poke.get("Ativo", True))) or bool(poke.get("ReservaPos"))
+            if is_res_eff:
+                bg_dir = COR_RESERVA
+            else:
+                bg_dir = COR_ALIADO if lado_eff == "A" else COR_INIMIGO
+
+            # Desenho com imagem e FUNDO colorido + borda sempre
+            _draw_cell(x_right, icon_top, image=img_dir, placeholder_txt=None, bg_color=bg_dir, shrink_px=0)
         else:
             # Sem pokémon: fundo colorido por área + número da casa (sem A/I/RA/RI)
             if is_reserva:
@@ -2605,7 +2636,7 @@ def PainelAcao(acao, parametros):
             else:
                 _blit_placeholder_colorido(rect_dir, pos, COR_ALIADO if lado == "A" else COR_INIMIGO)
     else:
-        # múltiplos alvos ou vazio → marcador simples
-        _blit_placeholder(rect_dir, "M")
+        # múltiplos alvos ou vazio → marcador simples, mas com borda
+        _draw_cell(x_right, icon_top, image=None, placeholder_txt="M", bg_color=None)
 
     return surf

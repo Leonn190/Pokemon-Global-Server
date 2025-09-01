@@ -2,6 +2,7 @@ import pygame
 import copy
 
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel
+from Codigo.Prefabs.FunçõesPrefabs import Tooltip
 from Codigo.Prefabs.Arrastavel import Arrastavel
 from Codigo.Modulos.Paineis import PainelItem, PainelPokemon, PainelPokemonAuxiliar, PainelPlayer
 
@@ -45,7 +46,12 @@ def SetorPlayer(tela, player, eventos, parametros):
     PainelPlayer(tela, (175,250), player, eventos, parametros)
 
 def SetorPokemonsPadrao(tela, player, eventos, parametros):
-    global areas_pokemons, pokemons_cache, arrastaveis_pokemons, times_cache
+    global areas_pokemons, areas_pokemons_times, pokemons_cache, arrastaveis_pokemons, times_cache
+
+    # -----------------------------------------------
+    # Tooltips simples: vamos acumular e desenhar por último (acima de tudo)
+    tooltips_pendentes = []
+    # -----------------------------------------------
 
     def executar_pokemon(arr):
         global pokemons_cache
@@ -125,25 +131,28 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
         poke = player.Pokemons[index]
 
         # botão invisível para seleção (sempre)
-        Botao_invisivel((x, y, TAMANHO_SLOT, TAMANHO_SLOT), lambda p=poke: parametros.update({"PokemonSelecionado": p}), clique_duplo=True)
+        Botao_invisivel((x, y, TAMANHO_SLOT, TAMANHO_SLOT),
+                        lambda p=poke: parametros.update({"PokemonSelecionado": p}),
+                        clique_duplo=True)
+
+        # >>> TOOLTIP (grade): se houver Pokémon, preparar tooltip
+        if poke:
+            tooltips_pendentes.append((rect, poke))
 
     # === 2) OBRIGATÓRIO: desenhar área dos TIMES (fundo + títulos + poderes + slots + imagens/níveis) ===
     equipes_cache = getattr(player, "Equipes", [])
-    num_times = min(5, max(1, len(equipes_cache)))  # garante pelo menos 1 na conta visual
+    num_times = min(5, max(1, len(equipes_cache)))  # pelo menos 1
     pos_equipes_x = pos_grid[0] + largura_total + 100
     pos_equipes_y = pos_grid[1]
-    fonte_equipes = fontes[20]  # ajuste se quiser maior/menor
+    fonte_equipes = fontes[20]
 
     header_h = fonte_equipes.get_height()
-    # altura por time: header + espaço + slot
     altura_por_time = header_h + 4 + TAMANHO_SLOT
-    # espaçamento entre times (o seu código usava +24)
     espacamento_times = 24
     altura_total_times = num_times * altura_por_time + (num_times - 1) * espacamento_times
 
     largura_times = 6 * TAMANHO_SLOT + (6 - 1) * ESPACO
     padding = 12
-    # fundo que engloba todos os times (um único fundo atrás da seção dos times)
     fundo_times_rect = pygame.Rect(
         pos_equipes_x - padding,
         pos_equipes_y - padding,
@@ -152,15 +161,13 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
     )
     pygame.draw.rect(tela, (139, 69, 19), fundo_times_rect, border_radius=6)
 
-    # agora desenha cada time (título, poder, slots, imagens, níveis) — sempre
+    # agora desenha cada time (título, poder, slots)
     cur_y = pos_equipes_y
     for idx, equipe in enumerate(equipes_cache[:5]):
-        # calcula poder do time (soma de poke["Total"] dos pokes presentes)
         poder_total = round(sum((p.get("Total", 0) for p in equipe if p)))
         texto_poder = fonte_equipes.render(f"Poder: {poder_total}", True, (255, 255, 0))
         texto_time = fonte_equipes.render(f"Time {idx + 1}", True, (255, 255, 255))
 
-        # desenha poder à esquerda e "Time X" à direita (dentro da área dos times)
         tela.blit(texto_poder, (pos_equipes_x + 5, cur_y))
         tela.blit(texto_time, (pos_equipes_x + largura_times - texto_time.get_width(), cur_y))
 
@@ -174,11 +181,15 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
 
             areas_pokemons_times.append(rect)
 
+            # >>> TOOLTIP (times): se houver Pokémon neste slot, preparar tooltip
+            poke_t = equipe[slot_idx] if slot_idx < len(equipe) else None
+            if poke_t:
+                tooltips_pendentes.append((rect, poke_t))
+
         cur_y += altura_por_time + espacamento_times
 
-     # ---- snapshot de equipes como IDs (ordem preservada) ----
+    # ---- snapshot de equipes como IDs (ordem preservada) ----
     def snapshot_equipes_ids(equipes):
-        # lista de listas de dicts -> tupla de tuplas de IDs
         snapshot = []
         for equipe in equipes:
             ids = tuple(m["ID"] for m in equipe if m is not None)
@@ -193,7 +204,7 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
         pokemons_cache = copy.deepcopy(player.Pokemons)  # snapshot pra detectar mutações in-place
         arrastaveis_pokemons.clear()
 
-        # arrastaveis para grade principal
+        # arrastáveis para grade principal
         for index, poke in enumerate(player.Pokemons):
             if not poke:
                 continue
@@ -215,7 +226,7 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
                 )
                 arrastaveis_pokemons.append(arr)
 
-        # arrastaveis para os times (mantendo infoExtra1 = indice do time)
+        # arrastáveis para os times (mantendo infoExtra1 = índice do time)
         cur_y = pos_equipes_y
         for idx, equipe in enumerate(equipes_cache[:5]):
             y_slots = cur_y + header_h + 4
@@ -239,7 +250,7 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
                         arrastaveis_pokemons.append(arr)
             cur_y += altura_por_time + espacamento_times
 
-        # Atualizar e desenhar arrastáveis
+    # Atualizar e desenhar arrastáveis
     for arr in arrastaveis_pokemons:
         if parametros["PokemonSelecionado"] is not None:
             arr.esta_arrastando = False
@@ -252,6 +263,39 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
     for arr in arrastaveis_pokemons:
         if arr.esta_arrastando:
             arr.desenhar(tela)
+
+    # -------------------------------------------------------
+    # TOOLTIP: desenhar por último (acima dos sprites e slots)
+    for rect_slot, poke in tooltips_pendentes:
+        try:
+            nome  = (poke.get("Nome")  or poke.get("nome")  or "Pokémon")
+            poder = int(poke.get("Poder") or poke.get("Total") or 0)
+            nivel = int(poke.get("Nivel") or poke.get("nivel") or poke.get("Estagio") or 1)
+        except Exception:
+            nome, poder, nivel = "Pokémon", 0, 1
+
+        # texto no formato pedido: usa "[" para quebrar linha na Tooltip
+        texto = f"Poder: {poder} [ Nivel: {nivel}"
+
+        # Tooltip levemente mais larga que o slot e centralizada acima
+        HUD_W = TAMANHO_SLOT + 20
+        title_h = fontes[14].get_height()
+        text_h  = fontes[12].get_height()
+        HUD_H = 8 + title_h + 5 + text_h + 6
+        hud_x = rect_slot.centerx - HUD_W // 2
+        hud_y = rect_slot.top - HUD_H - 8
+
+        rect_hud = pygame.Rect(hud_x, hud_y, HUD_W, HUD_H)
+
+        Tooltip(
+            tela,
+            rect_ctt=rect_slot,
+            rect_hud=rect_hud,
+            surface=None,
+            texto=texto,         fonte=fontes[12], cor_texto=(255, 255, 255),
+            titulo=nome,         fonte_titulo=fontes[14], cor_titulo=(255, 255, 0)
+        )
+    # -------------------------------------------------------
 
 def SetorPokemons(tela, player, eventos, parametros):
 

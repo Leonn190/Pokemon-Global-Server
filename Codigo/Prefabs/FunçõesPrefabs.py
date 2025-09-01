@@ -4,7 +4,10 @@ import os
 import math
 import re
 import sys
+import time
 import numpy as np
+
+_tooltip_fades = {}
 
 def resource_path(relative_path):
     """Garante o caminho correto mesmo quando empacotado em .exe com PyInstaller."""
@@ -74,40 +77,6 @@ def quebrar_texto(texto, fonte, largura_max):
     if linha_atual:
         linhas.append(linha_atual)
     return linhas
-
-def Tooltip(area, local, texto, titulo, fonte_texto, fonte_titulo, tela):
-    mouse_x, mouse_y = pygame.mouse.get_pos()
-    area_rect = pygame.Rect(area)
-    local_rect = pygame.Rect(local)
-
-    if not area_rect.collidepoint((mouse_x, mouse_y)):
-        return
-
-    # Prepara texto quebrado sem limite artificial de largura
-    linhas_texto = quebrar_texto(texto, fonte_texto, local_rect.width - 20)
-    altura_texto = fonte_texto.get_height() * len(linhas_texto)
-
-    # Prepara título (sem quebra)
-    titulo_render = fonte_titulo.render(titulo, True, (255, 255, 255))
-    altura_titulo = titulo_render.get_height()
-
-    # Cria fundo com transparência no tamanho definido por 'local'
-    fundo = pygame.Surface((local_rect.width, local_rect.height), pygame.SRCALPHA)
-    fundo.fill((0, 0, 0, 200))
-
-    # Desenha o título centralizado horizontalmente no topo
-    titulo_rect = titulo_render.get_rect(center=(local_rect.width // 2, altura_titulo // 2 + 5))
-    fundo.blit(titulo_render, titulo_rect)
-
-    # Desenha o texto abaixo, centralizado horizontalmente
-    y_texto_inicio = altura_titulo + 10
-    for i, linha in enumerate(linhas_texto):
-        render_linha = fonte_texto.render(linha, True, (255, 255, 255))
-        linha_rect = render_linha.get_rect(center=(local_rect.width // 2, y_texto_inicio + fonte_texto.get_height() // 2 + i * fonte_texto.get_height()))
-        fundo.blit(render_linha, linha_rect)
-
-    # Blita no local especificado
-    tela.blit(fundo, local_rect.topleft)
 
 def Animar(D_inicial,D_final,anima,tempo=200):
     
@@ -863,3 +832,83 @@ def caixa_de_texto(
 
     # manda pra tela
     tela.blit(surf, (x, y))
+
+def Tooltip(
+    tela, rect_ctt, rect_hud,
+    surface=None,
+    texto=None, fonte=None, cor_texto=(255,255,255),
+    titulo=None, fonte_titulo=None, cor_titulo=(255,255,0)
+):
+    global _tooltip_fades
+
+    mouse_pos = pygame.mouse.get_pos()
+    hovering = rect_ctt.collidepoint(mouse_pos)
+
+    # Criar chave única p/ cada rect
+    key = id(rect_ctt)
+    if key not in _tooltip_fades:
+        _tooltip_fades[key] = {"alpha": 0, "last_hover": False}
+
+    fade = _tooltip_fades[key]
+
+    # Atualiza estado de fade
+    if hovering:
+        fade["alpha"] = min(200, fade["alpha"] + 10)
+    else:
+        fade["alpha"] = max(0, fade["alpha"] - 15)
+
+    fade["last_hover"] = hovering
+
+    if fade["alpha"] <= 0:
+        return  # invisível ainda
+
+    # Se rect_hud for tupla, converter para rect (precisa surface ou default)
+    if isinstance(rect_hud, tuple):
+        if surface:
+            rect_hud = surface.get_rect(topleft=rect_hud)
+        else:
+            rect_hud = pygame.Rect(rect_hud[0], rect_hud[1], 200, 80)
+
+    # Surface de fundo (se não for fornecida)
+    if not surface:
+        surface = pygame.Surface((rect_hud.width, rect_hud.height), pygame.SRCALPHA)
+        surface.fill((0, 0, 0, fade["alpha"]))  # preto transparente
+
+    # Desenha fundo
+    tela.blit(surface, rect_hud.topleft)
+
+    y = rect_hud.top + 5
+
+    # Renderiza título, se existir
+    if titulo and fonte_titulo:
+        surf_titulo = fonte_titulo.render(titulo, True, cor_titulo)
+        titulo_x = rect_hud.centerx - surf_titulo.get_width() // 2
+        tela.blit(surf_titulo, (titulo_x, y))
+        y += surf_titulo.get_height() + 5  # espaço após título
+
+    # Renderiza texto, se existir
+    if texto and fonte:
+        # quebra de linha com "[" além do limite automático
+        partes = texto.split("[")
+        linhas = []
+
+        for parte in partes:
+            palavras = parte.split(" ")
+            linha = ""
+            for palavra in palavras:
+                test_line = linha + palavra + " "
+                largura, _ = fonte.size(test_line)
+                if largura <= rect_hud.width - 10:  # margem
+                    linha = test_line
+                else:
+                    linhas.append(linha)
+                    linha = palavra + " "
+            linhas.append(linha)
+
+        for linha in linhas:
+            surf_texto = fonte.render(linha.strip(), True, cor_texto)
+            tela.blit(surf_texto, (rect_hud.left + 5, y))
+            y += surf_texto.get_height()
+
+
+
