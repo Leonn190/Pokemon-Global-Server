@@ -10,7 +10,7 @@ from Codigo.Geradores.GeradorPokemon import GerarMatilha, CarregarAnimacaoPokemo
 from Codigo.Modulos.Config import TelaConfigurações
 from Codigo.Modulos.DesenhoPlayer import DesenharPlayer
 from Codigo.Server.ServerMundo import SairConta, SalvarConta
-# from Codigo.Localidades.EstabilizadorBatalhaLocal import IniciarBatalhaLocal
+from Codigo.Localidades.EstabilizadorBatalhaLocal import criar_e_inicializar_sala_local
 
 Cores = None
 Fontes = None
@@ -79,9 +79,13 @@ def Transformador(acao):
 
 def VerificaçãoCombate(parametros):
     if parametros.get("BatalhaSimples"):
-        if parametros.get("Pronto"):
-            for acao in parametros["LogAtual"]:
-                Transformador(acao)
+        while parametros["Running"]:
+            if parametros.get("Pronto"):
+                for acao in parametros["LogAtual"]:
+                    Transformador(acao)
+            
+            else:
+                time.sleep(1)
 
 def definir_ativos(equipe):
     # Filtra apenas os Pokémon válidos (não None)
@@ -616,6 +620,11 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                 firsts = {0, 3, 6}
                 if lado == 'I': highlight_I = firsts
                 elif lado == 'A': highlight_A = firsts
+            elif t == 'escolha':
+                # todas as áreas (aliadas e inimigas) marcadas,
+                # exceto a do próprio pokémon (removida logo abaixo)
+                highlight_A = set(range(9))
+                highlight_I = set(range(9))
 
     if modo_alvo and highlight_A and aliado_sel:
         try:
@@ -665,13 +674,13 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
         if modo_alvo:
             pisc = (i in highlight_A)
             Botao_Selecao(
-                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
+                tela=tela, texto=str(i+1), espaço=rect_anim, Fonte=Fontes[30],
                 cor_fundo=_slot_skin_aliado, cor_borda_normal=(cor_amarelo if pisc else (0, 0, 0)),
                 cor_borda_esquerda=None, cor_borda_direita=None, cor_passagem=None,
                 id_botao=f"ali-{i}",
                 estado_global=EstadoArenaFalso, eventos=None,
                 funcao_esquerdo=None, desfazer_esquerdo=None,
-                Piscante=pisc
+                Piscante=pisc, AlphaTexto=25
             )
             if pisc:
                 if mov_especial == 1:
@@ -686,7 +695,7 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                         _apos_primeiro_alvo()
                         _checar_finalizacao()
                     Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_A_linha, parametros))
-                elif alvo_info['tipo'] == 'celula':
+                elif alvo_info['tipo'] == 'celula' or alvo_info['tipo'] == 'escolha':
                     def _acao_A_cel(ii=i):
                         _add_code_single('A', ii)
                         _apos_primeiro_alvo()
@@ -719,12 +728,12 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                 ]
 
             Botao_Selecao(
-                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
+                tela=tela, texto=str(i+1), espaço=rect_anim, Fonte=Fontes[30],
                 cor_fundo=_slot_skin_aliado, cor_borda_normal=(0, 0, 0),
                 cor_passagem=(200, 200, 200), cor_borda_esquerda=Cores["azul"],
                 id_botao=f"ali-{i}",
                 eventos=eventos, estado_global=EstadoArenaBotoesAliado,
-                funcao_esquerdo=func_esq_ali,
+                funcao_esquerdo=func_esq_ali, AlphaTexto=25,
                 desfazer_esquerdo=desf_esq_ali
             )
 
@@ -737,13 +746,13 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
         if modo_alvo:
             pisc = (i in highlight_I)
             Botao_Selecao(
-                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
+                tela=tela, texto=str(i+1), espaço=rect_anim, Fonte=Fontes[30],
                 cor_fundo=_slot_skin_inimigo, cor_borda_normal=(cor_amarelo if pisc else (0, 0, 0)),
                 cor_borda_esquerda=None, cor_borda_direita=None, cor_passagem=None,
                 id_botao=f"ini-{i}",
                 estado_global=EstadoArenaFalso, eventos=None,
                 funcao_esquerdo=None, desfazer_esquerdo=None,
-                Piscante=pisc
+                Piscante=pisc, AlphaTexto=25
             )
             if pisc and mov_especial != 1:
                 if alvo_info['tipo'] == 'linha':
@@ -752,7 +761,7 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                         _apos_primeiro_alvo()
                         _checar_finalizacao()
                     Botao_invisivel(rect_anim, _wrap_energy_guard(_acao_I_linha, parametros))
-                elif alvo_info['tipo'] == 'celula':
+                elif alvo_info['tipo'] == 'celula' or alvo_info['tipo'] == 'escolha':
                     def _acao_I_cel(ii=i):
                         _add_code_single('I', ii)
                         _apos_primeiro_alvo()
@@ -780,14 +789,14 @@ def Arenas(tela, parametros, Fontes, eventos, dx_esq, dx_dir):
                 ]
 
             Botao_Selecao(
-                tela=tela, texto="", espaço=rect_anim, Fonte=fonte,
+                tela=tela, texto=str(i+1), espaço=rect_anim, Fonte=Fontes[30],
                 cor_fundo=_slot_skin_inimigo, cor_borda_normal=(0, 0, 0),
                 cor_passagem=(200, 200, 200), cor_borda_esquerda=Cores["vermelho"],
                 id_botao=f"ini-{i}",
                 eventos=eventos, estado_global=EstadoArenaBotoesInimigo,
-                funcao_esquerdo=func_esq_ini,
+                funcao_esquerdo=func_esq_ini, AlphaTexto=25,
                 desfazer_esquerdo=desf_esq_ini
-            )            
+            )
 
 def TelaAlvoBatalha(tela, estados, eventos, parametros):
     # ===== helpers gerais =====
@@ -1080,7 +1089,7 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
     TelaAlvoBatalha(tela, estados, eventos, parametros)
 
 
-    DesenharPlayer(tela,Player.Skin,(70,880),nome=Player.Nome,Fonte=Fontes[18])
+    DesenharPlayer(tela,Player.Skin,(90,920),nome=Player.Nome,Fonte=Fontes[18])
 
     if not parametros["BatalhaSimples"]:
         pass
@@ -1288,12 +1297,18 @@ def BatalhaLoop(tela, relogio, estados, config, info):
         parametros["AliadosAtivos"]  = definir_ativos(parametros["EquipeAliada"])
         parametros["InimigosAtivos"] = definir_ativos(parametros["EquipeInimiga"])
 
+        parametros["Sala"] = criar_e_inicializar_sala_local(parametros["EquipeAliada"],parametros["EquipeInimiga"])
+
     # --- antes do loop: taxa de decaimento (1 a cada 0,05s = 20/s)
     DECAY_PER_SEC = 20.0
 
     # inicializa o float a partir do inteiro (se existir)
     FugaFloat = float(parametros.get("Fuga", 0))
     parametros["Fuga"] = int(round(FugaFloat))
+
+    # cria a surface de fuga uma vez (fora do loop)
+    filtro_fuga = pygame.Surface(tela.get_size()).convert_alpha()
+    filtro_fuga.fill((0, 0, 0))
 
     while estados["Batalha"]:
         dt = relogio.get_time() / 1000.0
@@ -1316,6 +1331,12 @@ def BatalhaLoop(tela, relogio, estados, config, info):
             estados["Mundo"] = True
             info["AcabouDeSairConfronto"] = True
             break
+
+        # --- aplique o escurecimento reutilizando a mesma surface ---
+        if parametros["Fuga"] > 0:
+            alpha = int((parametros["Fuga"] / 100) * 255)
+            filtro_fuga.set_alpha(alpha)
+            tela.blit(filtro_fuga, (0, 0))
 
         tela.blit(Fundos["FundoBatalha"], (0, 0))
         eventos = pygame.event.get()

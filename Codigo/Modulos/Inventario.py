@@ -253,7 +253,7 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
     # Atualizar e desenhar arrastáveis
     for arr in arrastaveis_pokemons:
         if parametros["PokemonSelecionado"] is not None:
-            arr.esta_arrastando = False
+            pokemons_cache = []
         arr.atualizar(eventos)
         arr.arrastar(pygame.mouse.get_pos())
 
@@ -278,10 +278,10 @@ def SetorPokemonsPadrao(tela, player, eventos, parametros):
         texto = f"Poder: {poder} [ Nivel: {nivel}"
 
         # Tooltip levemente mais larga que o slot e centralizada acima
-        HUD_W = TAMANHO_SLOT + 20
+        HUD_W = TAMANHO_SLOT + 16
         title_h = fontes[14].get_height()
         text_h  = fontes[12].get_height()
-        HUD_H = 8 + title_h + 5 + text_h + 6
+        HUD_H = 8 + title_h + 5 + text_h + 8
         hud_x = rect_slot.centerx - HUD_W // 2
         hud_y = rect_slot.top - HUD_H - 8
 

@@ -1,7 +1,7 @@
 import pandas as pd
 
-df_Habilidades = pd.read_csv("Habilidades.csv")
-df_Equipaveis = pd.read_csv("Equipaveis.csv")
+df_Equipaveis = pd.read_csv("Dados/Equipaveis.csv")
+df_Habilidades = pd.read_csv("Dados/Habilidades.csv")
 
 from Codigo.Localidades.LeitorAtaques import ExecuteAtaque
 from Codigo.Funções.FunçõesHabilidades import HabDic
@@ -23,7 +23,7 @@ efeitos_positivos = [
     "Preparado",
     "Provocando",
     "Furtivo",
-    "Ilimitado"
+    "Ilimitado",
     "Encantado",
     "Refletido",
     "Evasivo",
@@ -45,7 +45,7 @@ efeitos_negativos = [
     "Enfraquecido",
     "Neutralizado",
     "Enfeitiçado",
-    "Atordoado"
+    "Atordoado",
     "Confuso",
     "Congelado",
     "Descarregado",
@@ -55,13 +55,18 @@ efeitos_negativos = [
 ]
 
 class Pokemon:
-    def __init__(self, dados: dict, dono: str):
+    def __init__(self, dados, dono, i, parti):
         self.nome = dados.get("nome")
         self.jogador = dono
         self.estagio = dados.get("Estagio")
         self.raridade = dados.get("Raridade")
         self.Altura = dados.get("Altura")
         self.Peso = dados.get("Peso")
+
+        if self.jogador == parti.jogador1:
+            self.ID = f"{i}/1"
+        elif self.jogador == parti.jogador2:
+            self.ID = f"{i}/2"
 
         self.Tipo1 = dados.get("Tipo1")
         self.Tipo2 = dados.get("Tipo2")
@@ -88,6 +93,10 @@ class Pokemon:
         self.base_crD = dados.get("CrD")
         self.base_crC = dados.get("CrC")
 
+        # >>> ADIÇÃO (bases de vamp/asse):
+        self.base_vamp = dados.get("Vamp", 0)
+        self.base_asse = dados.get("Asse", 0)
+
         # --- Variação permanente (buffs/debuffs fixos) ---
         self.var_per_atk = 0
         self.var_per_def = 0
@@ -100,6 +109,10 @@ class Pokemon:
         self.var_per_enR = 0
         self.var_per_crD = 0
         self.var_per_crC = 0
+
+        # >>> ADIÇÃO (variações permanentes de vamp/asse):
+        self.var_per_vamp = 0
+        self.var_per_asse = 0
 
         # --- Variação temporária (status temporários) ---
         self.var_temp_vida = 0
@@ -115,6 +128,10 @@ class Pokemon:
         self.var_temp_crD = 0
         self.var_temp_crC = 0
 
+        # >>> ADIÇÃO (variações temporárias de vamp/asse):
+        self.var_temp_vamp = 0
+        self.var_temp_asse = 0
+
         # --- Valor real (base + var_per + var_temp) ---
         self.vida = dados.get("Vida")
         self.atk = dados.get("Atk")
@@ -128,6 +145,10 @@ class Pokemon:
         self.enR = dados.get("EnR")
         self.crD = dados.get("CrD")
         self.crC = dados.get("CrC")
+
+        # >>> JÁ TINHA (mantido): leitura inicial dos valores exibidos
+        self.vamp = dados.get("Vamp", 0)
+        self.asse = dados.get("Asse", 0)
 
         # -- Constrói as habilidades como dicionários --
         self.Habilidades = []
@@ -166,9 +187,12 @@ class Pokemon:
         self.PodeUsarPassivaItem = True
         self.Recuo = False
         self.Protegido = False
-    
-    def TomarDano(self, dano, Partida, atacante=None):
+
+    def TomarDano(self, dano, Partida, atacante=None, Log=None):
         
+        # --- Captura o dano de entrada para calcular o multiplicador inicial ---
+        _dano_entrada = dano
+
         if atacante is not None:
             if Partida.clima == "Chuva":
                 if "fogo" in atacante.Tipo:
@@ -181,9 +205,20 @@ class Pokemon:
                 if "fogo" in atacante.Tipo:
                     dano = dano * 1.3
 
+        # --- MultiplicadorFinal: fator aplicado ao entrar no método (após clima/tipos do atacante) ---
+        if Log is not None:
+            try:
+                Log["MultiplicadorFinal"] = float(dano) / float(_dano_entrada) if _dano_entrada else 1.0
+            except Exception:
+                Log["MultiplicadorFinal"] = 1.0
+
         # --- Efeito: Evasivo ---
         if self.Efeitos.get("Evasivo", 0) > 0:
             self.Efeitos["Evasivo"] = 0  # remove o efeito
+            # não houve dano aplicado; logo, sem vampirismo e não matou
+            if Log is not None:
+                Log["Vampirismo"] = 0
+                Log["Matou"] = False
             return  # desvia do dano completamente
 
         if self.PodeUsarHabilidade:
@@ -219,14 +254,38 @@ class Pokemon:
         if self.Efeitos.get("Dormindo", 0) > 0:
             self.Efeitos["Dormindo"] = 0
 
+        # --- Acúmulo de vampirismo aplicado ao atacante neste dano ---
+        _vamp_total_cura = 0
+
         if atacante is not None:
             if self.Efeitos.get("Vampirico", 0) > 0:
                 Vampirismo = dano * 0.25
                 if atacante is not None:
                     atacante.ReceberCura(Vampirismo)
+                    try:
+                        _vamp_total_cura += int(Vampirismo)
+                    except Exception:
+                        pass
             
             self.AtacouTurno.append(atacante)
-        
+
+        # --- Vamp% do atacante (atributo 'vamp') ---
+        # (mantido exatamente como no seu código; soma ao total para log)
+        atacante.ReceberCura(dano * atacante.vamp / 100)
+        try:
+            _vamp_total_cura += int(dano * atacante.vamp / 100)
+        except Exception:
+            pass
+
+        # registra Vampirismo no sublog
+        if Log is not None:
+            if _vamp_total_cura > 0:
+                Log["Vampirismo"] = _vamp_total_cura
+            if Log.get("FimTurno"):
+                Log["DanoFinal"] = Log.get("DanoFinal") + dano
+            else:
+                Log["DanoFinal"] = dano
+
         self.DanoTurno += dano
 
         self.vida -= dano
@@ -236,6 +295,8 @@ class Pokemon:
             if self.Efeitos.get("Imortal", 0) > 0:
                 self.Efeitos["Imortal"] = 0
                 self.vida = 1
+                if Log is not None:
+                    Log["Matou"] = False
                 return  # Impede a morte, finaliza aqui
 
             self.vida = 0
@@ -253,8 +314,14 @@ class Pokemon:
             self.vivo = False
             self.local = None
             self.ativo = False
-    
-    def Curar(self, cura, alvo):
+
+            if Log is not None:
+                Log["Matou"] = True
+        else:
+            if Log is not None:
+                Log["Matou"] = False
+
+    def Curar(self, cura, alvo, Log=None):
 
         if self.PodeUsarHabilidade:
             for habilidade in self.Habilidades:
@@ -266,9 +333,9 @@ class Pokemon:
                 if item["Ativação"] == "AoCurar":
                     cura, alvo = IteDic[str(item["Code"])](cura, alvo)
 
-        alvo.ReceberCura(cura)
-    
-    def ReceberCura(self, cura):
+        alvo.ReceberCura(cura, Log)
+        
+    def ReceberCura(self, cura, Log=None):
 
         if self.Efeitos.get("Abençoado", 0) > 0:
             cura = int(cura * 1.3)
@@ -283,9 +350,19 @@ class Pokemon:
                 if item["Ativação"] == "AoReceberCura":
                     cura = IteDic[str(item["Code"])](cura)
             
+        cura_final = min(self.base_vida - self.vida, cura)
         self.vida = min(self.base_vida, self.vida + cura)
 
-    def ModificarStatus(self, Status, Alteração):
+        # --- Registro no log ---
+        if Log is not None:
+            if "Curas" not in Log:
+                Log["Curas"] = []
+            Log["Curas"].append({
+                "Alvo": self.ID,
+                "Cura": cura_final
+            })
+
+    def ModificarStatus(self, Status, Alteração, Log=None):
         if Alteração < 0:
             if self.PodeUsarHabilidade:
                 for habilidade in self.Habilidades:
@@ -319,7 +396,17 @@ class Pokemon:
         valor_atual = getattr(self, Status)
         setattr(self, Status, valor_atual + Alteração)
 
-    def AplicarEfeito(self, efeito, alvo):
+        # --- Registro no log ---
+        if Log is not None:
+            if "StatusAlterados" not in Log:
+                Log["StatusAlterados"] = []
+            Log["StatusAlterados"].append({
+                "Alvo": self.ID,
+                "Status": Status,
+                "Valor": Alteração
+            })
+
+    def AplicarEfeito(self, efeito, alvo, Log=None):
         
         turnos = max(1, self.mag // 10)
 
@@ -347,14 +434,14 @@ class Pokemon:
                     if habilidade["Ativação"] == "AplicarEfeitoNegativo":
                         self, turnos, efeito, alvo = HabDic[str(habilidade["Code"])](self, turnos, efeito, alvo)
 
-        alvo.ReceberEfeito(efeito, turnos)
+        alvo.ReceberEfeito(efeito, turnos, Log)
 
-    def ReceberEfeito(self, efeito, turnos):
-        if self.Efeitos["Imune"] > 0 and efeito in efeitos_negativos:
+    def ReceberEfeito(self, efeito, turnos, Log=None):
+        if self.Efeitos.get("Imune", 0) > 0 and efeito in efeitos_negativos:
             return
-        if self.Efeitos["Bloqueado"] > 0 and efeito in efeitos_positivos:
+        if self.Efeitos.get("Bloqueado", 0) > 0 and efeito in efeitos_positivos:
             return
-        if self.Efeitos["Amaldiçoado"] > 0 and efeito in efeitos_positivos:
+        if self.Efeitos.get("Amaldiçoado", 0) > 0 and efeito in efeitos_positivos:
             turnos *= 2
         
         Defesaturnos = self.mag // 10
@@ -383,7 +470,7 @@ class Pokemon:
                     if habilidade["Ativação"] == "ReceberEfeitoNegativo":
                         self, turnos, efeito, Defesaturnos = HabDic[str(habilidade["Code"])](self, turnos, efeito, Defesaturnos)
 
-        TurnosReal = max(1,turnos - Defesaturnos)
+        TurnosReal = max(1, turnos - Defesaturnos)
 
         if efeito not in self.Efeitos:
             self.Efeitos[efeito] = 0
@@ -391,6 +478,22 @@ class Pokemon:
         self.Efeitos[efeito] += TurnosReal
         if self.Efeitos[efeito] < 0:
             self.Efeitos[efeito] = 0
+
+        # --- Registro no log ---
+        if Log is not None:
+            if "EfeitosAplicados" not in Log:
+                Log["EfeitosAplicados"] = []
+            Log["EfeitosAplicados"].append({
+                "Alvo": self.ID,
+                "Efeito": efeito,
+                "Turnos": TurnosReal
+            })
+
+    def AlterarClima(self, efeito, Log=None):
+        pass
+
+    def ModificarArea(self, efeito, Log=None):
+        pass
 
     def GanharEnergia(self):
 
@@ -419,9 +522,9 @@ class Pokemon:
                 if habilidade["Ativação"] == "AoMover":
                     local, self, forçado = HabDic[str(habilidade["Code"])](self, local, forçado)
         
-        self.Local = local
+        self.local = local
 
-    def FimTurno(self, Partida):
+    def FimTurno(self, Partida, Log):
 
         self.PodeUsarHabilidade = True
         self.PodeUsarPassivaItem = True
@@ -436,27 +539,27 @@ class Pokemon:
             if self.Efeitos.get("Encharcado", 0) > 0:
                 self.Efeitos["Encharcado"] += 2
             if "gelo" in self.Tipo:
-                self.ReceberCura(self.base_vida/20)
+                self.ReceberCura(self.base_vida/20, Log=Log)
         elif Partida.clima == "Sol Forte":
             if self.Efeitos.get("Queimado", 0) > 0:
                 self.Efeitos["Queimado"] += 2
             if self.Efeitos.get("Encharcado", 0) > 0:
                 self.Efeitos["Encharcado"] -= 1
             if "gelo" in self.Tipo:
-                self.TomarDano(self.base_vida/10, Partida)
+                self.TomarDano(self.base_vida/10, Partida, Log=Log)
         elif Partida.clima == "Tempestade de Areia":
             if bool(set(["metal", "pedra", "terrestre"]) & set(self.Tipo)) is False:
-                self.TomarDano(self.base_vida/20, Partida)
+                self.TomarDano(self.base_vida/20, Partida, Log=Log)
         elif Partida.clima == "Chuva Acida":
             if "venenoso" in self.Tipo:
-                self.ReceberCura(self.base_vida * 0.07)
+                self.ReceberCura(self.base_vida * 0.07, Log=Log)
             else:
-                self.TomarDano(self.base_vida * 0.07, Partida)
+                self.TomarDano(self.base_vida * 0.07, Partida, Log=Log)
             if self.Efeitos.get("Envenenado", 0) > 0:
                 self.Efeitos["Envenenado"] += 2
         elif Partida.clima == "Gravidade Anomala":
             if self.Efeitos.get("Flutuando", 0) > 0 or self.Efeitos.get("Voando", 0) > 0:
-                self.TomarDano(self.base_vida * 0.08, Partida)
+                self.TomarDano(self.base_vida * 0.08, Partida, Log=Log)
         if Partida.clima == "Tempestade de Raios":
             if "eletrico" in self.Tipo:
                 if self.Efeitos.get("Energizado", 0) > 0:
@@ -476,17 +579,17 @@ class Pokemon:
         
         if self.Efeitos.get("Queimado", 0) > 0:
             dano = int(self.vida * 0.05)
-            self.TomarDano(dano, Partida)  # Sem atacante definido
+            self.TomarDano(dano, Partida, Log=Log)  # Sem atacante definido
             self.Efeitos["Queimado"] -= 1
 
         if self.Efeitos.get("Envenenado", 0) > 0:
             dano = int(self.vida * 0.08)
-            self.TomarDano(dano, Partida)
+            self.TomarDano(dano, Partida, Log=Log)
             self.Efeitos["Envenenado"] -= 1
 
         if self.Efeitos.get("Intoxicado", 0) > 0:
             dano = int(self.vida * 0.12)
-            self.TomarDano(dano, Partida)
+            self.TomarDano(dano, Partida, Log=Log)
             self.Efeitos["Intoxicado"] -= 1
 
             # Determina aliados com base no dono
@@ -499,20 +602,22 @@ class Pokemon:
             PokemonsAdjacentes = adjacentes(self, aliados)
             for pokemon in PokemonsAdjacentes:
                 dano_aliado = int(pokemon.vida * 0.08)
-                pokemon.TomarDano(dano_aliado, Partida)
+                SubLog = {"Agente": pokemon.ID}
+                pokemon.TomarDano(dano_aliado, Partida, SubLog)
+                Log["SubLogs"].append(SubLog)
         
         # --- Regeneração e Abençoado ---
         vida_perdida = self.base_vida - self.vida
         if vida_perdida > 0:
             if self.Efeitos.get("Regeneração", 0) > 0:
                 cura = int(vida_perdida * 0.15)
-                self.ReceberCura(cura)
+                self.ReceberCura(cura, Log=Log)
 
             if self.Efeitos.get("Abençoado", 0) > 0:
                 cura = int(vida_perdida * 0.05)
-                self.ReceberCura(cura)
+                self.ReceberCura(cura, Log=Log)
 
-        pokemon.GanharEnergia()
+        self.GanharEnergia()
     
     def Verifica(self, Partida):
 
@@ -529,6 +634,10 @@ class Pokemon:
         self.var_temp_crD = 0
         self.var_temp_crC = 0
 
+        # >>> ADIÇÃO (zerar temporários de vamp/asse a cada verificação):
+        self.var_temp_vamp = 0
+        self.var_temp_asse = 0
+
         if Partida.clima == "Nevasca":
             if "gelo" in self.Tipo:
                 self.var_temp_def += self.base_def * 0.4
@@ -538,7 +647,7 @@ class Pokemon:
         elif Partida.clima == "Nevoa":
             if "fantasma" in self.Tipo:
                 self.var_temp_vel += self.base_vel * 0.3
-        elif Partida.clima == "Gravidade Anomola":
+        elif Partida.clima == "Gravidade Anomala":
             if "cosmico" in self.Tipo:
                 self.var_temp_vel += self.base_vel * 0.15
                 multiplicador = round(self.Peso / 100)
@@ -548,7 +657,7 @@ class Pokemon:
             if "sombrio" in self.Tipo:
                 self.var_temp_vel += self.base_vel * 0.25
 
-            # --- Efeitos de Buff Temporário ---
+        # --- Efeitos de Buff Temporário ---
         if self.Efeitos.get("Fortificado", 0) > 0:
             valor = int((self.base_def + self.var_per_def) * 0.5)
             self.var_temp_def += valor
@@ -569,7 +678,7 @@ class Pokemon:
             valor = int((self.base_mag + self.var_per_mag) * 0.5)
             self.var_temp_mag += valor
 
-            # --- Efeitos de Debuff Temporário ---
+        # --- Efeitos de Debuff Temporário ---
         if self.Efeitos.get("Quebrado", 0) > 0:
             valor = int((self.base_def + self.var_per_def) * 0.5)
             self.var_temp_def -= valor
@@ -606,6 +715,7 @@ class Pokemon:
                 if item["Ativação"] == "Verificação":
                     self = IteDic[str(item["Code"])](self)
         
+        # --- Recalcular todos os valores reais ---
         self.atk = self.base_atk + self.var_per_atk + self.var_temp_atk
         self.Def = self.base_def + self.var_per_def + self.var_temp_def
         self.spA = self.base_spA + self.var_per_spA + self.var_temp_spA
@@ -618,13 +728,17 @@ class Pokemon:
         self.crD = self.base_crD + self.var_per_crD + self.var_temp_crD
         self.crC = self.base_crC + self.var_per_crC + self.var_temp_crC
 
+        # >>> ADIÇÃO (recalcular vamp/asse como os demais):
+        self.vamp = self.base_vamp + self.var_per_vamp + self.var_temp_vamp
+        self.asse = self.base_asse + self.var_per_asse + self.var_temp_asse
+
     def ToDic(self):
         return {
 
             # Atributos reais atuais (valor real = base + var_per + var_temp)
             "Vida": self.vida,
             "Atk": self.atk,
-            "Defesa": self.defesa,
+            "Defesa": self.Def,
             "SpA": self.spA,
             "SpD": self.spD,
             "Vel": self.vel,
@@ -635,9 +749,12 @@ class Pokemon:
             "CrD": self.crD,
             "CrC": self.crC,
 
+            "Vamp": self.vamp,
+            "Asse": self.asse,
+
             "local": self.local,
             "Energia": self.Energia,
-            "Efeitos": list(self.efeitos),  # copiando a lista de status para o dicionário
+            "Efeitos": list(self.Efeitos),  # copiando a lista de status para o dicionário
 
         }
 
@@ -656,8 +773,8 @@ class Partida:
         self.ArenaP2 = [None,None,None,None,None,None,None,None,None]
 
         # Cria instâncias da classe Pokemon
-        self.pokemons_jogador1 = [Pokemon(p, dono=code_jogador1) for p in pokemons_jogador1]
-        self.pokemons_jogador2 = [Pokemon(p, dono=code_jogador2) for p in pokemons_jogador2]
+        self.pokemons_jogador1 = [Pokemon(p, dono=code_jogador1, i=i, parti=self) for i, p in enumerate(pokemons_jogador1)]
+        self.pokemons_jogador2 = [Pokemon(p, dono=code_jogador2, i=i, parti=self) for i, p in enumerate(pokemons_jogador2)]
     
     def ToDic(self):
         return {
@@ -716,6 +833,9 @@ def OrdenarJogadasPorVelocidade(sala):
 
 def AtualizaDados(sala):
 
+    sala["partida"].historico.append(sala["Log"])
+    sala["partida"].historico.append(sala["LogFimTurno"])
+
     for i, pokemon in enumerate(sala["partida"].pokemons_jogador1):
         dados_atualizados = pokemon.ToDic()
         for chave, valor in dados_atualizados.items():
@@ -772,11 +892,16 @@ def ExecuteRodada(sala):
         for pokemon in sala["partida"].pokemons_jogador1 + sala["partida"].pokemons_jogador2:
             pokemon.Verifica()
 
+    LogFimTurno = []
     for pokemon in sala["partida"].pokemons_jogador1 + sala["partida"].pokemons_jogador2:
-        pokemon.FimTurno(sala["partida"])
+        Log = {"Agente": pokemon.ID, "FimTurno": True, "SubLogs":[]}
+        if pokemon.vivo:
+            pokemon.FimTurno(sala["partida"], Log)
         if sala["partida"].clima == "Tempestade de Raios":
             for raio in raios:
-                if pokemon.Local == raio:
-                    pokemon.TomarDano(int(pokemon.vida / 2), sala["partida"])
+                if pokemon.local == raio:
+                    pokemon.TomarDano(int(pokemon.vida / 2), sala["partida"], Log)
+        LogFimTurno.append(Log)
+    sala["LogFimTurno"] = LogFimTurno
 
     AtualizaDados(sala)

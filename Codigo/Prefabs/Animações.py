@@ -122,4 +122,66 @@ class Animação:
 
     def apagar(self):
         self.ativo = False
-        
+
+class PokemonAnimator:
+    def __init__(self, pokemon, frames):
+        self.pokemon = pokemon
+        self.frames = frames
+        self.frame_index = 0
+        self.timer = 0
+        self.rect = None  # retângulo do sprite para detectar hover
+
+    def atualizar(self, novos_dados):
+        self.pokemon.update(novos_dados)
+
+    def desenhar(self, dt, tela, x, y):
+        # --- animação ---
+        self.timer += dt
+        if self.timer > 0.1:
+            self.frame_index = (self.frame_index + 1) % len(self.frames)
+            self.timer = 0
+
+        sprite = self.frames[self.frame_index]
+        self.rect = tela.blit(sprite, (x, y))
+
+        # --- barras ---
+        vida = self.pokemon["Vida"]
+        energia = self.pokemon["Energia"]
+        vida_max = self.pokemon["VidaMax"]
+        ene_max = self.pokemon["Ene"]
+
+        largura = 100
+        offset_y = -18
+
+        # detectar se mouse está sobre o Pokémon
+        mouse_pos = pygame.mouse.get_pos()
+        hover = self.rect.collidepoint(mouse_pos)
+
+        # espessuras
+        if hover:
+            h_vida = 6
+            h_ene = 4
+        else:
+            h_vida = 3
+            h_ene = 2
+
+        # barra vida
+        vida_pct = max(0, vida) / max(1, vida_max)
+        pygame.draw.rect(tela, (0, 0, 0), (x, y + offset_y, largura, h_vida))
+        pygame.draw.rect(tela, (0, 200, 0), (x, y + offset_y, int(largura * vida_pct), h_vida))
+
+        # divisórias vida (30)
+        for i in range(30, vida_max, 30):
+            px = x + int(largura * (i / vida_max))
+            pygame.draw.line(tela, (0, 0, 0), (px, y + offset_y), (px, y + offset_y + h_vida))
+
+        # barra energia
+        offset_y2 = offset_y + h_vida + 2
+        ene_pct = max(0, energia) / max(1, ene_max)
+        pygame.draw.rect(tela, (0, 0, 0), (x, y + offset_y2, largura, h_ene))
+        pygame.draw.rect(tela, (0, 0, 200), (x, y + offset_y2, int(largura * ene_pct), h_ene))
+
+        # divisórias energia (15)
+        for i in range(15, ene_max, 15):
+            px = x + int(largura * (i / ene_max))
+            pygame.draw.line(tela, (0, 0, 0), (px, y + offset_y2), (px, y + offset_y2 + h_ene))

@@ -126,7 +126,8 @@ def Botao_Selecao(
     branco=False,
     Surface=False,
     arredondamento=0,   # <<< 0 = sem canto arredondado; quanto maior, mais arredondado
-    Piscante=False,     # <<< NOVO: piscar a borda (fade entre preto e a cor da borda)
+    Piscante=False,     # <<< piscar a borda (fade entre preto e a cor da borda)
+    AlphaTexto=None,    # <<< NOVO: transparência do texto (0..255); None = padrão
 ):
 
     x, y, largura, altura = espaço
@@ -220,6 +221,17 @@ def Botao_Selecao(
     if texto:
         cor_texto = (255, 255, 255) if branco else (0, 0, 0)
         texto_render = Fonte.render(str(texto), True, cor_texto)
+
+        # >>> NOVO: aplica transparência do texto, se fornecida
+        if AlphaTexto is not None:
+            try:
+                a = int(AlphaTexto)
+            except Exception:
+                a = 255
+            a = max(0, min(255, a))
+            # set_alpha define a opacidade global da surface do texto
+            texto_render.set_alpha(a)
+
         texto_rect = texto_render.get_rect(center=(x + largura // 2, y + altura // 2))
         tela.blit(texto_render, texto_rect)
 

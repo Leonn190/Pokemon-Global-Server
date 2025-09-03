@@ -95,68 +95,66 @@ def GeraPokemonBatalha(pokemon):
     return dados
 
 def GerarMatilha(pokemon, max=6):
-
     pokemon = MaterializarPokemon(pokemon)
     if not pokemon:
-        print("[ERRO] Pokemon inicial inválido:", pokemon)
         return []
 
     global df
     matilha = [pokemon]
-    linhagem = pokemon.get("Linhagem", None)
-    estagio_inicial = int(pokemon.get("Estagio", 0))
+    linhagem = pokemon.get("Linhagem")
 
-    print("\n=== Gerando Matilha ===")
-    print("Pokemon inicial:", pokemon.get("Nome"), "| Linhagem:", linhagem, "| Estagio:", estagio_inicial)
+    try:
+        estagio_inicial = int(pokemon.get("Estagio", 0))
+    except Exception:
+        estagio_inicial = 0
 
     if not linhagem:
-        print("[AVISO] Sem linhagem -> retorna só o inicial")
         return matilha
 
-    # garante que Estagio é numérico
-    df["Estagio"] = pd.to_numeric(df["Estagio"], errors="coerce").fillna(0).astype(int)
+    # Série numérica auxiliar (não altera o df)
+    est_num = pd.to_numeric(df["Estagio"], errors="coerce")
 
-    # pega candidatos válidos (mesma linhagem e estágio <= inicial)
-    candidatos = df[(df["Linhagem"] == linhagem) & (df["Estagio"] <= estagio_inicial)]
-    nomes_possiveis = candidatos["Nome"].tolist()
-    print("Candidatos encontrados:", nomes_possiveis)
+    # Máscara: mesma linhagem, não "FF", estágio numérico válido e <= inicial
+    mask = (
+        (df["Linhagem"] == linhagem) &
+        (df["Estagio"] != "FF") &
+        (est_num.notna()) &
+        (est_num <= estagio_inicial)
+    )
 
-    if not nomes_possiveis:
-        print("[AVISO] Nenhum candidato encontrado")
+    candidatos = df.loc[mask].copy()
+    if candidatos.empty:
         return matilha
 
-    # gera pokemons até atingir o máximo
-    while len(matilha) < max:
-        # chance de parar antes de atingir o limite (quanto mais perto do limite, menor a chance de parar)
-        chance_parar = 0.3 + (len(matilha) / max) * 0.5
-        if random.random() < chance_parar:
-            print("Parando cedo com", len(matilha), "pokemons")
+    # População e pesos alinhados (usa o mesmo índice de 'candidatos')
+    população = candidatos["Nome"].tolist()
+    est_cand = est_num.loc[candidatos.index].astype(int)
+    pesos = (estagio_inicial - est_cand + 1).clip(lower=1).astype(float).tolist()
+
+    if not população or not pesos:
+        return matilha
+
+    tentativas = 0
+    while len(matilha) < max and população and pesos:
+        tentativas += 1
+        if tentativas > 100:  # trava de segurança
             break
 
-        # escolhe um candidato com mais peso para estágios inferiores
-        pesos = []
-        for nome in nomes_possiveis:
-            est = int(df.loc[df["Nome"] == nome, "Estagio"].values[0])
-            peso = (estagio_inicial - est + 1)  # quanto menor o estágio, maior o peso
-            pesos.append(peso)
+        # chance de parar cedo
+        chance_parar = 0.3 + (len(matilha) / max) * 0.5
+        if random.random() < chance_parar:
+            break
 
-        nome = random.choices(nomes_possiveis, weights=pesos, k=1)[0]
-        print("Escolhido:", nome, "| Pesos:", dict(zip(nomes_possiveis, pesos)))
-
+        nome = random.choices(população, weights=pesos, k=1)[0]
         compactado = criar_pokemon_especifico(nome)
         if not compactado:
-            print("[ERRO] criar_pokemon_especifico falhou para", nome)
             continue
 
         Dados = desserializar_pokemon(compactado)
         materializado = MaterializarPokemon(Dados)
         if materializado:
             matilha.append(materializado)
-            print("Adicionado:", materializado.get("Nome"))
-        else:
-            print("[ERRO] MaterializarPokemon falhou para", nome)
 
-    print("Matilha final:", [p["Nome"] for p in matilha])
     return matilha
 
 def CarregarPokemon(nome_pokemon, dic):
@@ -432,7 +430,6 @@ def GanhaAtaque(pokemon):
     # todos os moves possíveis do próprio Pokémon
     try:
         all_moves = dfml[pokemon["Nome"]].dropna().tolist()
-        print(all_moves)
 
         df["Linhagem"] = pd.to_numeric(df["Linhagem"], errors="coerce")
         
@@ -459,7 +456,6 @@ def GanhaAtaque(pokemon):
         ]
 
         familia_inferior = familia_inferior.sort_values(by="Estagio", ascending=False)
-
         familia_inferior_lista = familia_inferior.to_dict("records")
 
         i = 0
@@ -478,10 +474,49 @@ def GanhaAtaque(pokemon):
         
         PoolFinal = ChanceAlta + ChanceAlta + ChanceAlta + ChanceMedia + ChanceMedia + ChanceBaixa
 
-        ataque = random.choice(PoolFinal)
+        # ======= NOVO: remover ataques já possuídos =======
+        ja_tem = set()
+        for mov in (pokemon.get("MoveList") or []):
+            if mov:
+                if isinstance(mov, dict):
+                    n = mov.get("nome") or mov.get("Ataque")
+                else:
+                    n = str(mov)
+                if n:
+                    ja_tem.add(str(n).lower())
+        for mov in (pokemon.get("Memoria") or []):
+            if mov:
+                if isinstance(mov, dict):
+                    n = mov.get("nome") or mov.get("Ataque")
+                else:
+                    n = str(mov)
+                if n:
+                    ja_tem.add(str(n).lower())
+
+        candidatos = [a for a in PoolFinal if a and str(a).lower() not in ja_tem]
+        if not candidatos:
+            # fallback simples: qualquer ataque do dfa que não tenha ainda
+            candidatos = [a for a in dfa["Ataque"].dropna().tolist() if str(a).lower() not in ja_tem]
+
+        # ======= NOVO: leve bias por tipo =======
+        tipos_poke = {
+            str(pokemon.get("Tipo1", "")).lower(),
+            str(pokemon.get("Tipo2", "")).lower(),
+            str(pokemon.get("Tipo3", "")).lower()
+        }
+        tipos_poke.discard("")
+        tipo_por_ataque = dfa.set_index("Ataque")["Tipo"].to_dict()
+
+        preferidos = [a for a in candidatos if str(tipo_por_ataque.get(a, "")).lower() in tipos_poke]
+        pool_bias = preferidos + preferidos + candidatos  # peso leve (x2) para do mesmo tipo
+        if not pool_bias:
+            raise ValueError("Sem candidatos de ataque válidos")
+
+        ataque = random.choice(pool_bias)
 
         r = dfa[dfa["Ataque"] == ataque].iloc[0]
     except:
+        # fallback antigo (mantido). Pode ocasionalmente repetir, mas é raríssimo.
         r = dfa[dfa["Code"] == random.randint(1,450)].iloc[0]
 
     novoataque = {
@@ -495,12 +530,18 @@ def GanhaAtaque(pokemon):
             "descrição": r["Descrição"],
         }
     
+    # evita inserir repetido por segurança
+    nomes_atuais = {str(m.get("nome") if isinstance(m, dict) else m).lower()
+                    for m in (pokemon.get("MoveList") or []) + (pokemon.get("Memoria") or [])
+                    if m}
+    if novoataque["nome"].lower() in nomes_atuais:
+        return  # já tem; não adiciona nada
+
     if None in pokemon["MoveList"]:
         for i, mov in enumerate(pokemon["MoveList"]):
             if mov is None:
                 pokemon["MoveList"][i] = novoataque
-                break  
-
+                break
     elif None in pokemon["Memoria"]:
         for i, mov in enumerate(pokemon["Memoria"]):
             if mov is None:

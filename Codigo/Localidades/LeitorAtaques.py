@@ -4,7 +4,7 @@ from Codigo.Funções.FunçõesHabilidades import HabDic
 from Codigo.Funções.FunçõesEquipaveis import IteDic
 import random
 
-df_Ataques = pd.read_csv("Ataques.csv")
+df_Ataques = pd.read_csv("Dados/Ataques.csv")
 
 tabela_tipos = {
     "normal":   {"pedra": 0.5, "fantasma": 0.0, "metal": 0.5},
@@ -26,7 +26,7 @@ tabela_tipos = {
     "metal":    {"gelo": 2.0, "pedra": 2.0, "fada": 2.0, "fogo": 0.5, "agua": 0.5, "eletrico": 0.5, "metal": 0.5},
     "fada":     {"lutador": 2.0, "dragao": 2.0, "sombrio": 2.0, "fogo": 0.5, "venenoso": 0.5, "metal": 0.5},
     "sonoro":   {"inseto": 2.0, "gelo": 2.0, "planta": 0.5, "pedra": 0.5, "metal": 0.5},
-    "cosmico":  {"psiquico": 2.0, "sonoro": 2.0, "agua": 2.0, "comico": 0.0, "fantasma": 0.5}
+    "cosmico":  {"psiquico": 2.0, "sonoro": 2.0, "agua": 2.0, "cosmico": 0.0, "fantasma": 0.5}
 }
 
 def AplicarFraquezaResistencia(tipos_ataque, tipos_defensor):
@@ -46,8 +46,6 @@ def ExecuteAtaque(Move, Partida):
     Alvos = Move["alvo"]
     codigo_ataque = Move["ataque"]
 
-    Log = {"Agente": Atacante, "Code Ataque": codigo_ataque}
-
     # --- Identificação de lado e times ---
     if Atacante in Partida.pokemons_jogador1:
         aliados = Partida.pokemons_jogador1
@@ -59,6 +57,8 @@ def ExecuteAtaque(Move, Partida):
         player = 2
     else:
         aliados, inimigos, player = [], [], 0
+    
+    Log = {"Agente": Atacante.ID, "Code Ataque": codigo_ataque, "Player": player}
 
     # ================================
     # 🔄 TROCA
@@ -70,16 +70,16 @@ def ExecuteAtaque(Move, Partida):
                 if item["Ativação"] == "AoTrocar":
                     Atacante = IteDic[str(item["Code"])](Atacante)
         if Atacante.PodeUsarHabilidade:
-            for habilidade in Atacante.Habilidade:
+            for habilidade in Atacante.Habilidades:
                 if habilidade["Ativação"] == "AoTrocar":
                     Atacante = HabDic[str(habilidade["Code"])](Atacante)
 
         # Troca em si
         Alvo = aliados[Alvos]
-        Atacante.Ativo = False
-        Alvo.Ativo = True
-        Alvo.Local = Atacante.Local
-        Atacante.Local = None
+        Atacante.ativo = False
+        Alvo.ativo = True
+        Alvo.local = Atacante.local
+        Atacante.local = None
 
         # Passivas ao entrar
         if Alvo.PodeUsarPassivaItem:
@@ -128,7 +128,7 @@ def ExecuteAtaque(Move, Partida):
     # ================================
     # 🎒 Ativação de Habilidades e Itens (Pré-Ataque)
     # ================================
-    for item in Atacante.Items:
+    for item in Atacante.Itens:
         if item["Ativação"] == "InicioAtaque" and Atacante.PodeUsarPassivaItem:
             Recuo = IteDic[str(item["Code"])](Atacante, Alvos, ataque, Partida, Log, Recuo)
 
@@ -156,12 +156,12 @@ def ExecuteAtaque(Move, Partida):
     # ================================
     tipo = ataque["Tipo"]
     StebUsado = 0
-    if player == 1 and len(Partida.StebP1) < 7:
-        Partida.StebP1[tipo] += Atacante.Sinergia
-        StebUsado = Partida.StebP1[tipo]
-    elif player == 2 and len(Partida.StebP2) < 7:
-        Partida.StebP2[tipo] += Atacante.Sinergia
-        StebUsado = Partida.StebP2[tipo]
+    if player == 1 and len(Partida.StebsP1) < 7:
+        Partida.StebsP1[tipo] = Partida.StebsP1.get(tipo,0) + Atacante.Sinergia
+        StebUsado = Partida.StebsP1[tipo]
+    elif player == 2 and len(Partida.StebsP2) < 7:
+        Partida.StebsP2[tipo] = Partida.StebsP2.get(tipo,0) + Atacante.Sinergia
+        StebUsado = Partida.StebsP2[tipo]
 
     # ================================
     # 🎯 Identificação de Alvos
@@ -179,21 +179,15 @@ def ExecuteAtaque(Move, Partida):
             AlvosInimigos += [i for i in inimigos if str(i.local) == pos]
 
     Log.update({
-        "Alvos Aliados": AlvosAliados,
-        "Alvos Inimigos": AlvosInimigos,
+        "Alvos Aliados": [x.ID for x in AlvosAliados],
+        "Alvos Inimigos": [x.ID for x in AlvosInimigos],
         "Tipo": tipo,
         "Estilo": ataque["Estilo"],
-        "Assertividade": ataque["Assertividade"]
+        "Assertividade": ataque["Assertividade"] + Atacante.asse
     })
 
     poder_ataque = Atacante.atk if ataque["Estilo"] == "n" else (
                    Atacante.spA if ataque["Estilo"] == "e" else 0)
-
-    # ================================
-    # 💥 Função especial direta de ataque (estilo especial)
-    # ================================
-    if ataque["Estilo"] not in ["n", "e"]:
-        AtkDic[str(codigo_ataque) + "s"](Atacante, AlvosInimigos, AlvosAliados, ataque, Partida, Log, Acertou)
 
     Log["SubLogs"] = []
 
@@ -201,19 +195,20 @@ def ExecuteAtaque(Move, Partida):
     # 🧮 Processamento por Alvo
     # ================================
     for Alvo in AlvosInimigos:
-        SubLog = {"Alvo": Alvo}
+        SubLog = {"Alvo": Alvo.ID}
         Log["SubLogs"].append(SubLog)
 
         # Modificadores de assertividade
-        assertividade = ataque["Assertividade"]
+        assertividade = ataque["Assertividade"] + Atacante.asse
         if isinstance(assertividade, str):
             assertividade = int(assertividade.replace('%', ''))
-
-        if Atacante.Efeitos.get("Cofuso", 0): assertividade *= 0.5
-        if Alvo.Efeitos.get("Voando", 0): assertividade *= 0.5
-        if Alvo.Efeitos.get("Flutuando", 0): assertividade *= 0.75
-        if "sombrio" not in Atacante.Tipo:
-            if Partida.clima == "Noite Densa": assertividade *= 0.75
+        
+        if Atacante.Efeitos.get("Confuso", 0): assertividade *= 0.5
+        if Alvo != Atacante:
+            if Alvo.Efeitos.get("Voando", 0): assertividade *= 0.5
+            if Alvo.Efeitos.get("Flutuando", 0): assertividade *= 0.75
+            if "sombrio" not in Atacante.Tipo:
+                if Partida.clima == "Noite Densa": assertividade *= 0.75
 
         Acertou = random.randint(1, 100) <= assertividade
         Protegido = getattr(Alvo, "Protegido", False)
@@ -223,8 +218,14 @@ def ExecuteAtaque(Move, Partida):
         bonus_critico = getattr(Atacante, "crD", 0)
         critico = random.randint(1, 100) <= chance_critico
 
+        # ================================
+        # 💥 Função Status direta de ataque (estilo Status)
+        # ================================
+        if ataque["Estilo"] not in ["n", "e"]:
+            AtkDic[str(codigo_ataque) + "s"](Atacante, Alvo, AlvosAliados, ataque, Partida, Log, Acertou, critico)
+
         # Defesa
-        defesa_alvo = Alvo.defesa if ataque["Estilo"] == "n" else Alvo.spD
+        defesa_alvo = Alvo.Def if ataque["Estilo"] == "n" else Alvo.spD
 
         # ================================
         # ⚙️ Função irregular do meio
@@ -289,8 +290,19 @@ def ExecuteAtaque(Move, Partida):
         # ================================
         # 🩸 Aplicação do dano
         # ================================
+        dano_aplicado = 0
+        morreu = False
         if Acertou and not Protegido:
-            Alvo.TomarDano(dano_final, Partida, Atacante)
+            vida_antes = Alvo.vida
+            Alvo.TomarDano(dano_final, Partida, Atacante, SubLog)
+            dano_aplicado = max(0, vida_antes - Alvo.vida)
+            morreu = (not Alvo.vivo)
+
+        # ================================
+        # 🔚 Pós-ataque por alvo ('p') — Target-End / On-Kill
+        # ================================
+        if "p" in ataque["função"]:
+            AtkDic[str(codigo_ataque) + "p"](Atacante, Alvo, AlvosAliados, ataque, Partida, Log, dano_aplicado, Acertou, Protegido, critico, morreu)
 
         SubLog.update({
             "Protegido": Protegido,
@@ -305,12 +317,18 @@ def ExecuteAtaque(Move, Partida):
             "Dano Bruto": dano_bruto,
             "Dano Refinado": dano_refinado,
             "Dano SemiFinal": dano_semifinal,
-            "Dano Final": dano_final
+            "Dano Enviado": dano_final
         })
 
     DanoTotal = 0
     for sub in Log["SubLogs"]:
         DanoTotal += sub["Dano Final"]
     Log["DanoTotal"] = DanoTotal
+
+    # ================================
+    # 🌐 Término global do ataque ('g')
+    # ================================
+    if "g" in ataque["função"]:
+        AtkDic[str(codigo_ataque) + "g"](Atacante, ataque, Partida, Log, Log["DanoTotal"])
 
     return Log

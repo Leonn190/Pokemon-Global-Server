@@ -1,7 +1,7 @@
 import pygame
 import math
 
-from Codigo.Prefabs.FunçõesPrefabs import Barra, Scrolavel, Slider, BarraMovel, SurfaceAtaque
+from Codigo.Prefabs.FunçõesPrefabs import Barra, Scrolavel, Slider, BarraMovel, SurfaceAtaque, Tooltip
 from Codigo.Prefabs.BotoesPrefab import Botao, Botao_invisivel, Botao_Surface, Botao_Selecao
 from Codigo.Prefabs.Animações import Animação
 from Codigo.Prefabs.Arrastavel import Arrastavel
@@ -1893,6 +1893,29 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
     COR_UP = (255, 180, 90)
     COR_DN = (220, 70, 70)
 
+    def _num(v, dflt=0):
+        try: return int(round(float(v)))
+        except Exception: return dflt
+
+    def _base_val(poke, key):
+        for k in (f"{key}Base", f"{key.lower()}Base", f"{key}_base"):
+            if k in poke and poke[k] is not None:
+                return _num(poke[k], _num(poke.get(key, 0)))
+        return _num(poke.get(key, 0))
+
+    def _cur_val(poke, key):
+        return _num(poke.get(key, 0))
+
+    def _tooltip_line_attr(poke, key, label=None):
+        base = _base_val(poke, key)
+        cur  = _cur_val(poke, key)
+        var  = cur - base
+        op   = "+" if var >= 0 else "-"
+        var_abs = abs(var)
+        lbl  = (label or key)
+        # 3 espaços depois de ":"  e espaços ao redor do operador
+        return f"{lbl}:   {base} {op} {var_abs} = {cur}"
+
     # ---------------- helpers ----------------
     def _get_val_and_color(lbl_key):
         key_map = {"EnE": "Ene"}
@@ -1999,28 +2022,60 @@ def PainelPokemonBatalha(pokemon, tela, pos, eventos, parametros, anima):
             ("Atk",  "SpA"),
             ("Def",  "SpD"),
             ("Per",  "Vel"),
-            ("EnE",  "EnR"),
+            ("Ene",  "EnR"),
             ("CrC",  "CrD"),
             ("Vamp", "Asse"),
         ]
-        rx = R_csup.x + SECTOR_PAD_LEFT - ATTR_SHIFT_LEFT  # empurra 10px p/ esquerda
+
+        rx = R_csup.x + SECTOR_PAD_LEFT - ATTR_SHIFT_LEFT
         ry = R_csup.y + SECTOR_PAD_TOP
         rw = R_csup.w - (SECTOR_PAD_LEFT + SECTOR_PAD_RIGHT)
 
         ncols = len(cols)
-        # inclua o gap extra entre a col 5 (CrC/CrD) e 6 (Vamp/Asse)
         total_gaps = STAT_COL_GAP * (ncols - 1) + STAT_COL_GAP_EXTRA_PERCENT
         col_w = max(1, (rw - total_gaps) // ncols)
-        top_y = ry
 
-        # índice da coluna de Vamp/Asse (0-based)
         vamp_col_idx = 6
+
+        # offsets conforme lado
+        TT_PAD = 6
+        OFF_UP_ALLY   = 4    # mais p/ cima
+        OFF_DOWN_ENEMY= 60   # mais p/ baixo
+
+        def _show_tt(rect_icon, key, label=None):
+            line = _tooltip_line_attr(pokemon, key, label=label)
+            tw, th = f_mini.size(line)
+            w = tw + 12
+            h = th + 8
+
+            if ALIADO:
+                hud_y = R_csup.top - h - TT_PAD - OFF_UP_ALLY
+            else:
+                hud_y = R_csup.bottom + TT_PAD + OFF_DOWN_ENEMY
+
+            # centraliza no painel (ou troque para ancorar na coluna: rect_icon.centerx - w//2)
+            hud_rect = pygame.Rect(R_csup.centerx - w//2, hud_y, w, h)
+
+            Tooltip(
+                tela, rect_icon, hud_rect,
+                surface=None,
+                texto=line, fonte=f_mini, cor_texto=(255,255,255),
+                titulo=None, fonte_titulo=None
+            )
+
+        top_y = ry
         for c, (k1, k2) in enumerate(cols):
-            # offset adicional para colunas após o gap extra
             extra = STAT_COL_GAP_EXTRA_PERCENT if c >= vamp_col_idx else 0
             cx = rx + c*(col_w + STAT_COL_GAP) + extra
-            _draw_icon_value(k1, cx, top_y, ICON_SZ, f_num)
+
+            _draw_icon_value(k1, cx, top_y,                ICON_SZ, f_num)
             _draw_icon_value(k2, cx, top_y + STAT_ROW_GAP, ICON_SZ, f_num)
+
+            rect_k1 = pygame.Rect(cx, top_y, ICON_SZ, ICON_SZ)
+            rect_k2 = pygame.Rect(cx, top_y + STAT_ROW_GAP, ICON_SZ, ICON_SZ)
+
+            _show_tt(rect_k1, k1, label=k1)
+            _show_tt(rect_k2, k2, label=k2)
 
     # ===== Setor: CENTRAL INFERIOR (build + barras + TIPOS/SINERGIA) =====
     def setor_central_inferior():
