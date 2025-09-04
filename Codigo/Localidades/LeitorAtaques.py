@@ -115,14 +115,18 @@ def ExecuteAtaque(Move, Partida):
     Recuo = getattr(Atacante, "Recuo", False)
     ataque_df = df_Ataques[df_Ataques["Code"] == codigo_ataque]
     if ataque_df.empty:
-        return
+        ataque_df = df_Ataques[df_Ataques["Ataque"] == codigo_ataque]
+        if ataque_df.empty:
+            return
 
     ataque = ataque_df.iloc[0].to_dict()
+
+    codigo_ataque = ataque["Code"]
 
     # ================================
     # ⚙️ Funções Irregulares (Pré-execução)
     # ================================
-    if ataque["função"] in ["i", "im", "if", "imf"]:
+    if "i" in ataque["função"]:
         Recuo = AtkDic[str(codigo_ataque) + "i"](Atacante, Alvos, ataque, Partida, Log, Recuo)
 
     # ================================
@@ -230,7 +234,7 @@ def ExecuteAtaque(Move, Partida):
         # ================================
         # ⚙️ Função irregular do meio
         # ================================
-        if ataque["função"] in ["m", "im", "mf", "imf"]:
+        if "m" in ataque["função"]:
             resultado = AtkDic[str(codigo_ataque) + "m"](
                 Atacante, Alvo, AlvosAliados, ataque, Partida,
                 poder_ataque, defesa_alvo, ataque["Dano"],
@@ -275,7 +279,7 @@ def ExecuteAtaque(Move, Partida):
         # ================================
         # 🧠 Execução de fim (função, habilidade, item)
         # ================================
-        if ataque["função"] in ["f", "mf", "if", "imf"]:
+        if "f" in ataque["função"]:
             resultado = AtkDic[str(codigo_ataque) + "f"](Atacante, Alvo, AlvosAliados, ataque, Partida, Log, dano_final)
             if resultado: dano_final = resultado
 

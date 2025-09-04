@@ -174,6 +174,7 @@ class Pokemon:
         self.DanoTurno = 0
         self.AtacouTurno = []
 
+        self.Barreira = 0
         self.Energia = self.ene / 2
         self.Sinergia = dados.get("Sinergia")
         self.vivo = True
@@ -182,6 +183,7 @@ class Pokemon:
         self.iv_total = dados.get("IV", 0)
 
         self.Efeitos = {}
+        self.Estacaveis = {}
 
         self.PodeUsarHabilidade = True
         self.PodeUsarPassivaItem = True
@@ -814,10 +816,13 @@ def OrdenarJogadasPorVelocidade(sala):
     jogadas_ordenadas = []
 
     for jogada in jogadas_raw:
-        jogador = jogada["jogador"]
+        if jogada in sala["jogada_jogador1"]:
+            jogador = 1
+        else:
+            jogador = 2
         idx = jogada["agente"]
 
-        if jogador == "jogador1":
+        if jogador == 1:
             agente = sala["partida"].pokemons_jogador1[idx]
         else:
             agente = sala["partida"].pokemons_jogador2[idx]

@@ -20,20 +20,10 @@ def criar_e_inicializar_sala_local(pokemons_jogador1,pokemons_ia,code_p1="LOCAL_
     sala["jogada_jogador2"] = None
     return sala
 
-def receber_e_executar_jogadas(sala, jogada_p1, jogada_p2=None, ai_policy=None):
-
-    if not sala.get("partida"):
-        raise RuntimeError("Partida não inicializada. Chame criar_e_inicializar_sala_local primeiro.")
+def receber_e_executar_jogadas(sala, jogada_p1, jogada_p2=None):
 
     # Jogada P1
     sala["jogada_jogador1"] = jogada_p1
-
-    # Jogada IA
-    if jogada_p2 is None:
-        if callable(ai_policy):
-            jogada_p2 = ai_policy(sala["partida"])
-        else:
-            jogada_p2 = {"acao": "aguardar"}  # ajuste pro formato do seu motor
     sala["jogada_jogador2"] = jogada_p2
 
     # Executa a rodada

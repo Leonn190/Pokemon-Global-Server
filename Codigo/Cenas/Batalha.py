@@ -1,16 +1,17 @@
-import pygame, random, time, re
+import pygame, random, time, re, json, threading
 
 from Codigo.Modulos.Outros import Clarear, Escurecer
 from Codigo.Modulos.Paineis import PainelPokemonBatalha, CriarSurfacePainelAtaque, PainelAcao, PAINEL_ATAQUE_CACHE
 from Codigo.Prefabs.BotoesPrefab import Botao_Selecao, Botao, Botao_invisivel, Botao_Tecla
 from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda, Animar, caixa_de_texto, Fluxo, Pulso
-from Codigo.Prefabs.Animações import Animação
+from Codigo.Prefabs.Animações import PokemonAnimator
 from Codigo.Prefabs.Sonoridade import Musica, AtualizarMusica, tocar
 from Codigo.Geradores.GeradorPokemon import GerarMatilha, CarregarAnimacaoPokemon, GeraPokemonBatalha, CarregarPokemon
 from Codigo.Modulos.Config import TelaConfigurações
 from Codigo.Modulos.DesenhoPlayer import DesenharPlayer
 from Codigo.Server.ServerMundo import SairConta, SalvarConta
-from Codigo.Localidades.EstabilizadorBatalhaLocal import criar_e_inicializar_sala_local
+from Codigo.Localidades.EstabilizadorBatalhaLocal import criar_e_inicializar_sala_local, receber_e_executar_jogadas
+from Codigo.Localidades.CombateIA import CombateIA
 
 Cores = None
 Fontes = None
@@ -26,6 +27,9 @@ Icones = None
 Particulas = None
 
 Player = None
+Ia = None
+
+dt = None
 
 # estado simples para slots, animações e skins
 _slots_esquerda = None
@@ -65,27 +69,49 @@ EstadoEditorLog = {}            # estados genéricos (hover/click, etc. — se p
 EstadoBotoesAcao = {}           # estados por botão principal (seleção de ação)
 EstadoBotoesApagar = {}         # estados por botão X (apagar ação)
 
+def LeitorLogs(LogRodada, nome_arquivo="LogRodada.json"):
+    # Abre o arquivo em modo escrita e salva o log em formato JSON
+    with open(nome_arquivo, "w", encoding="utf-8") as f:
+        json.dump(LogRodada, f, ensure_ascii=False, indent=4)
+    print(f"✅ Log da rodada salvo em '{nome_arquivo}'")
+
 def Transformador(acao):
     if acao["Movimento"] == 1:
         acao["Movimento"] = "Mover"
-        acao["Alvos"].remove["A"]
+        acao["Alvos"].remove("A")
         int(acao["Alvos"])
     elif acao["Movimento"] == 2:
         acao["Movimento"] = "Trocar"
-        acao["Alvos"].remove["RA"]
+        acao["Alvos"].remove("RA")
         int(acao["Alvos"])
     else:
         acao["Movimento"] = acao["Movimento"]["nome"]
+
+    return{
+        "agente": acao["Atacante"],
+        "ataque": acao["Movimento"],
+        "alvo":  acao["Alvos"]
+    }
 
 def VerificaçãoCombate(parametros):
     if parametros.get("BatalhaSimples"):
         while parametros["Running"]:
             if parametros.get("Pronto"):
-                for acao in parametros["LogAtual"]:
-                    Transformador(acao)
+                print(0)
+                parametros["Processando"] = True
+                JogadaIA = Ia.MontarJogada()
+
+                LogPl = [Transformador(acao) for acao in parametros["LogAtual"]]
+                LogIA = [Transformador(acao) for acao in JogadaIA]
+                
+                log, parametros["Sala"] = receber_e_executar_jogadas(parametros["Sala"], LogPl, LogIA)
+                LeitorLogs(log)
+
+                parametros["Pronto"] = False
             
             else:
-                time.sleep(1)
+                print(1)
+                time.sleep(1.5)
 
 def definir_ativos(equipe):
     # Filtra apenas os Pokémon válidos (não None)
@@ -1074,16 +1100,16 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
             idx = max(0, min(8, int(pkm.get("Pos", 1)) - 1))
             nome = pkm["Nome"]
             cx, cy = _slots_direita[idx].center
-            anim = Animação(Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)),
-                            (cx, cy), tamanho=1.1, intervalo=30)
+            anim = PokemonAnimator(pkm, Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)),
+                            (cx, cy), tamanho=1.1)
             _anim_inimigos.append((anim, (cx, cy)))
 
         for pkm in equipe_aliada:
             idx = max(0, min(8, int(pkm.get("Pos", 1)) - 1))
             nome = pkm["Nome"]
             cx, cy = _slots_esquerda[idx].center
-            anim = Animação(Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)),
-                            (cx, cy), tamanho=1.1, intervalo=30, inverted=True)
+            anim = PokemonAnimator(pkm, Animaçoes.get(nome, CarregarAnimacaoPokemon(nome, Animaçoes)),
+                            (cx, cy), tamanho=1.1, inverted=True)
             _anim_aliados.append((anim, (cx, cy)))
 
     TelaAlvoBatalha(tela, estados, eventos, parametros)
@@ -1096,9 +1122,9 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
 
     # atualiza posição por frame (deslocamento horizontal)
     for anim_obj, (cx, cy) in _anim_inimigos:
-        anim_obj.atualizar(tela, nova_pos=(int(cx + dx_dir), int(cy)), multiplicador=1.0)
+        anim_obj.desenhar(dt, tela, nova_pos=(int(cx + dx_dir), int(cy)))
     for anim_obj, (cx, cy) in _anim_aliados:
-        anim_obj.atualizar(tela, nova_pos=(int(cx + dx_esq), int(cy)), multiplicador=1.0)
+        anim_obj.desenhar(dt, tela, nova_pos=(int(cx + dx_esq), int(cy)))
 
 def TelaHudBatalha(tela, estados, eventos, parametros):
     global AliadoSelecionadoCache, InimigoSelecionadoCache
@@ -1239,7 +1265,7 @@ def BatalhaTelaPadrao(tela, estados, eventos, parametros):
     Botao_Tecla("esc",lambda: parametros.update({"Tela": BatalhaTelaOpçoes}))
 
 def BatalhaLoop(tela, relogio, estados, config, info):
-    global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, Player
+    global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, Player, Ia, dt
     global _anim_aliados, _anim_inimigos, AliadoSelecionadoCache, InimigoSelecionadoCache, Acao_surface_cache
     from Codigo.Cenas.Mundo import player
 
@@ -1292,12 +1318,23 @@ def BatalhaLoop(tela, relogio, estados, config, info):
             "EstadoBotoesPainelPokemonBatalha": {},
             "TelaConfigurações": {"Entrou": False},
             "Config": config,
+            "Running": True,
+            "Processando": False
         })
 
         parametros["AliadosAtivos"]  = definir_ativos(parametros["EquipeAliada"])
         parametros["InimigosAtivos"] = definir_ativos(parametros["EquipeInimiga"])
 
         parametros["Sala"] = criar_e_inicializar_sala_local(parametros["EquipeAliada"],parametros["EquipeInimiga"])
+
+        for i, pkm in enumerate(parametros["EquipeAliada"]):
+            pkm["ID"] = i
+        for i, pkm in enumerate(parametros["EquipeInimiga"]):
+            pkm["ID"] = i
+
+        Ia = CombateIA(parametros["EquipeInimiga"], parametros["EquipeAliada"], 0)
+
+        threading.Thread(target=VerificaçãoCombate, args=(parametros,), daemon=True).start()
 
     # --- antes do loop: taxa de decaimento (1 a cada 0,05s = 20/s)
     DECAY_PER_SEC = 20.0
@@ -1366,3 +1403,4 @@ def BatalhaLoop(tela, relogio, estados, config, info):
         pygame.display.update()
         relogio.tick(config["FPS"])
 
+    parametros["Running"] = False

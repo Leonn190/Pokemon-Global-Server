@@ -228,7 +228,7 @@ def GerenciadorDePokemonsProximos(Parametros, Mapa):
 
             time.sleep(0.5)
 
-        except Exception as e:
+        except:
             # print(f"[ERRO] {e}")
             # traceback.print_exc()
             continue

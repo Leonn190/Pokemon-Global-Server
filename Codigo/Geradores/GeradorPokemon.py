@@ -429,95 +429,96 @@ def SubirNivel(pokemon):
 def GanhaAtaque(pokemon):
     # todos os moves possíveis do próprio Pokémon
     try:
-        all_moves = dfml[pokemon["Nome"]].dropna().tolist()
+        print(222222+"444")
+        # all_moves = dfml[pokemon["Nome"]].dropna().tolist()
 
-        df["Linhagem"] = pd.to_numeric(df["Linhagem"], errors="coerce")
+        # df["Linhagem"] = pd.to_numeric(df["Linhagem"], errors="coerce")
         
-        def tenta_converter(x):
-            try:
-                return int(x)  # ou float(x)
-            except ValueError:
-                return x   # se não for número, mantém original
+        # def tenta_converter(x):
+        #     try:
+        #         return int(x)  # ou float(x)
+        #     except ValueError:
+        #         return x   # se não for número, mantém original
 
-        df["Estagio"] = df["Estagio"].apply(tenta_converter)
+        # df["Estagio"] = df["Estagio"].apply(tenta_converter)
 
-        # linhagem e estágio atuais
-        linhagem_atual = int(float(pokemon["Linhagem"]))
-        estagio_atual  = int(float(pokemon["Estagio"]))
+        # # linhagem e estágio atuais
+        # linhagem_atual = int(float(pokemon["Linhagem"]))
+        # estagio_atual  = int(float(pokemon["Estagio"]))
 
-        # garante que sejam numéricos
-        df["Estagio"]  = pd.to_numeric(df["Estagio"], errors="coerce")
-        df["Linhagem"] = pd.to_numeric(df["Linhagem"], errors="coerce")
+        # # garante que sejam numéricos
+        # df["Estagio"]  = pd.to_numeric(df["Estagio"], errors="coerce")
+        # df["Linhagem"] = pd.to_numeric(df["Linhagem"], errors="coerce")
 
-        # pré-evoluções (mesma linhagem, estágio menor)
-        familia_inferior = df[
-        (df["Linhagem"] == linhagem_atual) & 
-        (df["Estagio"].apply(lambda x: isinstance(x,int)) & (df["Estagio"] < estagio_atual))
-        ]
+        # # pré-evoluções (mesma linhagem, estágio menor)
+        # familia_inferior = df[
+        # (df["Linhagem"] == linhagem_atual) & 
+        # (df["Estagio"].apply(lambda x: isinstance(x,int)) & (df["Estagio"] < estagio_atual))
+        # ]
 
-        familia_inferior = familia_inferior.sort_values(by="Estagio", ascending=False)
-        familia_inferior_lista = familia_inferior.to_dict("records")
+        # familia_inferior = familia_inferior.sort_values(by="Estagio", ascending=False)
+        # familia_inferior_lista = familia_inferior.to_dict("records")
 
-        i = 0
-        ChanceAlta = all_moves
-        ChanceMedia = []
-        ChanceBaixa = []
-        for membro in familia_inferior_lista:
-            i += 1
-            MovesMembro = dfml[membro["Nome"]].dropna().tolist()
-            if i < 2:
-                ChanceAlta = [x for x in all_moves if x not in MovesMembro]
-                ChanceMedia = [x for x in all_moves if x in MovesMembro]
-            else:
-                ChanceMedia = [x for x in ChanceMedia if x not in MovesMembro]
-                ChanceBaixa = [x for x in ChanceMedia if x in MovesMembro]
+        # i = 0
+        # ChanceAlta = all_moves
+        # ChanceMedia = []
+        # ChanceBaixa = []
+        # for membro in familia_inferior_lista:
+        #     i += 1
+        #     MovesMembro = dfml[membro["Nome"]].dropna().tolist()
+        #     if i < 2:
+        #         ChanceAlta = [x for x in all_moves if x not in MovesMembro]
+        #         ChanceMedia = [x for x in all_moves if x in MovesMembro]
+        #     else:
+        #         ChanceMedia = [x for x in ChanceMedia if x not in MovesMembro]
+        #         ChanceBaixa = [x for x in ChanceMedia if x in MovesMembro]
         
-        PoolFinal = ChanceAlta + ChanceAlta + ChanceAlta + ChanceMedia + ChanceMedia + ChanceBaixa
+        # PoolFinal = ChanceAlta + ChanceAlta + ChanceAlta + ChanceMedia + ChanceMedia + ChanceBaixa
 
-        # ======= NOVO: remover ataques já possuídos =======
-        ja_tem = set()
-        for mov in (pokemon.get("MoveList") or []):
-            if mov:
-                if isinstance(mov, dict):
-                    n = mov.get("nome") or mov.get("Ataque")
-                else:
-                    n = str(mov)
-                if n:
-                    ja_tem.add(str(n).lower())
-        for mov in (pokemon.get("Memoria") or []):
-            if mov:
-                if isinstance(mov, dict):
-                    n = mov.get("nome") or mov.get("Ataque")
-                else:
-                    n = str(mov)
-                if n:
-                    ja_tem.add(str(n).lower())
+        # # ======= NOVO: remover ataques já possuídos =======
+        # ja_tem = set()
+        # for mov in (pokemon.get("MoveList") or []):
+        #     if mov:
+        #         if isinstance(mov, dict):
+        #             n = mov.get("nome") or mov.get("Ataque")
+        #         else:
+        #             n = str(mov)
+        #         if n:
+        #             ja_tem.add(str(n).lower())
+        # for mov in (pokemon.get("Memoria") or []):
+        #     if mov:
+        #         if isinstance(mov, dict):
+        #             n = mov.get("nome") or mov.get("Ataque")
+        #         else:
+        #             n = str(mov)
+        #         if n:
+        #             ja_tem.add(str(n).lower())
 
-        candidatos = [a for a in PoolFinal if a and str(a).lower() not in ja_tem]
-        if not candidatos:
-            # fallback simples: qualquer ataque do dfa que não tenha ainda
-            candidatos = [a for a in dfa["Ataque"].dropna().tolist() if str(a).lower() not in ja_tem]
+        # candidatos = [a for a in PoolFinal if a and str(a).lower() not in ja_tem]
+        # if not candidatos:
+        #     # fallback simples: qualquer ataque do dfa que não tenha ainda
+        #     candidatos = [a for a in dfa["Ataque"].dropna().tolist() if str(a).lower() not in ja_tem]
 
-        # ======= NOVO: leve bias por tipo =======
-        tipos_poke = {
-            str(pokemon.get("Tipo1", "")).lower(),
-            str(pokemon.get("Tipo2", "")).lower(),
-            str(pokemon.get("Tipo3", "")).lower()
-        }
-        tipos_poke.discard("")
-        tipo_por_ataque = dfa.set_index("Ataque")["Tipo"].to_dict()
+        # # ======= NOVO: leve bias por tipo =======
+        # tipos_poke = {
+        #     str(pokemon.get("Tipo1", "")).lower(),
+        #     str(pokemon.get("Tipo2", "")).lower(),
+        #     str(pokemon.get("Tipo3", "")).lower()
+        # }
+        # tipos_poke.discard("")
+        # tipo_por_ataque = dfa.set_index("Ataque")["Tipo"].to_dict()
 
-        preferidos = [a for a in candidatos if str(tipo_por_ataque.get(a, "")).lower() in tipos_poke]
-        pool_bias = preferidos + preferidos + candidatos  # peso leve (x2) para do mesmo tipo
-        if not pool_bias:
-            raise ValueError("Sem candidatos de ataque válidos")
+        # preferidos = [a for a in candidatos if str(tipo_por_ataque.get(a, "")).lower() in tipos_poke]
+        # pool_bias = preferidos + preferidos + candidatos  # peso leve (x2) para do mesmo tipo
+        # if not pool_bias:
+        #     raise ValueError("Sem candidatos de ataque válidos")
 
-        ataque = random.choice(pool_bias)
+        # ataque = random.choice(pool_bias)
 
-        r = dfa[dfa["Ataque"] == ataque].iloc[0]
+        # r = dfa[dfa["Ataque"] == ataque].iloc[0]
     except:
         # fallback antigo (mantido). Pode ocasionalmente repetir, mas é raríssimo.
-        r = dfa[dfa["Code"] == random.randint(1,450)].iloc[0]
+        r = dfa[dfa["Code"] == random.randint(1,20)].iloc[0]
 
     novoataque = {
             "nome": r["Ataque"],
