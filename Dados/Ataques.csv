@@ -1,464 +1,465 @@
 Ataque,Tipo,Custo,Dano,Estilo,Assertividade,Alvo,Descrição,função,Code
-Enraivecer,normal,10,0,s,100%,sem alvo,"Se Vida abaixo de 50%, ganhe Aprimorado se SpA for maior que Atk; caso contrário, ganhe Amplificado",,1
-Recarga,normal,10,0,s,100%,sem alvo,Recupera 200% de energia gasta nesse ataque e Aumenta SpA em 5%,,2
-Provocar,normal,12,0,s,100%,sem alvo,Aplique Provocar,,3
-Rosnar,normal,12,0,s,100%,inimigo,Reduz Atk do inimigo em 15%,,4
-Biscoito,normal,14,0,s,100%,sem alvo,"Esse pokemon e o aliado mais proximo ganham um Biscoito, para cada biscoito nesses pokemon, Cure 4% da propria magia",,4
-Tapa,normal,15,0.75,n,100%,inimigo,Sem efeito extra,,5
-Tapa Especial,normal,15,0.75,n,100%,inimigo,Sem efeito extra,,6
-Tapa Magico,normal,15,0.75,n,100%,inimigo,Dano especial escalado com Mag,,7
-Resetar,normal,15,0,s,100%,sem alvo,Zera suas variações de atributos (exceto efeitos),,8
-Golpe Critico,normal,18,0.95,n,90%,inimigo,esse ataque é sempre critico,,9
-Cabeçada,normal,18,1.05,n,90%,inimigo,Sem efeito extra,,10
-Estocada,normal,19,1,n,100%,inimigo,"se for o primeiro ataque do turno, causa +30% de dano",,10
-Transformar,normal,20,0,s,100%,inimigo,"Se transforme em uma copia identica do inimigo, mas com menos 25% de vida (ataque exclusivo do ditto)",,10
-Resetar Forçado,normal,20,0,s,100%,escolha,Zera as variações de atributos do alvo (exceto efeitos),,11
-Manobra Evasiva,normal,20,0.8,n,100%,inimigo,"Se for crítico, ganhe Evasivo",,12
-Barragem,normal,20,0,s,100%,sem alvo,"Ganhe barreira igual a 35% da Mag; se for crítico, ganhe 40%",,13
-Investida,normal,22,1.2,n,100%,inimigo,Causa 10% do dano a si mesmo,,14
-Grito de Guerra,normal,22,0,s,100%,aliado,Aumenta Atk de todos os aliados em 10%,,15
-Golpe Precavido,normal,22,1,n,150%,inimigo x2,Sem efeito extra,,16
-Inflar,normal,24,0,s,100%,sem alvo,Ganhe barreira igual a 25% da Vida,,17
-Pancada Seca,normal,25,0.9,n,100%,inimigo,"Reduz 5 de energia do alvo; se for crítico, Reduz 15",,18
-Ataque Rapido,normal,25,0.95,n,100%,inimigo,Sempre ataca primeiro,,19
-Energia,normal,25,1.1,e,110%,inimigo,Sem efeito extra,,20
-Chifrada,normal,26,0.45,n,95%,inimigo,"Esse ataque causa mais 45% da Per como dano adicional, e esse ataque usa 45% da Per a mais",,20
-Agilidade,normal,28,1,e,100%,inimigo,Aumenta Vel em 5%,,21
-Arranhar,normal,30,1.3,n,100%,inimigo,Sem efeito extra,,22
-Proteger,normal,30,0,s,90%,aliado,Protege um aliado,,23
-Tankar,normal,32,0,s,100%,sem alvo,Ganhe provocar e 15% da magia como Barreira e 10% da sua magia como sua menor defesa,,24
-Hiper Presa,normal,34,1.4,n,90%,inimigo,"Se for crítico, o inimigo recua",,25
-Investida Selvagem,normal,35,1.45,n,75%,inimigo,"Se errar, causa 25% do dano a si mesmo",,26
-Bola Especial,normal,35,1.35,e,100%,inimigo,Causa 50% do dano a inimigos adjacentes,,27
-Bola Climatica,normal,38,1.3,e,100%,inimigo,Causa 50% do dano a inimigos adjacentes; adapta o tipo ao Clima e causa +20% com Clima,,28
-Guilhotina,normal,40,1,n,50%,inimigo,Executa inimigos com Vida abaixo de 40%,,29
-Golpe Super Precavido,normal,44,1.25,n,200%,inimigo x5,Sem efeito extra,,30
-Esmagar,normal,46,1.1,n,90%,inimigo,Causa +10% de dano para cada 100kg desse pokemon,,31
-Hiper Raio,normal,58,1.8,e,90%,inimigo,Sem efeito extra,,32
-Borrifada,agua,10,0.65,n,100%,inimigo,Sem efeito extra,,33
-Splash,agua,10,0.8,n,50%,inimigo,Sem efeito extra,,33
-Esguicho Suave,agua,15,0.7,e,95%,escolha,"Se for usado em um aliado, cure ele em 35% da sua Mag e Remova Queimado",,34
-Bolhas,agua,16,0.5,n,100%,inimigo,Causa +10% de dano para cada acerto anterior com Bolhas,,35
-Dança da Chuva,agua,20,0,s,99%,sem alvo,Defina o Clima como Chuvoso,,36
-Jato de Agua,agua,22,1.1,e,100%,inimigo,Sem efeito extra,,37
-Gota Pesada,agua,25,0,s,100%,inimigo,Aplique Encharcado no inimigo,,38
-Barragem Aquatica,agua,25,0,s,100%,sem alvo,Ganhe barreira igual a 25% da Mag e Aumenta SpD em 5% da Mag,,39
-Aguas Magicas,agua,26,1.2,e,100%,inimigo,Dano especial escalado com Mag,,40
-Fonte Termal,agua,28,0,s,100%,aliado,Transforma todos os efeitos negativos de um aliado em Encharcado e cure ele em 35% da sua Mag,,41
-Lança d’Água        ,agua,28,1.25,n,70%,inimigo,"Se o alvo estiver Encharcado, acerta com 100% de chance e ignora Evasivo",,42
-Surfar,agua,30,1.25,n,120%,inimigo,Sem efeito extra,,43
-Redemoinho ,agua,30,1.15,e,90%,inimigo,Causa +15% de dano se o inimigo estiver Encharcado e +15% se o Clima for Chuvoso,,44
-Golpe de Concha,agua,32,0.4,n,95%,inimigo,Causa +60% da sua Def como dano físico adicional,,45
-Martelo Carangueijo,agua,32,1.35,n,100%,inimigo,Sem efeito extra,,46
-Chuva curativa,agua,32,0,s,100%,all aliados,"Cura todos os aliados em 15% da sua Mag; se estiver Chovendo, cure 30%; Remova Queimado dos aliados",,47
-Torrente Vital,agua,33,1.2,e,90%,aliado/inimigo,Cura o aliado em 40% do dano causado ao inimigosem alvoalvo,,48
-Bola de Agua,agua,35,1.35,e,100%,inimigo,Causa 50% do dano a inimigos adjacentes,,49
-Mergulho Rápido,agua,35,0.2,e,80%,inimigo,"Aplique Encharcado em si mesmo; neste turno, desvie de todos os ataques focados",,50
-Explosao Submersa,agua,36,1.4,n,100%,inimigo,"Se o Clima for Chuvoso, causa 80% do dano a inimigos adjacentes",,51
-Absorção total,agua,38,0,s,100%,sem alvo,"Todos os Pokémon ativos perdem Encharcado; para cada rodada acumulada, cure 5% da sua Mag e Aumenta SpA em 1%; se tiver 5 ou mais turnos, ganhe Ofensivo",,52
-Geiser,agua,38,1.5,e,70%,inimigo,Reduz SpD do alvo em 10%,,53
-Esfera Hidrocaótica,agua,40,1.35,e,100%,inimigo,"Se o inimigo estiver Encharcado, ignora SpD; escala com Mag, mas causa dano especial",,54
-Controle do Oceano,agua,40,0.85,e,100%,inimigo,Mova o inimigo para uma direção adjacente,,55
-Pulso de Agua,agua,40,1.4,n,100%,inimigo,"Reduz 10 de energia do alvo; se for crítico, Reduz 15",,56
-Golpe Abissal,agua,42,1.6,n,85%,inimigo,Causa +25% de dano se o inimigo estiver com Vida abaixo de 40%,,57
-Cachoeira,agua,44,1.5,n,100%,inimigo,25% de chance de fazer o inimigo recuar,,58
-Jato Duplo,agua,44,1.4,e,90%,inimigo x2,"Se for crítico, Aplique Encharcado no inimigo",,59
-Diluvio,agua,50,1.35,e,100%,all,"Recupere 20 de energia se o Clima for Chuvoso; caso contrário, se alguém sofrer crítico, defina Chuvoso; também Reduz 4 de Atk dos atingidos",,60
-Jato Triplo,agua,66,1.65,e,80%,inimigo x3,"Se for crítico, Aplique Encharcado no inimigo",,61
-Tsunami,agua,75,1.55,e,80%,all,40% de chance de Aplique Encharcado nos alvos,,62
-Foguinho,fogo,12,0.5,e,80%,inimigo,Causa +15% de dano para cada turno restante de Queimado no inimigo,,63
-Tapa Quente,fogo,15,0.8,n,100%,inimigo,Causa +10% de dano se o alvo estiver com Queimado,,64
-Chama,fogo,16,1,e,100%,inimigo,Sem efeito extra,,65
-Suspiro de Fogo,fogo,18,1,e,90%,inimigo,"Se o alvo estiver com menos de 50% da vida, esse ataque causa 25% de dano a mais",,65
-Aquecer,fogo,18,0,s,100%,aliado,"Remova Encharcado de si ou de um aliado; também remova Congelado; para cada turno removido, cure 5% da Mag",,66
-Queimar,fogo,20,0,s,75%,inimigo,Aplique Queimado no inimigo,,67
-Dança do Sol,fogo,20,0,s,99%,sem alvo,Defina o Clima como Sol Forte,,68
-Tiro Flamejante,fogo,21,1.1,n,140%,inimigo,Sem efeito extra,,69
-Labareda,fogo,25,1.25,n,100%,inimigo,"Se for crítico, Aplique Queimado no inimigo",,70
-Ferver,fogo,25,0.6,e,70%,inimigo,"Se o alvo estiver com Queimado, causa 60% da Mag como dano especial; neste caso, a assertividade será 100%",,71
-Superaquecer,fogo,28,1.1,e,100%,inimigo x2,"Remova Encharcado de si mesmo; se o alvo tiver Queimado, aumente em 3 turnos; se o Clima for Sol Forte, causa +20% de dano",,72
-Estouro Solar,fogo,30,1.2,e,100%,inimigo,Causa +50% de dano se o Clima for Sol Forte,,73
-Fornalha Interna,fogo,30,0,s,100%,sem alvo,"Se estiver com Queimado, cure 25% da Mag e ganhe Energizado; caso contrário, Aplique Queimado em si e recupere 120% da energia usada",,74
-Queimadura Eterna,fogo,30,0,s,85%,inimigo,"Aplique Queimado no inimigo, mas dobre a Mag dele",,75
-Barreira de Chamas,fogo,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% do Atk e 15% da Mag; se for crítico, ganhe 35% do Atk e 18% da Mag; se estiver com menos de 70% da Vida, ganhe +25% de barreira",,76
-Incendiar,fogo,30,0,s,100%,inimigo,Incendia a área selecionada,,77
-Ataque em Chamas,fogo,32,1.2,n,100%,inimigo,"Aplique Queimado nos aliados adjacentes; se o alvo tiver Queimado, causa +20% de dano; se você também estiver com Queimado, causa +20% adicionais",,78
-Bola de Fogo,fogo,35,1.35,e,100%,inimigo,Causa 50% do dano a inimigos adjacentes,,79
-Corte Incandescente,fogo,35,1.4,n,100%,inimigo,"Se for crítico, Aplique Queimado no inimigo",,80
-Investida Flamejante,fogo,40,1.5,n,95%,inimigo,Aplique Queimado em si e no inimigo,,81
-Jato de Fogo,fogo,40,1.6,e,100%,inimigo,Sem efeito extra,,82
-Ondas de Calor,fogo,42,1,s,100%,all,Causa +30% de dano se o Clima for Sol Forte; causa +5% de dano para cada Pokémon com Queimado em campo,,83
-Erupção,fogo,45,1.9,n,80%,inimigo,Este ataque não pode ser crítico,,84
-Raio de Fogo,fogo,50,1.85,e,100%,inimigo,Remova Congelado e Encharcado do inimigo,,85
-Fluxo Infernal,fogo,52,0,s,100%,inimigo,O alvo perde 50% da Vida atual,,86
-Laser de Fogo,fogo,55,1.55,e,100%,linha,Sem efeito extra,,87
-Explosão Ardente,fogo,55,1.5,n,90%,inimigo,"Se nocautear o alvo, inimigos adjacentes recebem 80% do dano",,88
-Jato de Lava,fogo,62,0,s,120%,linha,Incendia a linha selecionada,,89
-Inferno,fogo,65,0,s,95%,all,Aplique Queimado em todos os inimigos ativos,,90
-Sintese,planta,10,0,s,100%,sem alvo,"Se o Clima for Sol Forte, recupere 400% da energia gasta neste ataque",,91
-Crescimento,planta,12,0,s,100%,sem alvo,"Aumenta 3% em 3 atributos aleatórios; se o Clima for Sol Forte, Aumenta 4% em 4 atributos aleatórios (exceto Vida)",,92
-Cura Natural,planta,15,0,s,100%,"aliado,sem alvo",Aplique Regeneração no alvo,,93
-Tiro de Semente,planta,18,0.9,n,120%,inimigo,Sem efeito extra,,94
-Trevo da Sorte,planta,18,0,s,100%,"aliado,sem alvo",Aumenta CrC do alvo em 10%,,95
-Raizes,planta,20,0.8,n,90%,inimigo,Aplique Enraizado no alvo,,96
-Proteção de Algodão,planta,22,0,s,100%,sem alvo,Ganhe barreira igual a 20% da Mag e +5% de SpD,,97
-Dreno,planta,25,0.8,e,100%,inimigo,Cure 25% do seu SpA,,98
-Flor Magica,planta,25,0.25,e,100%,inimigo,Ganhe 5% da Mag; causa 75% da Mag como dano especial,,99
-Seiva Misteriosa,planta,26,1,e,100%,inimigo,Causa +35% de dano se o alvo estiver Envenenado,,100
-Absorver,planta,26,0.6,e,100%,inimigo,Roube um efeito positivo aleatório do alvo,,101
-Folha Navalha,planta,28,1.1,n,100%,linha,Este ataque usa +30% de Per,,102
-Chicote de Vinha,planta,32,1.25,n,80%,inimigo x2,Aumenta CrC em 15% para este ataque,,103
-Ataque da natureza,planta,34,1.3,n,100%,inimigo,"Se for crítico, Aplique Enraizado no inimigo",,104
-Mega Dreno,planta,35,1,e,100%,inimigo,Cure 10% da Vida do alvo,,105
-Tornado de Folhas,planta,35,1.2,e,90%,inimigo,Reduz Vel do alvo em 15%,,106
-Bomba de Semente,planta,36,1.4,n,100%,inimigo x2,Causa 25% do dano a inimigos adjacentes,,107
-Dança das Pétalas,planta,38,0,s,100%,sem alvo,Aumenta Vel em 12% para todos os aliados adjacentes e para si,,108
-Hiper Dreno,planta,45,1.2,e,100%,inimigo,Cure 40% da sua Mag,,109
-Raio Solar,planta,60,1.8,e,100%,inimigo,"Se o Clima for Sol Forte, recupere 25% da energia gasta e cause +10% de dano",,110
-Beslico Chocante,eletrico,13,0.6,n,80%,inimigo,Aumenta CrC e CrD em 3,,111
-Faisca,eletrico,16,1,e,110%,inimigo,Sem efeito extra,,112
-Pilha,eletrico,18,0,s,120%,sem alvo,Aplique Ilimitado,,113
-Descarga Total,eletrico,20,1,e,100%,inimigo,Consome toda sua energia; causa +10% de dano para cada 10 de energia adicional gasta,,114
-Dança Eletrica,eletrico,22,0,s,99%,sem alvo,Defina o Clima como Tempestade de Raios,,115
-Energizar,eletrico,25,0,s,100%,"aliado,sem alvo",Aplique Energizado no alvo,,116
-Vampirismo Energético,eletrico,25,0.9,n,100%,inimigo,Rouba 35% da energia atual do oponente,,117
-Curto,eletrico,26,0.8,n,100%,inimigo,Causa +60% da energia atual do alvo como dano físico,,118
-Fluxo Magnético,eletrico,27,1,n,90%,inimigo,Causa +25% de dano se você ou o alvo for do tipo Metal,,119
-Onda Elétrica,eletrico,29,0,s,95%,inimigo,Aplique Paralisado no alvo,,120
-Eletrochoque,eletrico,30,1.2,e,100%,inimigo,Atinge +1 casa aleatória para cada uso anterior deste ataque por este Pokémon,,121
-Barreira Energetica,eletrico,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da Ene e 15% da Mag; se for crítico, ganhe 35% da Ene e 18% da Mag; se estiver Energizado, ganhe +25% de barreira total",,122
-Consumir,eletrico,32,0.8,e,95%,inimigo,Reduz 70% da energia do alvo,,123
-Choque do Trovão,eletrico,33,1.4,e,100%,inimigo,"Se for crítico, Aplique Paralisado no inimigo; se o alvo estiver Encharcado, assertividade +100%",,124
-Investida do trovão,eletrico,34,1.55,n,100%,inimigo,80% de chance de Aplique Paralisado em si mesmo,,125
-Bola Eletrica,eletrico,35,1.35,e,100%,inimigo,Causa 50% do dano a inimigos adjacentes,,126
-Desestabilizar,eletrico,35,0,s,100%,inimigo,"Se a maior Def do alvo for SpD, Aplique Neutralizado; se for Def, Aplique Quebrado",,127
-Raio,eletrico,36,1.5,n,75%,inimigo,"Se o alvo for do tipo Metal ou estiver Encharcado, assertividade +55%",,128
-Pancada Energizada,eletrico,36,1.35,n,90%,inimigo,"O inimigo ganha 25% da energia usada; se estiver Energizado, causa +25% de dano",,129
-Relãmpago,eletrico,38,1.2,e,70%,inimigo,"Se o Clima for Tempestade de Raios, causa +35% de dano; se estiver Chuva ou o alvo estiver Encharcado, assertividade +40%",,130
-Eletricidade Inconstante,eletrico,40,1.7,e,50%,inimigo,"Se você ou o alvo estiver Energizado, assertividade +25%",,131
-Choque Triplo,eletrico,42,1.35,e,200%,inimigo x3,Sem efeito extra,,132
-Ultra Raio Aleatorio,eletrico,45,2.25,e,200%,aleatorio,Sem efeito extra,,133
-Sobrecarga,eletrico,46,1,e,95%,inimigo,"Concede 50% da energia gasta ao alvo; se exceder o Ene, Remova o excesso, cause +80% de dano e +100% do excesso como dano especial",,134
-Choque Quadruplo,eletrico,46,1.25,e,200%,inimigo x4,Sem efeito extra,,135
-Descarga Descomunal,eletrico,48,0,s,120%,sem alvo,"Aplique Paralisado em si; Aumenta Atk, SpA e Ene em 35%; Deixe seu Terreno Energizado",,136
-Chuva de Raios,eletrico,80,1.5,n,100%,all,"Lança raio em 6 casas aleatórias; se Clima for Chuva, lança +2; se for Tempestade de Raios, lança +6",,137
-Meditação,lutador,10,0,s,100%,sem alvo,"Ganhe Imune; se for crítico, recupere 150% da energia gasta",,138
-Treinar,lutador,15,0,s,100%,sem alvo,"Aumenta 5% de um atributo aleatório; se for crítico, ganhe Focado",,139
-Acrobacia,lutador,18,0.4,n,85%,inimigo/aliado,"Causa 40% da Vel como dano físico; Aumenta Vel em 3%; se a área estiver livre, Movasem alvose até ela",,140
-Concentração,lutador,19,0,s,100%,sem alvo,"Remova todos os efeitos negativos de si; se for crítico, ganhe Focado",,141
-Soco,lutador,20,1,n,100%,inimigo,Sem efeito extra,,142
-Preparativo,lutador,21,0.75,e,99%,inimigo,Ganhe Preparado,,143
-Soco Especial,lutador,23,1.1,e,100%,inimigo,Sem efeito extra,,144
-Lançamento,lutador,24,0.7,n,85%,inimigo,Mova o inimigo para uma área aleatória,,145
-Treino em Grupo,lutador,25,0,s,100%,sem alvo,"Aumenta 4% de um atributo aleatório e dos aliados adjacentes; para cada aliado adjacente, Aumenta +3%",,146
-Socos Multiplos,lutador,26,0.3,n,100%,inimigo,Causa dano físico extra igual a 200% da EnR,,147
-Soco Carregado,lutador,28,0.85,n,100%,inimigo,"Causa 45% da Ene como dano físico; se for crítico, recupere 25% da energia gasta",,148
-Karate,lutador,28,0.9,n,85%,inimigo,"Causa dano físico extra igual a 20% da Vel; se estiver Focado, causa +10% de dano",,149
-Chamar para Briga,lutador,30,0,s,100%,sem alvo,Ganhe os efeitos Preparado e Provocando,,150
-Barreira de Folego,lutador,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da EnR e 15% da Mag; se for crítico, ganhe 35% da EnR e 18% da Mag; se estiver Preparado, ganhe +25% de barreira total",,151
-Missil de Punho,lutador,32,1.35,e,80%,inimigo,Aumenta assertividade em 30% da Mag,,152
-Chute Rodopio Tornado,lutador,32,1.1,e,100%,linha,"Empurra todos os inimigos 1 área para trás; se já estiverem na última área, recebem +25% de dano",,153
-Chute Pirueta Aéreo,lutador,32,0.8,n,100%,inimigo,"Se o alvo estiver Voando ou Flutuando, causa +100% de dano e assertividade",,154
-Chute Duplo,lutador,35,1.1,n,95%,inimigo x2,Causa +25% de dano se os dois alvos estiverem lado a lado,,155
-Golpe Marcial,lutador,36,1.2,n,120%,inimigo ,"Causa dano físico extra igual a 25% do CrC; se for crítico, ganhe Preparado",,156
-Contra Ataque,lutador,36,1,n,100%,inimigo,Causa +65% de dano se o alvo tiver atacado você anteriormente,,157
-Submissão,lutador,38,1.35,n,85%,inimigo,"Aplique Incapacitado em si e no inimigo; se for crítico, você não será afetado",,158
-Combate Corporal,lutador,42,1.5,n,100%,inimigo,"Se o alvo estiver em casa adjacente, causa +30% de dano; se estiver até 2 casas adjacentes, causa +15%",,159
-Nocaute,lutador,43,1.2,n,120%,inimigo,"Metade da chance de crítico; se for crítico, o inimigo é automaticamente nocauteado",,160
-Golpe Cruzado,lutador,44,1.65,n,100%,inimigo,Sem efeito extra,,161
-Counter,lutador,45,1.3,n,110%,inimigo,"Adapta o estilo ao tipo de defesa mais fraca do inimigo; Remova 1 turno de todos os efeitos positivos; se for crítico, Remova metade do efeito; Remova Evasivo, Preparado e Refletindo antes de ativásem alvolos",,162
-1 Contra Todos,lutador,55,1.2,n,100%,inimigo,Não funciona se houver Pokémon na áreasem alvoalvo; causa 100% de dano a todos e +30% a inimigos adjacentes,,163
-Teleporte,psiquico,10,0,s,120%,aliado,Movasem alvose para a área selecionada,,164
-Olho que Tudo Ve,psiquico,10,0,s,150%,all,Remove todos os efeitos Furtivos do jogo,,165
-Toque Mental,psiquico,14,0.9,n,100%,inimigo,Sem efeito extra,,166
-Flutuar,psiquico,15,0,s,95%,sem alvo,Ganhe o efeito Flutuando,,167
-Cabeçada Zen,psiquico,16,1,n,90%,inimigo,Remova o efeito Imune do alvo,,168
-Depressão,psiquico,18,0,s,140%,inimigo,"Reduza 60% do menor status proporcional do alvo entre Vida, CrC e CrD; se o alvo tiver a menor Vida na partida, reduza também o segundo menor status; se for crítico, reduza +10%",,169
-Super Meditação ,psiquico,20,0,s,80%,sem alvo,Remova todos os efeitos negativos de si mesmo,,170
-Teletransporte Forçado,psiquico,22,0.5,e,100%,inimigo x2,Teleporte o inimigo para a área selecionada,,171
-Aceleração Mental,psiquico,22,0,s,75%,sem alvo,"Aumenta Vel em 12%; se errar, perde 5% de SpD",,172
-Proteção Mental,psiquico,22,0,s,110%,sem alvo,"Ganhe o efeito Imune; se já tiver Imune, fique Protegido; se for crítico, aplique este efeito a todos os Pokémon adjacentes",,173
-Confusão,psiquico,24,0,s,95%,inimigo,O alvo está Confuso,,174
-Disturbio,psiquico,25,1,e,99%,inimigo,"Remove todos os efeitos positivos de si mesmo; para cada efeito removido, causa +30% de dano",,175
-Amnesia,psiquico,26,1.1,e,90%,inimigo,"Se for crítico, o inimigo recua",,176
-Telecinese,psiquico,26,0.5,e,100%,inimigo x2,Causa +50% de dano para cada item equipado em ambos os alvos,,177
-Incapacitar,psiquico,28,0,s,100%,inimigo,"Aplique Incapacitado no inimigo; se for crítico, também Reduza 5% de SpD",,178
-Barreira Psiquica,psiquico,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da SpD e 15% da Mag; se for crítico, ganhe 35% da SpD e 18% da Mag; se estiver Imune, ganhe +25% de barreira",,179
-Tranferencia Mental,psiquico,32,0,s,100%,"aliado,inimigo","Transfira um efeito negativo de um aliado para o inimigo, um efeito positivo do inimigo para o aliado, ou ambos",,180
-Colapso Mental,psiquico,35,1,e,100%,inimigo,Causa +10% de dano para cada efeito no alvo,,181
-Raio de Confusão,psiquico,38,1.35,e,110%,inimigo,"Se for crítico, Aplique Confuso no alvo",,182
-Psiquico Desgastante,psiquico,38,1.55,e,100%,inimigo,50% de chance de Aplique Incapacitado em si mesmo,,183
-Mente Mágica,psiquico,40,0.2,e,70%,inimigo,"Causa 100% da Mag como dano; se errar, aumente 4% da sua Mag",,184
-Lamina Psiquica,psiquico,42,1.5,n,90%,inimigo,Causa +25% de Per contra inimigos Incapacitados,,185
-Raio Psiquico,psiquico,50,1.8,e,100%,inimigo,Sem efeito extra,,186
-Ultrapsiquico,psiquico,60,1.4,e,120%,inimigo,Causa +10% de dano para cada efeito positivo no alvo,,187
-Minhocagem,inseto,12,0.45,n,90%,inimigo,"Se for crítico, ganhe Evasivo",,188
-Regeneração,inseto,16,0,s,100%,sem alvo,Ganhe Regeneração,,189
-Picada,inseto,18,0.75,n,95%,inimigo,"Aumenta CrC em 5%; se for crítico, Aplique Envenenado no alvo",,190
-Ninho Protetor,inseto,20,0,s,85%,aliado,"Aumenta Def e SpD do alvo em 4%; se for crítico, deixesem alvoo Protegido",,191
-Revoada,inseto,22,0.5,e,100%,inimigo x2,Quebre 40% da barreira dos alvos antes do dano,,192
-Seda,inseto,25,1,e,100%,inimigo,O alvo perde 6% da Vel,,193
-Casulo Improvisado,inseto,25,0,s,100%,sem alvo,Ganhe barreira igual a 45% da Mag,,194
-Mordida de Inseto,inseto,26,1.25,n,100%,inimigo,Sem efeito extra,,195
-Feromonio de Guerra,inseto,27,0,s,100%,aliado,"Aumenta Atk dos aliados adjacentes em 12%; se for crítico, aumenta Vel em 6%",,196
-Doação de Energia,inseto,28,0,s,180%,aliado,"O alvo recupera 50% da energia gasta; se for crítico, recupera 100%",,197
-Exoesqueleto,inseto,30,0,s,100%,sem alvo,"Ganhe 15% da Mag como Def permanente; se for crítico, ganhe 5% da Mag como SpD permanente",,198
-Barreira Aspera,inseto,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da Per e 15% da Mag; se for crítico, ganhe 35% da Per e 18% da Mag; se já tiver barreira, ganhe +25%",,199
-Corte serrilhado,inseto,32,1.3,n,90%,inimigo,"Causa +25% de dano se o inimigo tiver barreira ou efeitos defensivos (Congelado, Reforçado, Fortificado, Preparado); se for crítico, ganhe 10% do Atk como Per",,200
-Carcomer,inseto,32,1.2,n,100%,inimigo,"Causa +20% de dano a inimigos Enraizados; se o inimigo estiver com menos de 50% da Vida, cure 40% do dano causado",,201
-Evolução Incerta,inseto,32,0,s,100%,sem alvo,"Reduz 15% dos 2 menores status e aumenta 15% dos 2 maiores (exceto Vida, CrC e CrD)",,202
-Lamina Orgânica,inseto,34,1.25,n,100%,inimigo,"Muda o estilo entre físico e especial conforme a menor defesa do inimigo; se a diferença for menor que 10%, causa dano físico com +60% de dano",,203
-Infestação,inseto,34,1,e,100%,inimigo,"Se for crítico, causa +15% de dano e +5% de vampirismo para cada uso prévio do ataque Infestação, zerando seu contador",,204
-Lançamento de Teia,inseto,35,1.2,e,100%,inimigo,"O alvo perde 10% da Vel; se for crítico, perde 15%",,205
-Tesoura X,inseto,40,1.45,n,100%,"1,3,5,7,9","Se o inimigo estiver no centro, recebe +30% de dano",,206
-Canibalismo Filial,inseto,42,0,s,135%,aliado,"Mata um aliado, mas regenera 80% da Vida perdida; não funciona se o aliado tiver mais de 30% da Vida",,207
-Nevoa de Feromonios,inseto,45,1,e,75%,all,"Se o Clima for Névoa, aumenta assertividade em 45%; causa +15% da Def dos alvos como dano especial; se for crítico, Aplique Neutralizado no alvo",,208
-Devorar,inseto,52,1.5,n,95%,inimigo,"Tem 30% de vampirismo; se o dano matar o alvo, o vampirismo dobra",,209
-Gelinho,gelo,10,1.1,e,60%,inimigo,"Se o alvo estiver Congelado, assertividade +20%; se Clima for Nevasca, assertividade +20% adicional",,210
-Olhar Frio,gelo,15,0,s,100%,inimigo,"Reduz 15% do maior status proporcional do alvo (exceto Vida); se for crítico, reduz 18%",,211
-Congelamento Tatico,gelo,15,0,s,100%,aliado,"Aplique Congelado e Regeneração no alvo; se for tipo Gelo, aumente Def em 10% da sua Mag",,212
-Bola de Neve,gelo,16,0.85,n,85%,inimigo,Causa +25% de dano se o Clima for Nevasca,,213
-Floco Prismatico,gelo,18,0,s,90%,sem alvo,"Ganhe +6% da Mag como SpA; se for crítico, +3% da Mag como SpD",,214
-Cristalizar,gelo,20,0,s,90%,inimigo,"Se o alvo estiver Encharcado, Aplique Congelado por mesma duração",,215
-Nevasca,gelo,20,0,s,98%,sem alvo,Defina o Clima como Nevasca,,216
-Gelo Verdadeiro,gelo,26,1.05,n,100%,inimigo,"Ignora 100% da Def; se for crítico, reduz 5% da Def do alvo; se Clima for Nevasca, causa +10% de dano",,217
-Geada,gelo,30,1,e,100%,inimigo,"Se Clima for Nevasca, causa +25% de dano e 60% do dano a inimigos adjacentes",,218
-Barreira Congelada,gelo,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da SpA e 15% da Mag; se for crítico, ganhe 35% da SpA e 18% da Mag; se Clima for Nevasca, barreira +25%",,219
-Congelamento,gelo,32,0,s,70%,inimigo,Aplique Congelado no inimigo,,220
-Magia Gelida,gelo,38,0.1,e,100%,inimigo,Causa 125% da Mag como dano especial extra,,221
-Quebra Gelo,gelo,40,1,n,95%,inimigo,"Causa +85% de dano a Pokémon Congelados; remove o efeito, mas se for crítico, reduz pela metade",,222
-Tumba de Gelo,gelo,40,1.3,n,50%,inimigo,Assertividade +300% se o alvo estiver Congelado; dobra duração do efeito Congelado no alvo,,223
-Ataque Polar,gelo,42,1.4,n,95%,inimigo x2,"Causa +15% de dano se o atacante estiver em área da ponta (1,3,7,9)",,224
-Reinado de Gelo,gelo,45,0.6,e,100%,inimigo x3,Causa +50% de dano para cada Pokémon Congelado na partida,,225
-Raio Aurora,gelo,50,1.7,e,99%,inimigo,"Se o Clima for Nevasca, cure aliados adjacentes em 25% da Mag e cause +15% da Mag como dano especial; se Clima for Noite Densa, assertividade +101% e cura a si mesmo em 35% da Mag",,226
-Raio de Gelo,gelo,52,1.9,e,100%,inimigo,"Causa sem alvo30% de dano a inimigos Congelados; se for crítico, 50% de chance de Congelar o alvo",,227
-Avalanche,gelo,65,1.35,e,90%,all,Causa +10% de dano se o Clima for Nevasca ou o alvo estiver Encharcado,,228
-Ventinho,voador,12,0.45,e,110%,linha,Todos os efeitos dos primeiros Pokémon da linha passam para o último,,229
-Voo Alto,voador,14,0,s,90%,sem alvo,"Se este Pokémon estiver Voando, ganhe Evasivo e aumente 1 turno do efeito Voando; se errar, perca o efeito Voando",,230
-Rajada de Vento,voador,15,0.95,e,90%,inimigo,Ganha +30% de assertividade se este Pokémon estiver Voando,,231
-Asas Protetoras,voador,16,0,s,100%,sem alvo,Ganhe 8% da Mag como Def e SpD; perca o mesmo valor em Vel,,232
-Voar,voador,18,0,s,100%,sem alvo,Ganhe o efeito Voando,,233
-Vendaval,voador,20,0,s,140%,all,Empurre todos os inimigos para a área mais atrás possível em suas linhas,,234
-Tornadinho Amigo,voador,21,0,s,95%,aliado,Aplique o efeito Voando no alvo,,235
-Voo Estrategico,voador,25,0,s,95%,sem alvo,Ganhe o efeito Voando e movasem alvose para posição livre aleatória,,236
-Impulso Aéreo,voador,25,0.85,e,95%,"inimigo,aliado","Ganhe 2% de Vel e movasem alvose para área marcada se vazia; se crítico, ganhe 3% de Vel",,237
-Tiro de Penas,voador,26,0.55,n,50%,inimigo x6,Sem efeito extra,,238
-Bico Broca,voador,26,1.05,n,100%,inimigo,Usa 200% de Per,,239
-Golpe de Asa,voador,28,1.3,n,100%,inimigo,Causa sem alvo20% de dano se este Pokémon estiver Voando,,240
-Barreira de Penas,voador,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da Vel e 15% da Mag; se crítico, ganhe 35% da Vel e 18% da Mag; se Voando, ganhe +25% de barreira total",,241
-Tornado Central,voador,30,1.5,e,140%,5,Sem efeito extra,,242
-Investida Aérea,voador,32,1.2,n,85%,inimigo,Causa +25% de dano e +25% de assertividade se este Pokémon estiver Voando; causa 10% de dano a si mesmo,,243
-Vento Forte,voador,35,1.1,e,85%,linha,"Empurre todos os inimigos uma área para trás; se algum inimigo estiver na última área, ele recebe +30% de dano",,244
-Rasante,voador,36,0.35,n,80%,inimigo,"Causa 100% da Vel como dano físico; se errar, este Pokémon fica Descarregado",,245
-Passaro Bravo,voador,38,1.45,n,100%,inimigo,"Causa +15% de dano se este Pokémon estiver com menos de 50% da Vida; se recuar, causa +15% de dano",,246
-Ás dos Ares,voador,40,1.5,n,200%,inimigo,"Remove efeitos Evasivo e Refletir, se existirem; crítico causa +10% de dano",,247
-Tornado,voador,55,1.5,e,100%,inimigo,Causa 50% de dano a inimigos adjacentes e troca a posição de todos os inimigos atingidos para área aleatória; causa +15% de dano se o alvo estiver Voando,,248
-Ciclone,voador,65,1.5,e,90%,inimigo,Causa +20% da Mag como dano especial; causa 50% de dano a inimigos adjacentes; causa +10% de dano e +10% de assertividade se estiver Chovendo,,249
-Olhar Cruel,sombrio,10,0,s,100%,inimigo,Aumente 1 turno de todos os efeitos negativos do alvo,,250
-Sombra,sombrio,12,0,s,200%,sem alvo,Ganhe +12 de CrD,,251
-Nas Sombras,sombrio,18,0,s,100%,sem alvo,Ganhe o efeito Furtivo,,252
-Nevoa Sombria,sombrio,20,0.4,e,110%,all,Causa +60% de dano se Clima for Névoa,,253
-Corrupção,sombrio,24,0,s,80%,inimigo,Remova todos os efeitos positivos do alvo,,254
-Mordida ,sombrio,25,1.2,n,99%,inimigo,Sem efeito extra,,255
-Expurgo dos fracos,sombrio,25,0,s,85%,sem alvo,"O Pokémon com menor vida base perde 48% da vida atual; se crítico, perde 58%",,256
-Inveja,sombrio,26,1.9,e,15%,inimigo,Ganha +20% de assertividade para cada efeito positivo no alvo; não pode ser crítico,,257
-Golpe Noturno,sombrio,28,1.15,n,90%,inimigo,Causa +35% de dano e +10% de assertividade se o Clima for Noite Densa ou se estiver Furtivo,,258
-Dominação,sombrio,30,1,e,100%,inimigo,"Causa +10% de dano para cada status seu maior que o do alvo, exceto CrC e CrD",,259
-Vingança,sombrio,30,0.85,n,100%,inimigo,"Se o inimigo já atacou este Pokémon neste turno, causa +100% de dano",,260
-Confronto Trevoso,sombrio,32,0.8,e,100%,inimigo,Aplique Provocar em si mesmo e no alvo,,261
-Correntes Eternas,sombrio,32,1.2,n,80%,inimigo,"Use 200% da Mag para deixar o alvo Enraizado; se já estiver Enraizado, causa +15% de dano; se crítico, usa 250% da Mag",,262
-Sombras Cortantes,sombrio,34,1.2,n,100%,inimigo x2,Causa +25% de dano se o alvo estiver Marcado ou Provocado,,263
-Bola Sombria,sombrio,35,1.35,e,100%,inimigo,Causa 50% de dano a inimigos nos arredores,,264
-Adaga das trevas,sombrio,35,1.35,n,95%,inimigo,"Aumenta em 10% todas as reduções de status do alvo; se crítico, aumenta 30%",,265
-Perseguição,sombrio,36,1.2,n,85%,inimigo,"Marca o oponente; causa +30% de dano a inimigos Marcados; se Clima for Noite Densa, +15% de chance de crítico",,266
-Ataque Perverso,sombrio,38,1.1,e,100%,inimigo x2,Baseia dano na média da defesa selecionada dos dois alvos; muda de estilo para a menor defesa,,267
-Vingança Completa,sombrio,38,1.65,e,120%,sem alvo,Atinge todos os Pokémon que já atacaram este Pokémon neste turno,,268
-Golpe Diminutivo,sombrio,40,1,e,100%,inimigo,Causa dano igual a % da vida do oponente,,269
-Devolver,sombrio,40,0.8,e,100%,inimigo,Causa 100% do dano recebido por este Pokémon neste turno como dano especial extra,,270
-Massacre,sombrio,45,1.4,n,100%,sem alvo,Atinge todos os inimigos com menos de 60% da vida; +10% de chance de crítico; causa +10% de dano se estiver Furtivo,,271
-Execução,sombrio,48,0,s,65%,inimigo,"Executa o alvo se ele tiver menos de 45% da vida; se executar, causa 50% de vampirismo; se crítico, executa com 50% da vida",,272
-Breu,sombrio,50,0,s,100%,sem alvo,Ganhe efeito Furtivo; conceda efeito Furtivo a aliados adjacentes; Pokémon com Furtivo ganham +10% da Mag como CrC,,273
-Ritual da noite,sombrio,50,0,s,160%,sem alvo,"Se Clima for Noite Densa, este Pokémon e adjacentes ganham +16% da Mag como Per, SpA e Atk; se crítico, +18%",,274
-Execução Massiva,sombrio,52,0,s,120%,all,Executa todos inimigos com 10% ou menos de vida,,275
-Corredor escuro,sombrio,65,1,e,120%,linha,Todos os alvos compartilham efeitos negativos; causa +10% de dano para cada efeito negativo que este Pokémon tiver,,276
-Visão do além ,fantasma,10,0,s,200%,sem alvo,Todos os inimigos perdem efeito Furtivo e Evasivo,,277
-Atravessar,fantasma,15,0,s,100%,inimigo,Transfira um efeito negativo para o alvo,,278
-Lambida,fantasma,18,0.8,n,90%,inimigo,Esse ataque tem 35% de vampirismo,,279
-Toque do medo,fantasma,18,0.5,n,95%,inimigo,Causa 150% de dano se o alvo estiver Paralisado,,280
-Susto,fantasma,19,0.3,e,100%,inimigo,"Sempre crítico se o Pokémon estiver Dormindo ou se o Clima for Névoa; se crítico, causa +100% de dano e paralisa o inimigo",,281
-Fantasminha Camarada,fantasma,20,0,s,99%,aliado,"O aliado ganha efeito Furtivo; se crítico, ganhe também",,282
-Maldade,fantasma,22,0,s,110%,inimigo,Conceda um efeito negativo aleatório ao alvo,,283
-Jogada de Sorte,fantasma,28,3,e,25%,inimigo,Sem efeito extra,,284
-Golpe Espelhado,fantasma,30,1,e,100%,inimigo,"Se este Pokémon estiver na mesma área que o alvo (campos diferentes), causa +55% de dano",,285
-Pulso de Plasma,fantasma,30,1.15,e,100%,inimigo,"Se crítico, deixe o inimigo Neutralizado",,286
-Crueldade,fantasma,32,0,s,120%,inimigo,"Deixe o oponente com um efeito negativo aleatório entre Neutralizado, Enfraquecido, Vampírico, Congelado, Amaldiçoado, Intoxicado",,287
-Mão Espectral,fantasma,34,1.05,e,100%,inimigo,Puxe o alvo para o mais perto possível no campo dele,,288
-Maldição,fantasma,34,0,s,100%,inimigo,Deixe o alvo com efeito Amaldiçoado,,289
-Golpe Cruel,fantasma,35,1,e,90%,inimigo,Causa +15% de dano para cada efeito negativo que o alvo tiver,,290
-Devorador de Pecados,fantasma,38,0.85,e,120%,inimigo x2,"Remove todos os efeitos negativos dos alvos; para cada efeito removido, ganha +20% de vampirismo",,291
-Garras do Além,fantasma,42,1.25,n,100%,inimigo,Causa +30% de dano se o alvo estiver Amaldiçoado; causa 15% de vampirismo se o Clima for Névoa,,292
-Ataque Fantasmagórico,fantasma,45,1.6,e,90%,inimigo,"Se crítico, ganhe 4% da Mag como CrD; se o Clima for Névoa, causa 10% de vampirismo",,293
-Cura Macabra,fantasma,45,0,s,100%,aliado x3,"Cura 25% da Mag para cada Pokémon derrotado; a cura total é dividida entre os alvos, se crítico cure 30%; se não houver alvo na área, cura a si mesmo",,294
-Competitividade Medonha,fantasma,52,1,e,85%,inimigo x2,"Causa +40% de dano e amaldiçoa uma das áreas atingidas se a soma de turnos negativos da sua equipe for maior que a do oponente; se o Clima for Névoa, causa 5% de vampirismo",,295
-Explosão Fantasma,fantasma,60,1.25,n,100%,inimigo,Deixa todos os inimigos adjacentes e o alvo com efeito Vampírico,,296
-Projétil Metalico,metal,12,1.25,n,95%,inimigo,Esse ataque usa 200% da Def do oponente,,297
-Afiar,metal,13,0,s,100%,sem alvo,Ganhe +15% de Per,,298
-Metalurgia,metal,18,0,s,120%,sem alvo,"Todos os aliados adjacentes e você ganham 10% da Mag como Per, mas perdem 5% da vida máxima; se crítico, usam 12% da Mag",,299
-Corte,metal,20,1.3,n,120%,inimigo,"Se o alvo não estiver adjacente, causa sem alvo50% de dano",,300
-Barreira Ofensiva,metal,22,0.4,e,100%,inimigo,Ganhe 15% da Mag como Barreira; causa 70% da Barreira como dano especial extra,,301
-Revestimento metalico,metal,24,0,s,100%,sem alvo,"Ganhe 10% da Mag como Def; se crítico, ganhe efeito Fortificado",,302
-Treinamento de Metal,metal,25,0,s,100%,sem alvo,Ganhe aleatoriamente +10 de CrD ou +10 de CrC,,303
-Corte Sanguinario,metal,28,1.15,n,100%,inimigo,Esse ataque tem 50% de vampirismo,,304
-Cauda de Ferro,metal,30,1.2,n,100%,inimigo,Remova 10% da Def do alvo,,305
-Barragem de Metal,metal,32,0,s,100%,sem alvo,Ganhe 60% da Def como Barreira,,306
-Barreira Inteligente,metal,32,0,s,100%,sem alvo,"Ganhe 25% da Mag como Barreira; além disso, ganhe 12% da Mag como aumento da menor defesa",,307
-Corte e Recorte,metal,32,0.95,n,85%,inimigo x2,Causa +30% de dano crítico,,308
-Lamina Metalica,metal,34,1.3,n,90%,inimigo,"Ganhe 10% da Mag como Per; se crítico, ganhe 12% da Mag",,309
-Imã,metal,35,1.1,e,85%,linha,"Puxa todos os inimigos uma área para frente; se algum inimigo já estiver na última área, recebe +30% de dano",,310
-Impacto de Aço,metal,36,0.8,n,90%,inimigo,"Não pode ser recuado; causa 80% da Def como dano físico extra; se errar, perde toda a Barreira",,311
-Britadeira,metal,38,0.25,n,120%,inimigo,Causa 135% da Per como dano extra,,312
-Super Barreira,metal,40,0,s,100%,sem alvo,"Aumente sua Def e Spd em 3% da sua Mag; ganhe 35% da Def e SpD como Barreira; se crítico, ganhe 40% em vez de 35%",,313
-Cabeçada de Ferro,metal,40,1.5,n,100%,inimigo,Perca 12% da sua Per mas se for critico faça o alvo recuar e perca apenas 8% da Per,,314
-Liga Metalica,metal,45,1.2,n,100%,inimigo x2,"Soma as Defesas dos alvos; se sua Def for maior, causa +50% de dano",,315
-Super Infincada,metal,56,1.35,n,99%,inimigo,"Usa 50% da Per para reduzir Def e Spd do alvo; se crítico, usa 60%",,316
-Rugido,dragao,14,0.75,e,100%,inimigo,Remova os efeitos Evasivo e Preparado do alvo; remova Protegido do Pokémon caso ele esteja protegido,,317
-Sacrificio,dragao,16,0,s,150%,sem alvo,Causa 35% da sua vida total a si mesmo; todos os aliados adjacentes ganham Protegido,,318
-Sopro do Dragão,dragao,18,0.65,e,100%,inimigo,"Remova 1 efeito negativo aleatório do oponente; se crítico, remova 2",,319
-Intimidar,dragao,24,0,s,80%,inimigo,Faça o alvo recuar,,320
-Tiro de Escamas,dragao,24,0.7,n,95%,inimigo,Este ataque causa 15% a mais de dano para cada vez que foi atacado com Tiro de Escamas; o alvo aumenta Def em 2%,,321
-Sem Fraquezas,dragao,25,0,s,100%,inimigo,Aumente seu pior status em 20%,,322
-Barreira Dragônica,dragao,26,0,s,100%,aliado,"Ganhe barreira equivalente a 25% da SpD; se estiver em Terreno Sagrado, dobre o valor",,323
-Juramento do Dracomante,dragao,28,0,s,100%,sem alvo,"Ganhe Imortal usando 200% da Mag; se crítico, use 250% da Mag",,324
-Garra do Dragão,dragao,30,1.1,n,90%,inimigo,"Se Atk for maior que SpA, aumente o status Quebrado no alvo; caso contrário, aumente Fragilizado no alvo",,325
-Vinculo Dragonico,dragao,30,1,e,110%,inimigo/aliado,"Este ataque causa 50% do dano causado ao aliado selecionado como dano especial extra; se crítico, cure 10% da vida perdida do aliado",,326
-Cauda Violenta,dragao,34,1.4,n,100%,inimigo,Sem efeito extra,,327
-Territorio Sagrado,dragao,35,0,s,100%,aliado,Deixe o Terreno Sagrado,,328
-Destruição,dragao,35,0,s,100%,inimigo,Deixe o Terreno Destruído,,329
-Lança Etérea,dragao,35,1.15,e,100%,inimigo,Ignora Evasivo e causa 30% a mais de dano se o inimigo estiver Protegido ou se você estiver com Recuo,,330
-Ataque Mistico,dragao,39,1.05,e,130%,inimigo,"Este ataque causa 12% da Mag como dano especial extra e rouba 12% da Mag do alvo; se crítico, ambos sobem para 15%",,331
-Ataque Majestoso,dragao,40,1.35,n,100%,inimigo,"Este ataque não pode ser recuado nem protegido; se crítico, faça o oponente recuar",,332
-Golpe Destrutivo,dragao,45,1.45,n,100%,inimigo,"Se crítico, deixe o Terreno Destruído",,333
-Investida Dragonica,dragao,52,1.9,n,85%,inimigo,"Causa 20% do dano a si mesmo; se errar, causa 40% do dano a si mesmo",,334
-Areia,terrestre,10,0.6,e,99%,inimigo,Este ataque causa 100% a mais de dano se o clima for Tempestade de Área,,335
-Cavar,terrestre,15,0,s,70%,sem alvo,"Ganhe Evasivo, mas ganhe o efeito Quebrado; se crítico, não ganhe Quebrado",,336
-Rachadura,terrestre,21,1,n,120%,inimigo,Este ataque causa 25% a mais de dano se houver efeito de Terreno no alvo,,337
-Dominio do Solo,terrestre,22,0,s,100%,sem alvo,Remova todos os efeitos negativos da área deste Pokémon e dos Terrenos nos arredores,,338
-Tempestade de Areia,terrestre,23,0,s,101%,sem alvo,Deixe o clima como Tempestade de Areia,,339
-Lançamento de Terra,terrestre,24,1.15,n,100%,inimigo,Sem efeito extra,,340
-Manipulação do Relevo,terrestre,28,0,s,110%,aliado,Deixe o Terreno Elevado,,341
-Proteção Arenosa,terrestre,29,0,s,100%,sem alvo,"Ganhe 15% da Mag como barreira e 15% da Perfuração como barreira; se o clima for Tempestade de Areia, ganhe 30% de Perfuração como barreira",,342
-Golpe de Ossos,terrestre,30,1.25,n,130%,inimigo,Este ataque ignora Protegido,,343
-Queda Sísmica,terrestre,34,1.1,n,100%,inimigo,Este ataque causa 15% da sua vida atual como dano extra e reduz Vel do alvo em 10%,,344
-Tremor Focalizado,terrestre,35,0.5,n,100%,inimigo,Este ataque causa 10% da vida do Pokémon como dano físico extra e remove um efeito positivo do Território do alvo,,345
-Tiro de Lama,terrestre,36,1.1,e,100%,inimigo,"Remova 20% da Mag do alvo; se crítico, remova 25%",,346
-Jato de Areia,terrestre,36,0.5,e,75%,linha,Reduza 10% da Perfuração dos alvos,,347
-Poder da Terra,terrestre,38,2.05,e,150%,aleatorio x2,Sem efeito extra,,348
-Tremor,terrestre,40,0.25,n,80%,all,Remova 5% da Def de todos os alvos atingidos; este ataque causa 10% da vida do Pokémon como dano físico extra,,349
-Canhão de Areia,terrestre,42,1.3,e,90%,inimigo,"Remova 20% da Def do alvo; inimigos adjacentes recebem 60% do dano e têm 12% da Def removida; inimigos até 2 áreas adjacentes recebem 30% do dano e 6% da Def removida; no clima Tempestade de Areia, a remoção da Def dobra",,350
-Quebra Chão,terrestre,50,1,n,100%,all,Remova todos os efeitos de Terreno do campo inimigo; remova o efeito Evasivo de todos os Pokémons antes de aplicar o dano,,351
-Fissura,terrestre,65,2,n,80%,inimigo,Inimigos adjacentes ganham 5% de Velocidade; este ataque não pode ser crítico,,352
-Terremoto,terrestre,85,1.3,n,90%,all,"Remova 15% da Def de todos os alvos atingidos; este ataque ignora Protegido; se crítico, remova 20% da Def",,353
-Revestimento Rochoso,pedra,12,0,s,100%,sem alvo,"Aumente 5% da Def; se clima Tempestade de Areia, aumente para 7%; se crítico, aumente +1%",,354
-Pedregulho,pedra,17,1.1,n,75%,inimigo,Sem efeito extra,,355
-Polida Estratégica,pedra,18,0,s,100%,sem alvo,Perca 4% da vida total e ganhe 15% de Vel,,356
-Chuva Aspera,pedra,20,1.2,n,120%,aleatorio x3,Sem efeito extra,,357
-Fragmento Incisivo,pedra,24,0,s,98%,inimigo,Deixe o alvo Quebrado,,358
-Pedra Especial,pedra,25,1.15,e,100%,inimigo,Sem efeito extra,,359
-Poder Ancião,pedra,25,0,s,120%,sem alvo,"Use 5% da Mag para aumentar Atk, SpA, Def e SpD; se crítico use 8% da Mag",,360
-Pedra Dupla,pedra,26,0.75,n,85%,inimigo x2,Sem efeito extra,,361
-Lamina de Cristal,pedra,28,1,e,90%,inimigo,"Esse ataque muda para o estilo da menor defesa do oponente e remove todo aumento dessa defesa; se crítico, ganhe 5% a mais de Perfuração",,362
-Escudo de Pedra,pedra,30,0,s,95%,sem alvo,"Ganhe 50% a mais da sua barreira atual; se não tiver barreira, ganhe barreira igual a 15% da Def e 5% da Mag",,363
-Barreira Rochosa,pedra,30,0,s,100%,sem alvo,"Ganhe 30% da Def e 15% da Mag como barreira; se crítico, ganhe 35% da Def e 18% da Mag; se clima Tempestade de Areia, ganhe 25% a mais de barreira",,364
-Rolagem,pedra,32,1,n,90%,linha,Esse ataque causa 20% a mais de dano ao primeiro inimigo da linha,,365
-Colapso Rochoso,pedra,35,1.35,n,95%,inimigo,"Se o alvo tiver barreira, esse ataque quebra 80% da barreira antes do dano",,366
-Impacto Rochoso,pedra,36,0.9,n,100%,inimigo,Esse ataque usa 60% da Def como dano normal extra; deixa você Quebrado,,367
-Bomba de estilhaços,pedra,38,0,s,95%,inimigo,"Deixe o alvo Quebrado; se houver Pokémon na área mirada, quebre todos inimigos adjacentes",,368
-Gema Poderosa,pedra,40,1.5,e,100%,inimigo,Sem efeito extra,,369
-Pedra Colossal,pedra,42,1.4,n,85%,inimigo,"Se crítico, remova 1 item do Pokémon alvo",,370
-Autodestruição,pedra,50,2.5,n,120%,inimigo,Ganhe o efeito Imortal; esse ataque causa 80% do dano a si mesmo,,371
-Farpa,venenoso,10,0.5,n,90%,inimigo,"Se crítico, aplique Envenenado no alvo",,372
-Lixo,venenoso,10,0.3,n,120%,inimigo,Reduza 5% da Mag do menor status do alvo (exceto vida); se crítico use 8% da Mag,,373
-Arroto,venenoso,13,0.15,e,130%,inimigo,Esse ataque causa 1000% a mais de dano se sua vida estiver maior que 75%,,374
-Envenenar,venenoso,18,0,s,100%,inimigo,Aplique Envenenado no alvo,,375
-Poluição,venenoso,18,0,s,100%,sem alvo,"Se clima Chuva, deixe o clima como Chuva Ácida",,376
-Acido,venenoso,20,0.55,n,97%,inimigo,Esse ataque usa 12% da Mag para reduzir a Def do alvo; se crítico use 16%; se clima Chuva Ácida reduza +4%,,377
-Acido Especial,venenoso,20,0.55,n,97%,inimigo,Esse ataque usa 12% da Mag para reduzir a SpD do alvo; se crítico use 16%; se clima Chuva Ácida reduza +4%,,378
-Esporos Conectados,venenoso,22,1,e,100%,sem alvo,"Esse ataque atinge todos os inimigos envenenados, para cada inimigo envenenado esse ataque causa mais 15% de dano",,378
-Fumaça Tóxica,venenoso,24,0,s,100%,inimigo,"Aplique Envenenado no alvo; se já estiver Envenenado, transforme em Intoxicado; se crítico, aplique Intoxicado direto",,379
-Extração,venenoso,26,0.95,n,100%,inimigo,"Esse ataque tem 25% de vampirismo por turno de Envenenado ou Intoxicado do alvo; remova ambos os efeitos após o ataque; se crítico, ganhe 30% de vampirismo por turno",,380
-Contaminar,venenoso,28,0,s,100%,inimigo,Deixe a área selecionada Contaminada,,381
-Gás Venenoso,venenoso,32,0.6,e,92%,linha,Dobre o número de turnos dos efeitos Envenenado e Intoxicado,,382
-Gás Corrosivo,venenoso,32,0.6,e,92%,linha,Dobre o número de qualquer redução de Def ou SpD já aplicada nos alvos,,383
-Bomba de Lodo,venenoso,35,1.2,e,90%,inimigo,Esse ataque aplica Envenenado ao alvo e inimigos adjacentes,,384
-Drenagem,venenoso,36,1.1,n,85%,inimigo,"Se o alvo estiver Envenenado ou Intoxicado, roube 10% do Atk e SpA e remova ambos os efeitos; se crítico roube 12%",,385
-Escudo Tóxico,venenoso,38,0.75,n,100%,inimigo,"Esse ataque causa 50% de SpA a si mesmo, 150% do dano total causado vira barreira para si mesmo, se o alvo estiver envenenado é 160% do dano total",,384
-Vortex Venenoso,venenoso,45,1,e,100%,inimigo,Esse ataque causa 8% a mais de dano para cada turno de Envenenado ou Intoxicado no alvo; remova 1 turno de ambos os efeitos se existirem,,385
-Poço,venenoso,60,1.35,n,160%,inimigo,"Esse ataque usa 16% da magia para diminuir a EnR do algo, se critico usa 20%, se o alvo estiver envenenado ele perde 100% da energia atual dele",,386
-Charme,fada,14,0,s,100%,inimigo,Reduza o Atk do alvo em 10% da sua Mag,,387
-Brilho,fada,18,0.75,e,150%,sem alvo,"Esse ataque atinge apenas inimigos com efeito Furtivo, removendo o efeito deles",,388
-Salvamento,fada,20,0,s,100%,sem alvo,Conceda Regeneração e Imune ao aliado com menor % de vida,,389
-Toque Fabuloso,fada,21,1,n,100%,inimigo,"Se o alvo estiver com efeito Encantado, Amplificado ou Abençoado, o ataque é crítico automático",,390
-Bondade,fada,23,0,s,95%,aliado,Aplique efeito positivo aleatório no oponente,,391
-Encanto,fada,24,0,s,100%,aliado,Aplique Encantado no alvo,,392
-Fluxo Radiante,fada,25,0,s,120%,sem alvo,"Esse ataque atinge todos os pokémons da linha do atacante, inimigos e aliados; causa 5% de dano aos inimigos e cura 5% da vida perdida dos aliados; efeito triplicado em pokémons Radiantes",,393
-Benção,fada,26,0,s,100%,aliado,Aplique Abençoado no alvo,,394
-Ataque Maravilhoso,fada,28,1.2,n,100%,inimigo,Esse ataque causa +10% de dano se estiver com efeito Encantado,,395
-Autruismo,fada,29,0,s,100%,aliado,"Aplique efeito positivo aleatório no oponente entre Abençoado, Aprimorado, Amplificado, Refletindo, Evasivo e Encantado",,396
-Ataque de positividade,fada,30,1,e,100%,inimigo,Esse ataque causa +15% de dano especial para cada efeito positivo nesse pokémon,,397
-Amizade,fada,30,0,s,100%,aliado,Ganhe 10% do status proporcionalmente mais forte do alvo e ele ganhe 10% do seu status proporcionalmente mais forte; se crítico a troca é 12%,,398
-Positividade total,fada,32,0.5,e,95%,inimigo,Esse ataque causa +5% de dano para cada turno de efeito positivo na sua equipe,,399
-Luz Purificadora,fada,32,0,s,100%,sem alvo,Remova todos os efeitos negativos de si mesmo e aliados adjacentes,,400
-Barragem Magica,fada,32,0,s,100%,sem alvo,"Ganhe 50% da Mag como Barreira; se crítico ganhe 55%; se estiver Encantado, ganhe Provocando",,401
-Vento Fada,fada,32,0.25,e,80%,linha,Esse ataque causa +60% da Mag como dano especial extra,,402
-Dança das Flores,fada,35,1.25,e,90%,inimigo,Esse ataque causa +15% de dano para cada aliado com efeito Encantado,,403
-Chuva Sintilante,fada,35,0,s,100%,sem alvo,Aplique efeito Furtivo em todos os aliados menos você; ganhe 5% de Mag,,404
-Dança das Fadas,fada,38,0,s,100%,sem alvo,Aumente em 12% a Mag de todos os aliados adjacentes e de si mesmo,,405
-Salvamento Total,fada,40,0,s,100%,sem alvo,"Cure 10% da Mag do aliado com menor vida e dê 10% da Mag como Barreira; deixe ele Imortal, Imune e Furtivo; se crítico cure e barreira 12%",,406
-Corrente Mágica,fada,42,0.9,e,100%,inimigo x3,Esse ataque causa +20% da Mag como dano especial extra e cura aliados adjacentes em 10% do vampirismo de cada um dos 3 alvos,,407
-Trinca Luminescente,fada,45,0,s,120%,linha aliado,Todos os pokémons da linha ganham os mesmos efeitos positivos,,408
-Corte das Fadas,fada,50,0.5,e,100%,inimigo,Esse ataque causa +50% da soma da Mag de todos os pokémons aliados do tipo Fada,,409
-Raio Fada,fada,55,0,e,100%,inimigo,Esse ataque causa 150% da Mag como dano especial extra,,410
-Poeira Cósmica,cosmico,12,0,s,100%,inimigo,Reduz SpA do inimigo em 15%,,411
-Radiação,cosmico,18,0,s,100%,sem alvo,"Esse ataque remove 10% da vida atual do pokémon; se ele estiver Envenenado ou se você estiver Flutuando, remove 15%; se crítico, remove +5%",,412
-Gravidade,cosmico,20,0.2,n,90%,all,"Esse ataque causa 600% do dano a pokémons com efeito Voando ou Flutuando, removendo esse efeito; se crítico, causa 700% de dano; se o clima for Gravidade Anômala, +110% de assertividade",,413
-Dança Gravitacional,cosmico,20,0,s,96%,sem alvo,Deixe o clima Gravidade Anômala,,414
-Eco Galactico,cosmico,25,0.75,e,100%,inimigo x2,Esse ataque causa +10% de dano se o clima for Gravidade Anômala,,415
-Força G,cosmico,28,0.4,n,100%,inimigo,"Esse ataque causa +50% de dano para cada 50kg que o pokémon tenha; se o clima for Gravidade Anômala, causa +25% de dano",,416
-Distorção,cosmico,30,0,s,95%,inimigo,Inverta todas as variações de status do pokémon tirando vida,,417
-Tiro Espacial,cosmico,30,1.2,n,100%,inimigo,Esse ataque causa +15% de dano se esse pokémon estiver Flutuando,,418
-Onda Cosmica,cosmico,32,1.05,e,90%,linha,Sem efeito extra,,419
-Curvatura Espacial,cosmico,34,0.5,e,100%,inimigo,"Esse ataque move o inimigo uma área para trás; se ele não puder ser movido, perde 3% da Vel e 5% da Per",,420
-Estrela Cadente,cosmico,35,0,s,100%,sem alvo,"Ganhe aleatoriamente +25% da Mag, SpA, SpD ou CrC; se crítico, ganhe +5% adicional",,421
-Fragmento Celeste,cosmico,35,0.75,n,100%,inimigo,Esse ataque causa 75% da Mag como dano físico extra,,422
-Manipulação Gravitacional,cosmico,38,0,s,100%,all aliados,Deixe todos os aliados Flutuando,,423
-Controle Total,cosmico,40,0,s,120%,linha,Mova todos os inimigos para a linha escolhida; eles se posicionam aleatoriamente nela,,424
-Explosão Lunar,cosmico,40,1.4,e,100%,inimigo,Esse ataque causa 60% de dano a inimigos adjacentes,,425
-Raio Cosmico,cosmico,55,1.85,e,95%,inimigo,Sem efeito extra,,426
-Supernova,cosmico,100,2,e,99%,all,Esse pokémon fica Descarregado; esse ataque não pode ser crítico,,427
-Grito,sonoro,12,0.35,e,75%,linha,"Se crítico, tire 5% do SpA dos atingidos criticamente",,428
-Cantar,sonoro,14,0,s,99%,inimigo,"Se crítico, deixe o inimigo Dormindo",,429
-Som Atordoante,sonoro,15,0,s,90%,inimigo,Deixe o alvo Atordoado,,430
-Musica Ambiente,sonoro,16,0,s,85%,sem alvo,Todos os aliados ao redor e a si mesmo ganham 3% da Mag como aumento do maior status proporcional individual,,431
-Som Angustiante,sonoro,18,0,s,90%,inimigo,Reduza 10% da SpD do alvo,,432
-Voz Ousada,sonoro,20,0.75,e,95%,inimigo,"Se o alvo for o pokémon ativo com mais vida, esse ataque causa +60% de dano",,433
-Super Grito,sonoro,24,0.6,e,80%,linha,"Se crítico, tire 10% do SpA dos atingidos criticamente",,434
-Voz desarmadora,sonoro,25,0,s,85%,inimigo,Aplique Recuo no alvo,,435
-Amplificação,sonoro,26,0,s,70%,aliado,Aumente o SpA do alvo em 20% da sua Mag,,436
-Ressonância Sonora,sonoro,27,1,e,90%,inimigo,"Se o alvo estiver Confuso, Dormindo ou Congelado, esse ataque causa +45% de dano",,437
-Canto da imortalidade,sonoro,28,0,s,85%,aliado,Deixe o alvo com efeito Imortal,,438
-Melodia Anticlimática,sonoro,32,0.8,e,95%,inimigo,Esse ataque causa +50% de dano se houver clima ativo; remove o clima,,439
-Tremor Sonoro,sonoro,32,0.65,n,95%,all,Sem efeito extra,,440
-Canto Prolongador,sonoro,34,0,s,90%,aliado,"Aumente 50% todos os efeitos positivos do alvo (arredonde para baixo); se crítico, aumente 60% (arredonde para baixo)",,441
-Musica Alegre,sonoro,35,0,s,80%,sem alvo,"Todos os aliados ao redor e a si mesmo curam 20% da sua Mag; se crítico, curam 25%",,442
-Musica Alta,sonoro,35,0,s,80%,sem alvo,Todos os aliados ao redor e a si mesmo ganham Atk e SpA equivalentes a 6% da sua Mag; se crítico ganham 9%,,443
-Musica Agitada,sonoro,35,0,s,80%,sem alvo,Todos os aliados ao redor e a si mesmo ganham 12% da Mag como aumento de Vel; se crítico ganham 16%,,444
-Batida Ritimica,sonoro,36,1.05,n,85%,linha,"Se houver 2 ou mais inimigos na linha selecionada, esse ataque tem 35% de vampirismo",,445
-Bomba Sonora,sonoro,38,0,s,95%,inimigo,"Deixe o alvo Neutralizado; se houver pokémon na área miranda, deixe todos os inimigos adjacentes Neutralizados",,446
-Ataque Hipersonico,sonoro,38,1.15,n,95%,inimigo,Esse ataque sempre age primeiro (mais rápido que Ataque Rápido); se crítico ganhe 5% da Mag como Velocidade,,447
-Musica Motivacional,sonoro,40,0,s,90%,sem alvo,Todos os aliados ao redor e a si mesmo ganham efeito Imparável,,448
-Hiper Voz,sonoro,50,1.60,e,95%,inimigo,Sem efeito extra,,449
-Volume Máximo,sonoro,56,1.55,e,85%,linha,"Esse ataque causa 20% do total a todos os aliados adjacentes; se crítico, deixa o alvo Incapacitado",,450
-Show Completo,sonoro,60,0,s,100%,all aliados,"Aumente 1 turno de todos os efeitos positivos; aumente 5% da Mag para todos os status de todos os pokémons aliados ativos, menos Vida, CrC e CrD",,451
+Enraivecer,normal,10,0,s,100%,sem alvo,"Se Vida abaixo de 50%, ganhe Aprimorado se SpA for maior que Atk; caso contrário, ganhe Amplificado",i,1
+Recarga,normal,10,0,s,100%,sem alvo,Recupera 200% de energia gasta nesse ataque e Aumenta SpA em 5%,f,2
+Provocar,normal,12,0,s,100%,sem alvo,Aplique Provocar,s,3
+Rosnar,normal,12,0,s,100%,inimigo,Reduz Atk do inimigo em 15%,s,4
+Biscoito,normal,14,0,s,100%,sem alvo,"Esse pokemon e o aliado mais proximo ganham um Biscoito, para cada biscoito nesses pokemon, Cure 4% da propria magia",s,5
+Tapa,normal,15,0.75,n,100%,inimigo,Sem efeito extra,n,6
+Tapa Especial,normal,15,0.75,n,100%,inimigo,Sem efeito extra,n,7
+Tapa Magico,normal,15,0.75,n,100%,inimigo,Dano especial escalado com Mag,m,8
+Resetar,normal,15,0,s,100%,sem alvo,Zera suas variações de atributos (exceto efeitos),s,9
+Golpe Critico,normal,18,0.95,n,90%,inimigo,esse ataque é sempre critico,m,10
+Cabeçada,normal,18,1.05,n,90%,inimigo,Sem efeito extra,n,11
+Estocada,normal,19,1,n,100%,inimigo,"se for o primeiro ataque do turno, causa +30% de dano",m,12
+Transformar,normal,20,0,s,100%,inimigo,"Se transforme em uma copia identica do inimigo, mas com menos 25% de vida (ataque exclusivo do ditto)",s,13
+Resetar Forçado,normal,20,0,s,100%,escolha,Zera as variações de atributos do alvo (exceto efeitos),s,14
+Manobra Evasiva,normal,20,0.8,n,100%,inimigo,"Se for crítico, ganhe Evasivo",p,15
+Barragem,normal,20,0,s,100%,sem alvo,"Ganhe barreira igual a 35% da Mag; se for crítico, ganhe 40%",s,16
+Investida,normal,22,1.2,n,100%,inimigo,Causa 10% do dano a si mesmo,p,17
+Grito de Guerra,normal,22,0,s,100%,aliado,Aumenta Atk de todos os aliados em 10%,s,18
+Golpe Precavido,normal,22,1,n,150%,inimigo x2,Sem efeito extra,n,19
+Inflar,normal,24,0,s,100%,sem alvo,Ganhe barreira igual a 25% da Vida,s,20
+Pancada Seca,normal,25,0.9,n,100%,inimigo,"Reduz 5 de energia do alvo; se for crítico, Reduz 15",,21
+Ataque Rapido,normal,25,0.95,n,100%,inimigo,Sempre ataca primeiro,,22
+Energia,normal,25,1.1,e,110%,inimigo,Sem efeito extra,,23
+Chifrada,normal,26,0.45,n,95%,inimigo,"Esse ataque causa mais 45% da Per como dano adicional, e esse ataque usa 45% da Per a mais",,24
+Agilidade,normal,28,1,e,100%,inimigo,Aumenta Vel em 5%,,25
+Arranhar,normal,30,1.3,n,100%,inimigo,Sem efeito extra,,26
+Proteger,normal,30,0,s,90%,aliado,Protege um aliado,,27
+Tankar,normal,32,0,s,100%,sem alvo,Ganhe provocar e 15% da magia como Barreira e 10% da sua magia como sua menor defesa,,28
+Hiper Presa,normal,34,1.4,n,90%,inimigo,"Se for crítico, o inimigo recua",,29
+Investida Selvagem,normal,35,1.45,n,75%,inimigo,"Se errar, causa 25% do dano a si mesmo",,30
+Bola Especial,normal,35,1.35,e,100%,inimigo,Causa 50% do dano a inimigos adjacentes,,31
+Bola Climatica,normal,38,1.3,e,100%,inimigo,Causa 50% do dano a inimigos adjacentes; adapta o tipo ao Clima e causa +20% com Clima,,32
+Guilhotina,normal,40,1,n,50%,inimigo,Executa inimigos com Vida abaixo de 40%,,33
+Golpe Super Precavido,normal,44,1.25,n,200%,inimigo x5,Sem efeito extra,,34
+Esmagar,normal,46,1.1,n,90%,inimigo,Causa +10% de dano para cada 100kg desse pokemon,,35
+Hiper Raio,normal,58,1.8,e,90%,inimigo,Sem efeito extra,,36
+Borrifada,agua,10,0.65,n,100%,inimigo,Sem efeito extra,,37
+Splash,agua,10,0.8,n,50%,inimigo,Sem efeito extra,,38
+Esguicho Suave,agua,15,0.7,e,95%,escolha,"Se for usado em um aliado, cure ele em 35% da sua Mag e Remova Queimado",,39
+Bolhas,agua,16,0.5,n,100%,inimigo,Causa +10% de dano para cada acerto anterior com Bolhas,,40
+Dança da Chuva,agua,20,0,s,99%,sem alvo,Defina o Clima como Chuvoso,,41
+Jato de Agua,agua,22,1.1,e,100%,inimigo,Sem efeito extra,,42
+Gota Pesada,agua,25,0,s,100%,inimigo,Aplique Encharcado no inimigo,,43
+Barragem Aquatica,agua,25,0,s,100%,sem alvo,Ganhe barreira igual a 25% da Mag e Aumenta SpD em 5% da Mag,,44
+Aguas Magicas,agua,26,1.2,e,100%,inimigo,Dano especial escalado com Mag,,45
+Fonte Termal,agua,28,0,s,100%,aliado,Transforma todos os efeitos negativos de um aliado em Encharcado e cure ele em 35% da sua Mag,,46
+Lança d’Água        ,agua,28,1.25,n,70%,inimigo,"Se o alvo estiver Encharcado, acerta com 100% de chance e ignora Evasivo",,47
+Surfar,agua,30,1.25,n,120%,inimigo,Sem efeito extra,,48
+Redemoinho ,agua,30,1.15,e,90%,inimigo,Causa +15% de dano se o inimigo estiver Encharcado e +15% se o Clima for Chuvoso,,49
+Golpe de Concha,agua,32,0.4,n,95%,inimigo,Causa +60% da sua Def como dano físico adicional,,50
+Martelo Carangueijo,agua,32,1.35,n,100%,inimigo,Sem efeito extra,,51
+Chuva curativa,agua,32,0,s,100%,all aliados,"Cura todos os aliados em 15% da sua Mag; se estiver Chovendo, cure 30%; Remova Queimado dos aliados",,52
+Torrente Vital,agua,33,1.2,e,90%,aliado/inimigo,Cura o aliado em 40% do dano causado ao inimigosem alvoalvo,,53
+Bola de Agua,agua,35,1.35,e,100%,inimigo,Causa 50% do dano a inimigos adjacentes,,54
+Mergulho Rápido,agua,35,0.2,e,80%,inimigo,"Aplique Encharcado em si mesmo; neste turno, desvie de todos os ataques focados",,55
+Explosao Submersa,agua,36,1.4,n,100%,inimigo,"Se o Clima for Chuvoso, causa 80% do dano a inimigos adjacentes",,56
+Absorção total,agua,38,0,s,100%,sem alvo,"Todos os Pokémon ativos perdem Encharcado; para cada rodada acumulada, cure 5% da sua Mag e Aumenta SpA em 1%; se tiver 5 ou mais turnos, ganhe Ofensivo",,57
+Geiser,agua,38,1.5,e,70%,inimigo,Reduz SpD do alvo em 10%,,58
+Esfera Hidrocaótica,agua,40,1.35,e,100%,inimigo,"Se o inimigo estiver Encharcado, ignora SpD; escala com Mag, mas causa dano especial",,59
+Controle do Oceano,agua,40,0.85,e,100%,inimigo,Mova o inimigo para uma direção adjacente,,60
+Pulso de Agua,agua,40,1.4,n,100%,inimigo,"Reduz 10 de energia do alvo; se for crítico, Reduz 15",,61
+Golpe Abissal,agua,42,1.6,n,85%,inimigo,Causa +25% de dano se o inimigo estiver com Vida abaixo de 40%,,62
+Cachoeira,agua,44,1.5,n,100%,inimigo,25% de chance de fazer o inimigo recuar,,63
+Jato Duplo,agua,44,1.4,e,90%,inimigo x2,"Se for crítico, Aplique Encharcado no inimigo",,64
+Diluvio,agua,50,1.35,e,100%,all,"Recupere 20 de energia se o Clima for Chuvoso; caso contrário, se alguém sofrer crítico, defina Chuvoso; também Reduz 4 de Atk dos atingidos",,65
+Jato Triplo,agua,66,1.65,e,80%,inimigo x3,"Se for crítico, Aplique Encharcado no inimigo",,66
+Tsunami,agua,75,1.55,e,80%,all,40% de chance de Aplique Encharcado nos alvos,,67
+Foguinho,fogo,12,0.5,e,80%,inimigo,Causa +15% de dano para cada turno restante de Queimado no inimigo,,68
+Tapa Quente,fogo,15,0.8,n,100%,inimigo,Causa +10% de dano se o alvo estiver com Queimado,,69
+Chama,fogo,16,1,e,100%,inimigo,Sem efeito extra,,70
+Suspiro de Fogo,fogo,18,1,e,90%,inimigo,"Se o alvo estiver com menos de 50% da vida, esse ataque causa 25% de dano a mais",,71
+Aquecer,fogo,18,0,s,100%,aliado,"Remova Encharcado de si ou de um aliado; também remova Congelado; para cada turno removido, cure 5% da Mag",,72
+Queimar,fogo,20,0,s,75%,inimigo,Aplique Queimado no inimigo,,73
+Dança do Sol,fogo,20,0,s,99%,sem alvo,Defina o Clima como Sol Forte,,74
+Tiro Flamejante,fogo,21,1.1,n,140%,inimigo,Sem efeito extra,,75
+Labareda,fogo,25,1.25,n,100%,inimigo,"Se for crítico, Aplique Queimado no inimigo",,76
+Ferver,fogo,25,0.6,e,70%,inimigo,"Se o alvo estiver com Queimado, causa 60% da Mag como dano especial; neste caso, a assertividade será 100%",,77
+Superaquecer,fogo,28,1.1,e,100%,inimigo x2,"Remova Encharcado de si mesmo; se o alvo tiver Queimado, aumente em 3 turnos; se o Clima for Sol Forte, causa +20% de dano",,78
+Estouro Solar,fogo,30,1.2,e,100%,inimigo,Causa +50% de dano se o Clima for Sol Forte,,79
+Fornalha Interna,fogo,30,0,s,100%,sem alvo,"Se estiver com Queimado, cure 25% da Mag e ganhe Energizado; caso contrário, Aplique Queimado em si e recupere 120% da energia usada",,80
+Queimadura Eterna,fogo,30,0,s,85%,inimigo,"Aplique Queimado no inimigo, mas dobre a Mag dele",,81
+Barreira de Chamas,fogo,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% do Atk e 15% da Mag; se for crítico, ganhe 35% do Atk e 18% da Mag; se estiver com menos de 70% da Vida, ganhe +25% de barreira",,82
+Incendiar,fogo,30,0,s,100%,inimigo,Incendia a área selecionada,,83
+Ataque em Chamas,fogo,32,1.2,n,100%,inimigo,"Aplique Queimado nos aliados adjacentes; se o alvo tiver Queimado, causa +20% de dano; se você também estiver com Queimado, causa +20% adicionais",,84
+Bola de Fogo,fogo,35,1.35,e,100%,inimigo,Causa 50% do dano a inimigos adjacentes,,85
+Corte Incandescente,fogo,35,1.4,n,100%,inimigo,"Se for crítico, Aplique Queimado no inimigo",,86
+Investida Flamejante,fogo,40,1.5,n,95%,inimigo,Aplique Queimado em si e no inimigo,,87
+Jato de Fogo,fogo,40,1.6,e,100%,inimigo,Sem efeito extra,,88
+Ondas de Calor,fogo,42,1,s,100%,all,Causa +30% de dano se o Clima for Sol Forte; causa +5% de dano para cada Pokémon com Queimado em campo,,89
+Erupção,fogo,45,1.9,n,80%,inimigo,Este ataque não pode ser crítico,,90
+Raio de Fogo,fogo,50,1.85,e,100%,inimigo,Remova Congelado e Encharcado do inimigo,,91
+Fluxo Infernal,fogo,52,0,s,100%,inimigo,O alvo perde 50% da Vida atual,,92
+Laser de Fogo,fogo,55,1.55,e,100%,linha,Sem efeito extra,,93
+Explosão Ardente,fogo,55,1.5,n,90%,inimigo,"Se nocautear o alvo, inimigos adjacentes recebem 80% do dano",,94
+Jato de Lava,fogo,62,0,s,120%,linha,Incendia a linha selecionada,,95
+Inferno,fogo,65,0,s,95%,all,Aplique Queimado em todos os inimigos ativos,,96
+Sintese,planta,10,0,s,100%,sem alvo,"Se o Clima for Sol Forte, recupere 400% da energia gasta neste ataque",,97
+Crescimento,planta,12,0,s,100%,sem alvo,"Aumenta 3% em 3 atributos aleatórios; se o Clima for Sol Forte, Aumenta 4% em 4 atributos aleatórios (exceto Vida)",,98
+Cura Natural,planta,15,0,s,100%,"aliado,sem alvo",Aplique Regeneração no alvo,,99
+Tiro de Semente,planta,18,0.9,n,120%,inimigo,Sem efeito extra,,100
+Trevo da Sorte,planta,18,0,s,100%,"aliado,sem alvo",Aumenta CrC do alvo em 10%,,101
+Raizes,planta,20,0.8,n,90%,inimigo,Aplique Enraizado no alvo,,102
+Proteção de Algodão,planta,22,0,s,100%,sem alvo,Ganhe barreira igual a 20% da Mag e +5% de SpD,,103
+Dreno,planta,25,0.8,e,100%,inimigo,Cure 25% do seu SpA,,104
+Flor Magica,planta,25,0.25,e,100%,inimigo,Ganhe 5% da Mag; causa 75% da Mag como dano especial,,105
+Seiva Misteriosa,planta,26,1,e,100%,inimigo,Causa +35% de dano se o alvo estiver Envenenado,,106
+Absorver,planta,26,0.6,e,100%,inimigo,Roube um efeito positivo aleatório do alvo,,107
+Folha Navalha,planta,28,1.1,n,100%,linha,Este ataque usa +30% de Per,,108
+Flecha de Madeira,planta,30,1.15,n,120%,linha,"Esse ataque só atinge o primeiro inimigo da linha, esse ataque causa mais 15% da Per como dano adicional além de causar mais 10% de dano por area de distancia",,109
+Chicote de Vinha,planta,32,1.25,n,80%,inimigo x2,Aumenta CrC em 15% para este ataque,,110
+Ataque da natureza,planta,34,1.3,n,100%,inimigo,"Se for crítico, Aplique Enraizado no inimigo",,111
+Mega Dreno,planta,35,1,e,100%,inimigo,Cure 10% da Vida do alvo,,112
+Tornado de Folhas,planta,35,1.2,e,90%,inimigo,Reduz Vel do alvo em 15%,,113
+Bomba de Semente,planta,36,1.4,n,100%,inimigo x2,Causa 25% do dano a inimigos adjacentes,,114
+Dança das Pétalas,planta,38,0,s,100%,sem alvo,Aumenta Vel em 12% para todos os aliados adjacentes e para si,,115
+Hiper Dreno,planta,45,1.2,e,100%,inimigo,Cure 40% da sua Mag,,116
+Raio Solar,planta,60,1.8,e,100%,inimigo,"Se o Clima for Sol Forte, recupere 25% da energia gasta e cause +10% de dano",,117
+Beslico Chocante,eletrico,13,0.6,n,80%,inimigo,Aumenta CrC e CrD em 3,,118
+Faisca,eletrico,16,1,e,110%,inimigo,Sem efeito extra,,119
+Pilha,eletrico,18,0,s,120%,sem alvo,Aplique Ilimitado,,120
+Descarga Total,eletrico,20,1,e,100%,inimigo,Consome toda sua energia; causa +10% de dano para cada 10 de energia adicional gasta,,121
+Dança Eletrica,eletrico,22,0,s,99%,sem alvo,Defina o Clima como Tempestade de Raios,,122
+Energizar,eletrico,25,0,s,100%,"aliado,sem alvo",Aplique Energizado no alvo,,123
+Vampirismo Energético,eletrico,25,0.9,n,100%,inimigo,Rouba 35% da energia atual do oponente,,124
+Curto,eletrico,26,0.8,n,100%,inimigo,Causa +60% da energia atual do alvo como dano físico,,125
+Fluxo Magnético,eletrico,27,1,n,90%,inimigo,Causa +25% de dano se você ou o alvo for do tipo Metal,,126
+Onda Elétrica,eletrico,29,0,s,95%,inimigo,Aplique Paralisado no alvo,,127
+Eletrochoque,eletrico,30,1.2,e,100%,inimigo,Atinge +1 casa aleatória para cada uso anterior deste ataque por este Pokémon,,128
+Barreira Energetica,eletrico,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da Ene e 15% da Mag; se for crítico, ganhe 35% da Ene e 18% da Mag; se estiver Energizado, ganhe +25% de barreira total",,129
+Consumir,eletrico,32,0.8,e,95%,inimigo,Reduz 70% da energia do alvo,,130
+Choque do Trovão,eletrico,33,1.4,e,100%,inimigo,"Se for crítico, Aplique Paralisado no inimigo; se o alvo estiver Encharcado, assertividade +100%",,131
+Investida do trovão,eletrico,34,1.55,n,100%,inimigo,80% de chance de Aplique Paralisado em si mesmo,,132
+Bola Eletrica,eletrico,35,1.35,e,100%,inimigo,Causa 50% do dano a inimigos adjacentes,,133
+Desestabilizar,eletrico,35,0,s,100%,inimigo,"Se a maior Def do alvo for SpD, Aplique Neutralizado; se for Def, Aplique Quebrado",,134
+Raio,eletrico,36,1.5,n,75%,inimigo,"Se o alvo for do tipo Metal ou estiver Encharcado, assertividade +55%",,135
+Pancada Energizada,eletrico,36,1.35,n,90%,inimigo,"O inimigo ganha 25% da energia usada; se estiver Energizado, causa +25% de dano",,136
+Relãmpago,eletrico,38,1.2,e,70%,inimigo,"Se o Clima for Tempestade de Raios, causa +35% de dano; se estiver Chuva ou o alvo estiver Encharcado, assertividade +40%",,137
+Eletricidade Inconstante,eletrico,40,1.7,e,50%,inimigo,"Se você ou o alvo estiver Energizado, assertividade +25%",,138
+Choque Triplo,eletrico,42,1.35,e,200%,inimigo x3,Sem efeito extra,,139
+Ultra Raio Aleatorio,eletrico,45,2.25,e,200%,aleatorio,Sem efeito extra,,140
+Sobrecarga,eletrico,46,1,e,95%,inimigo,"Concede 50% da energia gasta ao alvo; se exceder o Ene, Remova o excesso, cause +80% de dano e +100% do excesso como dano especial",,141
+Choque Quadruplo,eletrico,46,1.25,e,200%,inimigo x4,Sem efeito extra,,142
+Descarga Descomunal,eletrico,48,0,s,120%,sem alvo,"Aplique Paralisado em si; Aumenta Atk, SpA e Ene em 35%; Deixe seu Terreno Energizado",,143
+Chuva de Raios,eletrico,80,1.5,n,100%,all,"Lança raio em 6 casas aleatórias; se Clima for Chuva, lança +2; se for Tempestade de Raios, lança +6",,144
+Meditação,lutador,10,0,s,100%,sem alvo,"Ganhe Imune; se for crítico, recupere 150% da energia gasta",,145
+Treinar,lutador,15,0,s,100%,sem alvo,"Aumenta 5% de um atributo aleatório; se for crítico, ganhe Focado",,146
+Acrobacia,lutador,18,0.4,n,85%,inimigo/aliado,"Causa 40% da Vel como dano físico; Aumenta Vel em 3%; se a área estiver livre, Movasem alvose até ela",,147
+Concentração,lutador,19,0,s,100%,sem alvo,"Remova todos os efeitos negativos de si; se for crítico, ganhe Focado",,148
+Soco,lutador,20,1,n,100%,inimigo,Sem efeito extra,,149
+Preparativo,lutador,21,0.75,e,99%,inimigo,Ganhe Preparado,,150
+Soco Especial,lutador,23,1.1,e,100%,inimigo,Sem efeito extra,,151
+Lançamento,lutador,24,0.7,n,85%,inimigo,Mova o inimigo para uma área aleatória,,152
+Treino em Grupo,lutador,25,0,s,100%,sem alvo,"Aumenta 4% de um atributo aleatório e dos aliados adjacentes; para cada aliado adjacente, Aumenta +3%",,153
+Socos Multiplos,lutador,26,0.3,n,100%,inimigo,Causa dano físico extra igual a 200% da EnR,,154
+Soco Carregado,lutador,28,0.85,n,100%,inimigo,"Causa 45% da Ene como dano físico; se for crítico, recupere 25% da energia gasta",,155
+Karate,lutador,28,0.9,n,85%,inimigo,"Causa dano físico extra igual a 20% da Vel; se estiver Focado, causa +10% de dano",,156
+Chamar para Briga,lutador,30,0,s,100%,sem alvo,Ganhe os efeitos Preparado e Provocando,,157
+Barreira de Folego,lutador,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da EnR e 15% da Mag; se for crítico, ganhe 35% da EnR e 18% da Mag; se estiver Preparado, ganhe +25% de barreira total",,158
+Missil de Punho,lutador,32,1.35,e,80%,inimigo,Aumenta assertividade em 30% da Mag,,159
+Chute Rodopio Tornado,lutador,32,1.1,e,100%,linha,"Empurra todos os inimigos 1 área para trás; se já estiverem na última área, recebem +25% de dano",,160
+Chute Pirueta Aéreo,lutador,32,0.8,n,100%,inimigo,"Se o alvo estiver Voando ou Flutuando, causa +100% de dano e assertividade",,161
+Chute Duplo,lutador,35,1.1,n,95%,inimigo x2,Causa +25% de dano se os dois alvos estiverem lado a lado,,162
+Golpe Marcial,lutador,36,1.2,n,120%,inimigo ,"Causa dano físico extra igual a 25% do CrC; se for crítico, ganhe Preparado",,163
+Contra Ataque,lutador,36,1,n,100%,inimigo,Causa +65% de dano se o alvo tiver atacado você anteriormente,,164
+Submissão,lutador,38,1.35,n,85%,inimigo,"Aplique Incapacitado em si e no inimigo; se for crítico, você não será afetado",,165
+Combate Corporal,lutador,42,1.5,n,100%,inimigo,"Se o alvo estiver em casa adjacente, causa +30% de dano; se estiver até 2 casas adjacentes, causa +15%",,166
+Nocaute,lutador,43,1.2,n,120%,inimigo,"Metade da chance de crítico; se for crítico, o inimigo é automaticamente nocauteado",,167
+Golpe Cruzado,lutador,44,1.65,n,100%,inimigo,Sem efeito extra,,168
+Counter,lutador,45,1.3,n,110%,inimigo,"Adapta o estilo ao tipo de defesa mais fraca do inimigo; Remova 1 turno de todos os efeitos positivos; se for crítico, Remova metade do efeito; Remova Evasivo, Preparado e Refletindo antes de ativásem alvolos",,169
+1 Contra Todos,lutador,55,1.2,n,100%,inimigo,Não funciona se houver Pokémon na áreasem alvoalvo; causa 100% de dano a todos e +30% a inimigos adjacentes,,170
+Teleporte,psiquico,10,0,s,120%,aliado,Movasem alvose para a área selecionada,,171
+Olho que Tudo Ve,psiquico,10,0,s,150%,all,Remove todos os efeitos Furtivos do jogo,,172
+Toque Mental,psiquico,14,0.9,n,100%,inimigo,Sem efeito extra,,173
+Flutuar,psiquico,15,0,s,95%,sem alvo,Ganhe o efeito Flutuando,,174
+Cabeçada Zen,psiquico,16,1,n,90%,inimigo,Remova o efeito Imune do alvo,,175
+Depressão,psiquico,18,0,s,140%,inimigo,"Reduza 60% do menor status proporcional do alvo entre Vida, CrC e CrD; se o alvo tiver a menor Vida na partida, reduza também o segundo menor status; se for crítico, reduza +10%",,176
+Super Meditação ,psiquico,20,0,s,80%,sem alvo,Remova todos os efeitos negativos de si mesmo,,177
+Teletransporte Forçado,psiquico,22,0.5,e,100%,inimigo x2,Teleporte o inimigo para a área selecionada,,178
+Aceleração Mental,psiquico,22,0,s,75%,sem alvo,"Aumenta Vel em 12%; se errar, perde 5% de SpD",,179
+Proteção Mental,psiquico,22,0,s,110%,sem alvo,"Ganhe o efeito Imune; se já tiver Imune, fique Protegido; se for crítico, aplique este efeito a todos os Pokémon adjacentes",,180
+Confusão,psiquico,24,0,s,95%,inimigo,O alvo está Confuso,,181
+Disturbio,psiquico,25,1,e,99%,inimigo,"Remove todos os efeitos positivos de si mesmo; para cada efeito removido, causa +30% de dano",,182
+Amnesia,psiquico,26,1.1,e,90%,inimigo,"Se for crítico, o inimigo recua",,183
+Telecinese,psiquico,26,0.5,e,100%,inimigo x2,Causa +50% de dano para cada item equipado em ambos os alvos,,184
+Incapacitar,psiquico,28,0,s,100%,inimigo,"Aplique Incapacitado no inimigo; se for crítico, também Reduza 5% de SpD",,185
+Barreira Psiquica,psiquico,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da SpD e 15% da Mag; se for crítico, ganhe 35% da SpD e 18% da Mag; se estiver Imune, ganhe +25% de barreira",,186
+Tranferencia Mental,psiquico,32,0,s,100%,"aliado,inimigo","Transfira um efeito negativo de um aliado para o inimigo, um efeito positivo do inimigo para o aliado, ou ambos",,187
+Colapso Mental,psiquico,35,1,e,100%,inimigo,Causa +10% de dano para cada efeito no alvo,,188
+Raio de Confusão,psiquico,38,1.35,e,110%,inimigo,"Se for crítico, Aplique Confuso no alvo",,189
+Psiquico Desgastante,psiquico,38,1.55,e,100%,inimigo,50% de chance de Aplique Incapacitado em si mesmo,,190
+Mente Mágica,psiquico,40,0.2,e,70%,inimigo,"Causa 100% da Mag como dano; se errar, aumente 4% da sua Mag",,191
+Lamina Psiquica,psiquico,42,1.5,n,90%,inimigo,Causa +25% de Per contra inimigos Incapacitados,,192
+Raio Psiquico,psiquico,50,1.8,e,100%,inimigo,Sem efeito extra,,193
+Ultrapsiquico,psiquico,60,1.4,e,120%,inimigo,Causa +10% de dano para cada efeito positivo no alvo,,194
+Minhocagem,inseto,12,0.45,n,90%,inimigo,"Se for crítico, ganhe Evasivo",,195
+Regeneração,inseto,16,0,s,100%,sem alvo,Ganhe Regeneração,,196
+Picada,inseto,18,0.75,n,95%,inimigo,"Aumenta CrC em 5%; se for crítico, Aplique Envenenado no alvo",,197
+Ninho Protetor,inseto,20,0,s,85%,aliado,"Aumenta Def e SpD do alvo em 4%; se for crítico, deixesem alvoo Protegido",,198
+Revoada,inseto,22,0.5,e,100%,inimigo x2,Quebre 40% da barreira dos alvos antes do dano,,199
+Seda,inseto,25,1,e,100%,inimigo,O alvo perde 6% da Vel,,200
+Casulo Improvisado,inseto,25,0,s,100%,sem alvo,Ganhe barreira igual a 45% da Mag,,201
+Mordida de Inseto,inseto,26,1.25,n,100%,inimigo,Sem efeito extra,,202
+Feromonio de Guerra,inseto,27,0,s,100%,aliado,"Aumenta Atk dos aliados adjacentes em 12%; se for crítico, aumenta Vel em 6%",,203
+Doação de Energia,inseto,28,0,s,180%,aliado,"O alvo recupera 50% da energia gasta; se for crítico, recupera 100%",,204
+Exoesqueleto,inseto,30,0,s,100%,sem alvo,"Ganhe 15% da Mag como Def permanente; se for crítico, ganhe 5% da Mag como SpD permanente",,205
+Barreira Aspera,inseto,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da Per e 15% da Mag; se for crítico, ganhe 35% da Per e 18% da Mag; se já tiver barreira, ganhe +25%",,206
+Corte serrilhado,inseto,32,1.3,n,90%,inimigo,"Causa +25% de dano se o inimigo tiver barreira ou efeitos defensivos (Congelado, Reforçado, Fortificado, Preparado); se for crítico, ganhe 10% do Atk como Per",,207
+Carcomer,inseto,32,1.2,n,100%,inimigo,"Causa +20% de dano a inimigos Enraizados; se o inimigo estiver com menos de 50% da Vida, cure 40% do dano causado",,208
+Evolução Incerta,inseto,32,0,s,100%,sem alvo,"Reduz 15% dos 2 menores status e aumenta 15% dos 2 maiores (exceto Vida, CrC e CrD)",,209
+Lamina Orgânica,inseto,34,1.25,n,100%,inimigo,"Muda o estilo entre físico e especial conforme a menor defesa do inimigo; se a diferença for menor que 10%, causa dano físico com +60% de dano",,210
+Infestação,inseto,34,1,e,100%,inimigo,"Se for crítico, causa +15% de dano e +5% de vampirismo para cada uso prévio do ataque Infestação, zerando seu contador",,211
+Lançamento de Teia,inseto,35,1.2,e,100%,inimigo,"O alvo perde 10% da Vel; se for crítico, perde 15%",,212
+Tesoura X,inseto,40,1.45,n,100%,"1,3,5,7,9","Se o inimigo estiver no centro, recebe +30% de dano",,213
+Canibalismo Filial,inseto,42,0,s,135%,aliado,"Mata um aliado, mas regenera 80% da Vida perdida; não funciona se o aliado tiver mais de 30% da Vida",,214
+Nevoa de Feromonios,inseto,45,1,e,75%,all,"Se o Clima for Névoa, aumenta assertividade em 45%; causa +15% da Def dos alvos como dano especial; se for crítico, Aplique Neutralizado no alvo",,215
+Devorar,inseto,52,1.5,n,95%,inimigo,"Tem 30% de vampirismo; se o dano matar o alvo, o vampirismo dobra",,216
+Gelinho,gelo,10,1.1,e,60%,inimigo,"Se o alvo estiver Congelado, assertividade +20%; se Clima for Nevasca, assertividade +20% adicional",,217
+Olhar Frio,gelo,15,0,s,100%,inimigo,"Reduz 15% do maior status proporcional do alvo (exceto Vida); se for crítico, reduz 18%",,218
+Congelamento Tatico,gelo,15,0,s,100%,aliado,"Aplique Congelado e Regeneração no alvo; se for tipo Gelo, aumente Def em 10% da sua Mag",,219
+Bola de Neve,gelo,16,0.85,n,85%,inimigo,Causa +25% de dano se o Clima for Nevasca,,220
+Floco Prismatico,gelo,18,0,s,90%,sem alvo,"Ganhe +6% da Mag como SpA; se for crítico, +3% da Mag como SpD",,221
+Cristalizar,gelo,20,0,s,90%,inimigo,"Se o alvo estiver Encharcado, Aplique Congelado por mesma duração",,222
+Nevasca,gelo,20,0,s,98%,sem alvo,Defina o Clima como Nevasca,,223
+Gelo Verdadeiro,gelo,26,1.05,n,100%,inimigo,"Ignora 100% da Def; se for crítico, reduz 5% da Def do alvo; se Clima for Nevasca, causa +10% de dano",,224
+Geada,gelo,30,1,e,100%,inimigo,"Se Clima for Nevasca, causa +25% de dano e 60% do dano a inimigos adjacentes",,225
+Barreira Congelada,gelo,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da SpA e 15% da Mag; se for crítico, ganhe 35% da SpA e 18% da Mag; se Clima for Nevasca, barreira +25%",,226
+Congelamento,gelo,32,0,s,70%,inimigo,Aplique Congelado no inimigo,,227
+Magia Gelida,gelo,38,0.1,e,100%,inimigo,Causa 125% da Mag como dano especial extra,,228
+Quebra Gelo,gelo,40,1,n,95%,inimigo,"Causa +85% de dano a Pokémon Congelados; remove o efeito, mas se for crítico, reduz pela metade",,229
+Tumba de Gelo,gelo,40,1.3,n,50%,inimigo,Assertividade +300% se o alvo estiver Congelado; dobra duração do efeito Congelado no alvo,,230
+Ataque Polar,gelo,42,1.4,n,95%,inimigo x2,"Causa +15% de dano se o atacante estiver em área da ponta (1,3,7,9)",,231
+Reinado de Gelo,gelo,45,0.6,e,100%,inimigo x3,Causa +50% de dano para cada Pokémon Congelado na partida,,232
+Raio Aurora,gelo,50,1.7,e,99%,inimigo,"Se o Clima for Nevasca, cure aliados adjacentes em 25% da Mag e cause +15% da Mag como dano especial; se Clima for Noite Densa, assertividade +101% e cura a si mesmo em 35% da Mag",,233
+Raio de Gelo,gelo,52,1.9,e,100%,inimigo,"Causa sem alvo30% de dano a inimigos Congelados; se for crítico, 50% de chance de Congelar o alvo",,234
+Avalanche,gelo,65,1.35,e,90%,all,Causa +10% de dano se o Clima for Nevasca ou o alvo estiver Encharcado,,235
+Ventinho,voador,12,0.45,e,110%,linha,Todos os efeitos dos primeiros Pokémon da linha passam para o último,,236
+Voo Alto,voador,14,0,s,90%,sem alvo,"Se este Pokémon estiver Voando, ganhe Evasivo e aumente 1 turno do efeito Voando; se errar, perca o efeito Voando",,237
+Rajada de Vento,voador,15,0.95,e,90%,inimigo,Ganha +30% de assertividade se este Pokémon estiver Voando,,238
+Asas Protetoras,voador,16,0,s,100%,sem alvo,Ganhe 8% da Mag como Def e SpD; perca o mesmo valor em Vel,,239
+Voar,voador,18,0,s,100%,sem alvo,Ganhe o efeito Voando,,240
+Vendaval,voador,20,0,s,140%,all,Empurre todos os inimigos para a área mais atrás possível em suas linhas,,241
+Tornadinho Amigo,voador,21,0,s,95%,aliado,Aplique o efeito Voando no alvo,,242
+Voo Estrategico,voador,25,0,s,95%,sem alvo,Ganhe o efeito Voando e movasem alvose para posição livre aleatória,,243
+Impulso Aéreo,voador,25,0.85,e,95%,"inimigo,aliado","Ganhe 2% de Vel e movasem alvose para área marcada se vazia; se crítico, ganhe 3% de Vel",,244
+Tiro de Penas,voador,26,0.55,n,50%,inimigo x6,Sem efeito extra,,245
+Bico Broca,voador,26,1.05,n,100%,inimigo,Usa 200% de Per,,246
+Golpe de Asa,voador,28,1.3,n,100%,inimigo,Causa sem alvo20% de dano se este Pokémon estiver Voando,,247
+Barreira de Penas,voador,30,0,s,100%,sem alvo,"Ganhe barreira igual a 30% da Vel e 15% da Mag; se crítico, ganhe 35% da Vel e 18% da Mag; se Voando, ganhe +25% de barreira total",,248
+Tornado Central,voador,30,1.5,e,140%,5,Sem efeito extra,,249
+Investida Aérea,voador,32,1.2,n,85%,inimigo,Causa +25% de dano e +25% de assertividade se este Pokémon estiver Voando; causa 10% de dano a si mesmo,,250
+Vento Forte,voador,35,1.1,e,85%,linha,"Empurre todos os inimigos uma área para trás; se algum inimigo estiver na última área, ele recebe +30% de dano",,251
+Rasante,voador,36,0.35,n,80%,inimigo,"Causa 100% da Vel como dano físico; se errar, este Pokémon fica Descarregado",,252
+Passaro Bravo,voador,38,1.45,n,100%,inimigo,"Causa +15% de dano se este Pokémon estiver com menos de 50% da Vida; se recuar, causa +15% de dano",,253
+Ás dos Ares,voador,40,1.5,n,200%,inimigo,"Remove efeitos Evasivo e Refletir, se existirem; crítico causa +10% de dano",,254
+Tornado,voador,55,1.5,e,100%,inimigo,Causa 50% de dano a inimigos adjacentes e troca a posição de todos os inimigos atingidos para área aleatória; causa +15% de dano se o alvo estiver Voando,,255
+Ciclone,voador,65,1.5,e,90%,inimigo,Causa +20% da Mag como dano especial; causa 50% de dano a inimigos adjacentes; causa +10% de dano e +10% de assertividade se estiver Chovendo,,256
+Olhar Cruel,sombrio,10,0,s,100%,inimigo,Aumente 1 turno de todos os efeitos negativos do alvo,,257
+Sombra,sombrio,12,0,s,200%,sem alvo,Ganhe +12 de CrD,,258
+Nas Sombras,sombrio,18,0,s,100%,sem alvo,Ganhe o efeito Furtivo,,259
+Nevoa Sombria,sombrio,20,0.4,e,110%,all,Causa +60% de dano se Clima for Névoa,,260
+Corrupção,sombrio,24,0,s,80%,inimigo,Remova todos os efeitos positivos do alvo,,261
+Mordida ,sombrio,25,1.2,n,99%,inimigo,Sem efeito extra,,262
+Expurgo dos fracos,sombrio,25,0,s,85%,sem alvo,"O Pokémon com menor vida base perde 48% da vida atual; se crítico, perde 58%",,263
+Inveja,sombrio,26,1.9,e,15%,inimigo,Ganha +20% de assertividade para cada efeito positivo no alvo; não pode ser crítico,,264
+Golpe Noturno,sombrio,28,1.15,n,90%,inimigo,Causa +35% de dano e +10% de assertividade se o Clima for Noite Densa ou se estiver Furtivo,,265
+Dominação,sombrio,30,1,e,100%,inimigo,"Causa +10% de dano para cada status seu maior que o do alvo, exceto CrC e CrD",,266
+Vingança,sombrio,30,0.85,n,100%,inimigo,"Se o inimigo já atacou este Pokémon neste turno, causa +100% de dano",,267
+Confronto Trevoso,sombrio,32,0.8,e,100%,inimigo,Aplique Provocar em si mesmo e no alvo,,268
+Correntes Eternas,sombrio,32,1.2,n,80%,inimigo,"Use 200% da Mag para deixar o alvo Enraizado; se já estiver Enraizado, causa +15% de dano; se crítico, usa 250% da Mag",,269
+Sombras Cortantes,sombrio,34,1.2,n,100%,inimigo x2,Causa +25% de dano se o alvo estiver Marcado ou Provocado,,270
+Bola Sombria,sombrio,35,1.35,e,100%,inimigo,Causa 50% de dano a inimigos nos arredores,,271
+Adaga das trevas,sombrio,35,1.35,n,95%,inimigo,"Aumenta em 10% todas as reduções de status do alvo; se crítico, aumenta 30%",,272
+Perseguição,sombrio,36,1.2,n,85%,inimigo,"Marca o oponente; causa +30% de dano a inimigos Marcados; se Clima for Noite Densa, +15% de chance de crítico",,273
+Ataque Perverso,sombrio,38,1.1,e,100%,inimigo x2,Baseia dano na média da defesa selecionada dos dois alvos; muda de estilo para a menor defesa,,274
+Vingança Completa,sombrio,38,1.65,e,120%,sem alvo,Atinge todos os Pokémon que já atacaram este Pokémon neste turno,,275
+Golpe Diminutivo,sombrio,40,1,e,100%,inimigo,Causa dano igual a % da vida do oponente,,276
+Devolver,sombrio,40,0.8,e,100%,inimigo,Causa 100% do dano recebido por este Pokémon neste turno como dano especial extra,,277
+Massacre,sombrio,45,1.4,n,100%,sem alvo,Atinge todos os inimigos com menos de 60% da vida; +10% de chance de crítico; causa +10% de dano se estiver Furtivo,,278
+Execução,sombrio,48,0,s,65%,inimigo,"Executa o alvo se ele tiver menos de 45% da vida; se executar, causa 50% de vampirismo; se crítico, executa com 50% da vida",,279
+Breu,sombrio,50,0,s,100%,sem alvo,Ganhe efeito Furtivo; conceda efeito Furtivo a aliados adjacentes; Pokémon com Furtivo ganham +10% da Mag como CrC,,280
+Ritual da noite,sombrio,50,0,s,160%,sem alvo,"Se Clima for Noite Densa, este Pokémon e adjacentes ganham +16% da Mag como Per, SpA e Atk; se crítico, +18%",,281
+Execução Massiva,sombrio,52,0,s,120%,all,Executa todos inimigos com 10% ou menos de vida,,282
+Corredor escuro,sombrio,65,1,e,120%,linha,Todos os alvos compartilham efeitos negativos; causa +10% de dano para cada efeito negativo que este Pokémon tiver,,283
+Visão do além ,fantasma,10,0,s,200%,sem alvo,Todos os inimigos perdem efeito Furtivo e Evasivo,,284
+Atravessar,fantasma,15,0,s,100%,inimigo,Transfira um efeito negativo para o alvo,,285
+Lambida,fantasma,18,0.8,n,90%,inimigo,Esse ataque tem 35% de vampirismo,,286
+Toque do medo,fantasma,18,0.5,n,95%,inimigo,Causa 150% de dano se o alvo estiver Paralisado,,287
+Susto,fantasma,19,0.3,e,100%,inimigo,"Sempre crítico se o Pokémon estiver Dormindo ou se o Clima for Névoa; se crítico, causa +100% de dano e paralisa o inimigo",,288
+Fantasminha Camarada,fantasma,20,0,s,99%,aliado,"O aliado ganha efeito Furtivo; se crítico, ganhe também",,289
+Maldade,fantasma,22,0,s,110%,inimigo,Conceda um efeito negativo aleatório ao alvo,,290
+Jogada de Sorte,fantasma,28,3,e,25%,inimigo,Sem efeito extra,,291
+Golpe Espelhado,fantasma,30,1,e,100%,inimigo,"Se este Pokémon estiver na mesma área que o alvo (campos diferentes), causa +55% de dano",,292
+Pulso de Plasma,fantasma,30,1.15,e,100%,inimigo,"Se crítico, deixe o inimigo Neutralizado",,293
+Crueldade,fantasma,32,0,s,120%,inimigo,"Deixe o oponente com um efeito negativo aleatório entre Neutralizado, Enfraquecido, Vampírico, Congelado, Amaldiçoado, Intoxicado",,294
+Mão Espectral,fantasma,34,1.05,e,100%,inimigo,Puxe o alvo para o mais perto possível no campo dele,,295
+Maldição,fantasma,34,0,s,100%,inimigo,Deixe o alvo com efeito Amaldiçoado,,296
+Golpe Cruel,fantasma,35,1,e,90%,inimigo,Causa +15% de dano para cada efeito negativo que o alvo tiver,,297
+Devorador de Pecados,fantasma,38,0.85,e,120%,inimigo x2,"Remove todos os efeitos negativos dos alvos; para cada efeito removido, ganha +20% de vampirismo",,298
+Garras do Além,fantasma,42,1.25,n,100%,inimigo,Causa +30% de dano se o alvo estiver Amaldiçoado; causa 15% de vampirismo se o Clima for Névoa,,299
+Ataque Fantasmagórico,fantasma,45,1.6,e,90%,inimigo,"Se crítico, ganhe 4% da Mag como CrD; se o Clima for Névoa, causa 10% de vampirismo",,300
+Cura Macabra,fantasma,45,0,s,100%,aliado x3,"Cura 25% da Mag para cada Pokémon derrotado; a cura total é dividida entre os alvos, se crítico cure 30%; se não houver alvo na área, cura a si mesmo",,301
+Competitividade Medonha,fantasma,52,1,e,85%,inimigo x2,"Causa +40% de dano e amaldiçoa uma das áreas atingidas se a soma de turnos negativos da sua equipe for maior que a do oponente; se o Clima for Névoa, causa 5% de vampirismo",,302
+Explosão Fantasma,fantasma,60,1.25,n,100%,inimigo,Deixa todos os inimigos adjacentes e o alvo com efeito Vampírico,,303
+Projétil Metalico,metal,12,1.25,n,95%,inimigo,Esse ataque usa 200% da Def do oponente,,304
+Afiar,metal,13,0,s,100%,sem alvo,Ganhe +15% de Per,,305
+Metalurgia,metal,18,0,s,120%,sem alvo,"Todos os aliados adjacentes e você ganham 10% da Mag como Per, mas perdem 5% da vida máxima; se crítico, usam 12% da Mag",,306
+Corte,metal,20,1.3,n,120%,inimigo,"Se o alvo não estiver adjacente, causa sem alvo50% de dano",,307
+Barreira Ofensiva,metal,22,0.4,e,100%,inimigo,Ganhe 15% da Mag como Barreira; causa 70% da Barreira como dano especial extra,,308
+Revestimento metalico,metal,24,0,s,100%,sem alvo,"Ganhe 10% da Mag como Def; se crítico, ganhe efeito Fortificado",,309
+Treinamento de Metal,metal,25,0,s,100%,sem alvo,Ganhe aleatoriamente +10 de CrD ou +10 de CrC,,310
+Corte Sanguinario,metal,28,1.15,n,100%,inimigo,Esse ataque tem 50% de vampirismo,,311
+Cauda de Ferro,metal,30,1.2,n,100%,inimigo,Remova 10% da Def do alvo,,312
+Barragem de Metal,metal,32,0,s,100%,sem alvo,Ganhe 60% da Def como Barreira,,313
+Barreira Inteligente,metal,32,0,s,100%,sem alvo,"Ganhe 25% da Mag como Barreira; além disso, ganhe 12% da Mag como aumento da menor defesa",,314
+Corte e Recorte,metal,32,0.95,n,85%,inimigo x2,Causa +30% de dano crítico,,315
+Lamina Metalica,metal,34,1.3,n,90%,inimigo,"Ganhe 10% da Mag como Per; se crítico, ganhe 12% da Mag",,316
+Imã,metal,35,1.1,e,85%,linha,"Puxa todos os inimigos uma área para frente; se algum inimigo já estiver na última área, recebe +30% de dano",,317
+Impacto de Aço,metal,36,0.8,n,90%,inimigo,"Não pode ser recuado; causa 80% da Def como dano físico extra; se errar, perde toda a Barreira",,318
+Britadeira,metal,38,0.25,n,120%,inimigo,Causa 135% da Per como dano extra,,319
+Super Barreira,metal,40,0,s,100%,sem alvo,"Aumente sua Def e Spd em 3% da sua Mag; ganhe 35% da Def e SpD como Barreira; se crítico, ganhe 40% em vez de 35%",,320
+Cabeçada de Ferro,metal,40,1.5,n,100%,inimigo,Perca 12% da sua Per mas se for critico faça o alvo recuar e perca apenas 8% da Per,,321
+Liga Metalica,metal,45,1.2,n,100%,inimigo x2,"Soma as Defesas dos alvos; se sua Def for maior, causa +50% de dano",,322
+Super Infincada,metal,56,1.35,n,99%,inimigo,"Usa 50% da Per para reduzir Def e Spd do alvo; se crítico, usa 60%",,323
+Rugido,dragao,14,0.75,e,100%,inimigo,Remova os efeitos Evasivo e Preparado do alvo; remova Protegido do Pokémon caso ele esteja protegido,,324
+Sacrificio,dragao,16,0,s,150%,sem alvo,Causa 35% da sua vida total a si mesmo; todos os aliados adjacentes ganham Protegido,,325
+Sopro do Dragão,dragao,18,0.65,e,100%,inimigo,"Remova 1 efeito negativo aleatório do oponente; se crítico, remova 2",,326
+Intimidar,dragao,24,0,s,80%,inimigo,Faça o alvo recuar,,327
+Tiro de Escamas,dragao,24,0.7,n,95%,inimigo,Este ataque causa 15% a mais de dano para cada vez que foi atacado com Tiro de Escamas; o alvo aumenta Def em 2%,,328
+Sem Fraquezas,dragao,25,0,s,100%,inimigo,Aumente seu pior status em 20%,,329
+Barreira Dragônica,dragao,26,0,s,100%,aliado,"Ganhe barreira equivalente a 25% da SpD; se estiver em Terreno Sagrado, dobre o valor",,330
+Juramento do Dracomante,dragao,28,0,s,100%,sem alvo,"Ganhe Imortal usando 200% da Mag; se crítico, use 250% da Mag",,331
+Garra do Dragão,dragao,30,1.1,n,90%,inimigo,"Se Atk for maior que SpA, aumente o status Quebrado no alvo; caso contrário, aumente Fragilizado no alvo",,332
+Vinculo Dragonico,dragao,30,1,e,110%,inimigo/aliado,"Este ataque causa 50% do dano causado ao aliado selecionado como dano especial extra; se crítico, cure 10% da vida perdida do aliado",,333
+Cauda Violenta,dragao,34,1.4,n,100%,inimigo,Sem efeito extra,,334
+Territorio Sagrado,dragao,35,0,s,100%,aliado,Deixe o Terreno Sagrado,,335
+Destruição,dragao,35,0,s,100%,inimigo,Deixe o Terreno Destruído,,336
+Lança Etérea,dragao,35,1.15,e,100%,inimigo,Ignora Evasivo e causa 30% a mais de dano se o inimigo estiver Protegido ou se você estiver com Recuo,,337
+Ataque Mistico,dragao,39,1.05,e,130%,inimigo,"Este ataque causa 12% da Mag como dano especial extra e rouba 12% da Mag do alvo; se crítico, ambos sobem para 15%",,338
+Ataque Majestoso,dragao,40,1.35,n,100%,inimigo,"Este ataque não pode ser recuado nem protegido; se crítico, faça o oponente recuar",,339
+Golpe Destrutivo,dragao,45,1.45,n,100%,inimigo,"Se crítico, deixe o Terreno Destruído",,340
+Investida Dragonica,dragao,52,1.9,n,85%,inimigo,"Causa 20% do dano a si mesmo; se errar, causa 40% do dano a si mesmo",,341
+Areia,terrestre,10,0.6,e,99%,inimigo,Este ataque causa 100% a mais de dano se o clima for Tempestade de Área,,342
+Cavar,terrestre,15,0,s,70%,sem alvo,"Ganhe Evasivo, mas ganhe o efeito Quebrado; se crítico, não ganhe Quebrado",,343
+Rachadura,terrestre,21,1,n,120%,inimigo,Este ataque causa 25% a mais de dano se houver efeito de Terreno no alvo,,344
+Dominio do Solo,terrestre,22,0,s,100%,sem alvo,Remova todos os efeitos negativos da área deste Pokémon e dos Terrenos nos arredores,,345
+Tempestade de Areia,terrestre,23,0,s,101%,sem alvo,Deixe o clima como Tempestade de Areia,,346
+Lançamento de Terra,terrestre,24,1.15,n,100%,inimigo,Sem efeito extra,,347
+Manipulação do Relevo,terrestre,28,0,s,110%,aliado,Deixe o Terreno Elevado,,348
+Proteção Arenosa,terrestre,29,0,s,100%,sem alvo,"Ganhe 15% da Mag como barreira e 15% da Perfuração como barreira; se o clima for Tempestade de Areia, ganhe 30% de Perfuração como barreira",,349
+Golpe de Ossos,terrestre,30,1.25,n,130%,inimigo,Este ataque ignora Protegido,,350
+Queda Sísmica,terrestre,34,1.1,n,100%,inimigo,Este ataque causa 15% da sua vida atual como dano extra e reduz Vel do alvo em 10%,,351
+Tremor Focalizado,terrestre,35,0.5,n,100%,inimigo,Este ataque causa 10% da vida do Pokémon como dano físico extra e remove um efeito positivo do Território do alvo,,352
+Tiro de Lama,terrestre,36,1.1,e,100%,inimigo,"Remova 20% da Mag do alvo; se crítico, remova 25%",,353
+Jato de Areia,terrestre,36,0.5,e,75%,linha,Reduza 10% da Perfuração dos alvos,,354
+Poder da Terra,terrestre,38,2.05,e,150%,aleatorio x2,Sem efeito extra,,355
+Tremor,terrestre,40,0.25,n,80%,all,Remova 5% da Def de todos os alvos atingidos; este ataque causa 10% da vida do Pokémon como dano físico extra,,356
+Canhão de Areia,terrestre,42,1.3,e,90%,inimigo,"Remova 20% da Def do alvo; inimigos adjacentes recebem 60% do dano e têm 12% da Def removida; inimigos até 2 áreas adjacentes recebem 30% do dano e 6% da Def removida; no clima Tempestade de Areia, a remoção da Def dobra",,357
+Quebra Chão,terrestre,50,1,n,100%,all,Remova todos os efeitos de Terreno do campo inimigo; remova o efeito Evasivo de todos os Pokémons antes de aplicar o dano,,358
+Fissura,terrestre,65,2,n,80%,inimigo,Inimigos adjacentes ganham 5% de Velocidade; este ataque não pode ser crítico,,359
+Terremoto,terrestre,85,1.3,n,90%,all,"Remova 15% da Def de todos os alvos atingidos; este ataque ignora Protegido; se crítico, remova 20% da Def",,360
+Revestimento Rochoso,pedra,12,0,s,100%,sem alvo,"Aumente 5% da Def; se clima Tempestade de Areia, aumente para 7%; se crítico, aumente +1%",,361
+Pedregulho,pedra,17,1.1,n,75%,inimigo,Sem efeito extra,,362
+Polida Estratégica,pedra,18,0,s,100%,sem alvo,Perca 4% da vida total e ganhe 15% de Vel,,363
+Chuva Aspera,pedra,20,1.2,n,120%,aleatorio x3,Sem efeito extra,,364
+Fragmento Incisivo,pedra,24,0,s,98%,inimigo,Deixe o alvo Quebrado,,365
+Pedra Especial,pedra,25,1.15,e,100%,inimigo,Sem efeito extra,,366
+Poder Ancião,pedra,25,0,s,120%,sem alvo,"Use 5% da Mag para aumentar Atk, SpA, Def e SpD; se crítico use 8% da Mag",,367
+Pedra Dupla,pedra,26,0.75,n,85%,inimigo x2,Sem efeito extra,,368
+Lamina de Cristal,pedra,28,1,e,90%,inimigo,"Esse ataque muda para o estilo da menor defesa do oponente e remove todo aumento dessa defesa; se crítico, ganhe 5% a mais de Perfuração",,369
+Escudo de Pedra,pedra,30,0,s,95%,sem alvo,"Ganhe 50% a mais da sua barreira atual; se não tiver barreira, ganhe barreira igual a 15% da Def e 5% da Mag",,370
+Barreira Rochosa,pedra,30,0,s,100%,sem alvo,"Ganhe 30% da Def e 15% da Mag como barreira; se crítico, ganhe 35% da Def e 18% da Mag; se clima Tempestade de Areia, ganhe 25% a mais de barreira",,371
+Rolagem,pedra,32,1,n,90%,linha,Esse ataque causa 20% a mais de dano ao primeiro inimigo da linha,,372
+Colapso Rochoso,pedra,35,1.35,n,95%,inimigo,"Se o alvo tiver barreira, esse ataque quebra 80% da barreira antes do dano",,373
+Impacto Rochoso,pedra,36,0.9,n,100%,inimigo,Esse ataque usa 60% da Def como dano normal extra; deixa você Quebrado,,374
+Bomba de estilhaços,pedra,38,0,s,95%,inimigo,"Deixe o alvo Quebrado; se houver Pokémon na área mirada, quebre todos inimigos adjacentes",,375
+Gema Poderosa,pedra,40,1.5,e,100%,inimigo,Sem efeito extra,,376
+Pedra Colossal,pedra,42,1.4,n,85%,inimigo,"Se crítico, remova 1 item do Pokémon alvo",,377
+Autodestruição,pedra,50,2.5,n,120%,inimigo,Ganhe o efeito Imortal; esse ataque causa 80% do dano a si mesmo,,378
+Farpa,venenoso,10,0.5,n,90%,inimigo,"Se crítico, aplique Envenenado no alvo",,379
+Lixo,venenoso,10,0.3,n,120%,inimigo,Reduza 5% da Mag do menor status do alvo (exceto vida); se crítico use 8% da Mag,,380
+Arroto,venenoso,13,0.15,e,130%,inimigo,Esse ataque causa 1000% a mais de dano se sua vida estiver maior que 75%,,381
+Envenenar,venenoso,18,0,s,100%,inimigo,Aplique Envenenado no alvo,,382
+Poluição,venenoso,18,0,s,100%,sem alvo,"Se clima Chuva, deixe o clima como Chuva Ácida",,383
+Acido,venenoso,20,0.55,n,97%,inimigo,Esse ataque usa 12% da Mag para reduzir a Def do alvo; se crítico use 16%; se clima Chuva Ácida reduza +4%,,384
+Acido Especial,venenoso,20,0.55,n,97%,inimigo,Esse ataque usa 12% da Mag para reduzir a SpD do alvo; se crítico use 16%; se clima Chuva Ácida reduza +4%,,385
+Esporos Conectados,venenoso,22,1,e,100%,sem alvo,"Esse ataque atinge todos os inimigos envenenados, para cada inimigo envenenado esse ataque causa mais 15% de dano",,386
+Fumaça Tóxica,venenoso,24,0,s,100%,inimigo,"Aplique Envenenado no alvo; se já estiver Envenenado, transforme em Intoxicado; se crítico, aplique Intoxicado direto",,387
+Extração,venenoso,26,0.95,n,100%,inimigo,"Esse ataque tem 25% de vampirismo por turno de Envenenado ou Intoxicado do alvo; remova ambos os efeitos após o ataque; se crítico, ganhe 30% de vampirismo por turno",,388
+Contaminar,venenoso,28,0,s,100%,inimigo,Deixe a área selecionada Contaminada,,389
+Gás Venenoso,venenoso,32,0.6,e,92%,linha,Dobre o número de turnos dos efeitos Envenenado e Intoxicado,,390
+Gás Corrosivo,venenoso,32,0.6,e,92%,linha,Dobre o número de qualquer redução de Def ou SpD já aplicada nos alvos,,391
+Bomba de Lodo,venenoso,35,1.2,e,90%,inimigo,Esse ataque aplica Envenenado ao alvo e inimigos adjacentes,,392
+Drenagem,venenoso,36,1.1,n,85%,inimigo,"Se o alvo estiver Envenenado ou Intoxicado, roube 10% do Atk e SpA e remova ambos os efeitos; se crítico roube 12%",,393
+Escudo Tóxico,venenoso,38,0.75,n,100%,inimigo,"Esse ataque causa 50% de SpA a si mesmo, 150% do dano total causado vira barreira para si mesmo, se o alvo estiver envenenado é 160% do dano total",,394
+Vortex Venenoso,venenoso,45,1,e,100%,inimigo,Esse ataque causa 8% a mais de dano para cada turno de Envenenado ou Intoxicado no alvo; remova 1 turno de ambos os efeitos se existirem,,395
+Poço,venenoso,60,1.35,n,160%,inimigo,"Esse ataque usa 16% da magia para diminuir a EnR do algo, se critico usa 20%, se o alvo estiver envenenado ele perde 100% da energia atual dele",,396
+Charme,fada,14,0,s,100%,inimigo,Reduza o Atk do alvo em 10% da sua Mag,,397
+Brilho,fada,18,0.75,e,150%,sem alvo,"Esse ataque atinge apenas inimigos com efeito Furtivo, removendo o efeito deles",,398
+Salvamento,fada,20,0,s,100%,sem alvo,Conceda Regeneração e Imune ao aliado com menor % de vida,,399
+Toque Fabuloso,fada,21,1,n,100%,inimigo,"Se o alvo estiver com efeito Encantado, Amplificado ou Abençoado, o ataque é crítico automático",,400
+Bondade,fada,23,0,s,95%,aliado,Aplique efeito positivo aleatório no oponente,,401
+Encanto,fada,24,0,s,100%,aliado,Aplique Encantado no alvo,,402
+Fluxo Radiante,fada,25,0,s,120%,sem alvo,"Esse ataque atinge todos os pokémons da linha do atacante, inimigos e aliados; causa 5% de dano aos inimigos e cura 5% da vida perdida dos aliados; efeito triplicado em pokémons Radiantes",,403
+Benção,fada,26,0,s,100%,aliado,Aplique Abençoado no alvo,,404
+Ataque Maravilhoso,fada,28,1.2,n,100%,inimigo,Esse ataque causa +10% de dano se estiver com efeito Encantado,,405
+Autruismo,fada,29,0,s,100%,aliado,"Aplique efeito positivo aleatório no oponente entre Abençoado, Aprimorado, Amplificado, Refletindo, Evasivo e Encantado",,406
+Ataque de positividade,fada,30,1,e,100%,inimigo,Esse ataque causa +15% de dano especial para cada efeito positivo nesse pokémon,,407
+Amizade,fada,30,0,s,100%,aliado,Ganhe 10% do status proporcionalmente mais forte do alvo e ele ganhe 10% do seu status proporcionalmente mais forte; se crítico a troca é 12%,,408
+Positividade total,fada,32,0.5,e,95%,inimigo,Esse ataque causa +5% de dano para cada turno de efeito positivo na sua equipe,,409
+Luz Purificadora,fada,32,0,s,100%,sem alvo,Remova todos os efeitos negativos de si mesmo e aliados adjacentes,,410
+Barragem Magica,fada,32,0,s,100%,sem alvo,"Ganhe 50% da Mag como Barreira; se crítico ganhe 55%; se estiver Encantado, ganhe Provocando",,411
+Vento Fada,fada,32,0.25,e,80%,linha,Esse ataque causa +60% da Mag como dano especial extra,,412
+Dança das Flores,fada,35,1.25,e,90%,inimigo,Esse ataque causa +15% de dano para cada aliado com efeito Encantado,,413
+Chuva Sintilante,fada,35,0,s,100%,sem alvo,Aplique efeito Furtivo em todos os aliados menos você; ganhe 5% de Mag,,414
+Dança das Fadas,fada,38,0,s,100%,sem alvo,Aumente em 12% a Mag de todos os aliados adjacentes e de si mesmo,,415
+Salvamento Total,fada,40,0,s,100%,sem alvo,"Cure 10% da Mag do aliado com menor vida e dê 10% da Mag como Barreira; deixe ele Imortal, Imune e Furtivo; se crítico cure e barreira 12%",,416
+Corrente Mágica,fada,42,0.9,e,100%,inimigo x3,Esse ataque causa +20% da Mag como dano especial extra e cura aliados adjacentes em 10% do vampirismo de cada um dos 3 alvos,,417
+Trinca Luminescente,fada,45,0,s,120%,linha aliado,Todos os pokémons da linha ganham os mesmos efeitos positivos,,418
+Corte das Fadas,fada,50,0.5,e,100%,inimigo,Esse ataque causa +50% da soma da Mag de todos os pokémons aliados do tipo Fada,,419
+Raio Fada,fada,55,0,e,100%,inimigo,Esse ataque causa 150% da Mag como dano especial extra,,420
+Poeira Cósmica,cosmico,12,0,s,100%,inimigo,Reduz SpA do inimigo em 15%,,421
+Radiação,cosmico,18,0,s,100%,sem alvo,"Esse ataque remove 10% da vida atual do pokémon; se ele estiver Envenenado ou se você estiver Flutuando, remove 15%; se crítico, remove +5%",,422
+Gravidade,cosmico,20,0.2,n,90%,all,"Esse ataque causa 600% do dano a pokémons com efeito Voando ou Flutuando, removendo esse efeito; se crítico, causa 700% de dano; se o clima for Gravidade Anômala, +110% de assertividade",,423
+Dança Gravitacional,cosmico,20,0,s,96%,sem alvo,Deixe o clima Gravidade Anômala,,424
+Eco Galactico,cosmico,25,0.75,e,100%,inimigo x2,Esse ataque causa +10% de dano se o clima for Gravidade Anômala,,425
+Força G,cosmico,28,0.4,n,100%,inimigo,"Esse ataque causa +50% de dano para cada 50kg que o pokémon tenha; se o clima for Gravidade Anômala, causa +25% de dano",,426
+Distorção,cosmico,30,0,s,95%,inimigo,Inverta todas as variações de status do pokémon tirando vida,,427
+Tiro Espacial,cosmico,30,1.2,n,100%,inimigo,Esse ataque causa +15% de dano se esse pokémon estiver Flutuando,,428
+Onda Cosmica,cosmico,32,1.05,e,90%,linha,Sem efeito extra,,429
+Curvatura Espacial,cosmico,34,0.5,e,100%,inimigo,"Esse ataque move o inimigo uma área para trás; se ele não puder ser movido, perde 3% da Vel e 5% da Per",,430
+Estrela Cadente,cosmico,35,0,s,100%,sem alvo,"Ganhe aleatoriamente +25% da Mag, SpA, SpD ou CrC; se crítico, ganhe +5% adicional",,431
+Fragmento Celeste,cosmico,35,0.75,n,100%,inimigo,Esse ataque causa 75% da Mag como dano físico extra,,432
+Manipulação Gravitacional,cosmico,38,0,s,100%,all aliados,Deixe todos os aliados Flutuando,,433
+Controle Total,cosmico,40,0,s,120%,linha,Mova todos os inimigos para a linha escolhida; eles se posicionam aleatoriamente nela,,434
+Explosão Lunar,cosmico,40,1.4,e,100%,inimigo,Esse ataque causa 60% de dano a inimigos adjacentes,,435
+Raio Cosmico,cosmico,55,1.85,e,95%,inimigo,Sem efeito extra,,436
+Supernova,cosmico,100,2,e,99%,all,Esse pokémon fica Descarregado; esse ataque não pode ser crítico,,437
+Grito,sonoro,12,0.35,e,75%,linha,"Se crítico, tire 5% do SpA dos atingidos criticamente",,438
+Cantar,sonoro,14,0,s,99%,inimigo,"Se crítico, deixe o inimigo Dormindo",,439
+Som Atordoante,sonoro,15,0,s,90%,inimigo,Deixe o alvo Atordoado,,440
+Musica Ambiente,sonoro,16,0,s,85%,sem alvo,Todos os aliados ao redor e a si mesmo ganham 3% da Mag como aumento do maior status proporcional individual,,441
+Som Angustiante,sonoro,18,0,s,90%,inimigo,Reduza 10% da SpD do alvo,,442
+Voz Ousada,sonoro,20,0.75,e,95%,inimigo,"Se o alvo for o pokémon ativo com mais vida, esse ataque causa +60% de dano",,443
+Super Grito,sonoro,24,0.6,e,80%,linha,"Se crítico, tire 10% do SpA dos atingidos criticamente",,444
+Voz desarmadora,sonoro,25,0,s,85%,inimigo,Aplique Recuo no alvo,,445
+Amplificação,sonoro,26,0,s,70%,aliado,Aumente o SpA do alvo em 20% da sua Mag,,446
+Ressonância Sonora,sonoro,27,1,e,90%,inimigo,"Se o alvo estiver Confuso, Dormindo ou Congelado, esse ataque causa +45% de dano",,447
+Canto da imortalidade,sonoro,28,0,s,85%,aliado,Deixe o alvo com efeito Imortal,,448
+Melodia Anticlimática,sonoro,32,0.8,e,95%,inimigo,Esse ataque causa +50% de dano se houver clima ativo; remove o clima,,449
+Tremor Sonoro,sonoro,32,0.65,n,95%,all,Sem efeito extra,,450
+Canto Prolongador,sonoro,34,0,s,90%,aliado,"Aumente 50% todos os efeitos positivos do alvo (arredonde para baixo); se crítico, aumente 60% (arredonde para baixo)",,451
+Musica Alegre,sonoro,35,0,s,80%,sem alvo,"Todos os aliados ao redor e a si mesmo curam 20% da sua Mag; se crítico, curam 25%",,452
+Musica Alta,sonoro,35,0,s,80%,sem alvo,Todos os aliados ao redor e a si mesmo ganham Atk e SpA equivalentes a 6% da sua Mag; se crítico ganham 9%,,453
+Musica Agitada,sonoro,35,0,s,80%,sem alvo,Todos os aliados ao redor e a si mesmo ganham 12% da Mag como aumento de Vel; se crítico ganham 16%,,454
+Batida Ritimica,sonoro,36,1.05,n,85%,linha,"Se houver 2 ou mais inimigos na linha selecionada, esse ataque tem 35% de vampirismo",,455
+Bomba Sonora,sonoro,38,0,s,95%,inimigo,"Deixe o alvo Neutralizado; se houver pokémon na área miranda, deixe todos os inimigos adjacentes Neutralizados",,456
+Ataque Hipersonico,sonoro,38,1.15,n,95%,inimigo,Esse ataque sempre age primeiro (mais rápido que Ataque Rápido); se crítico ganhe 5% da Mag como Velocidade,,457
+Musica Motivacional,sonoro,40,0,s,90%,sem alvo,Todos os aliados ao redor e a si mesmo ganham efeito Imparável,,458
+Hiper Voz,sonoro,50,1.60,e,95%,inimigo,Sem efeito extra,,459
+Volume Máximo,sonoro,56,1.55,e,85%,linha,"Esse ataque causa 20% do total a todos os aliados adjacentes; se crítico, deixa o alvo Incapacitado",,460
+Show Completo,sonoro,60,0,s,100%,all aliados,"Aumente 1 turno de todos os efeitos positivos; aumente 5% da Mag para todos os status de todos os pokémons aliados ativos, menos Vida, CrC e CrD",,461
 Buraco Negro,cosmico/sombrio,60,1.3,e,,inimigo,,,
 Meteoro,cosmico/pedra,50,1.5,n,,inimigo,,,
 Choque Hidratado,eletrico/agua,40,,e,,inimigo,,,

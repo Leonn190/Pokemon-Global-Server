@@ -80,9 +80,9 @@ class Pokemon:
         self.FTipo = [self.FTipo1,self.FTipo2,self.FTipo3]
 
         # --- Valores base (origem) ---
-        self.base_vida = dados.get("vida")
-        self.base_atk = dados.get("atk")
-        self.base_def = dados.get("def")
+        self.base_vida = dados.get("Vida")
+        self.base_atk = dados.get("Atk")
+        self.base_def = dados.get("Def")
         self.base_spA = dados.get("SpA")
         self.base_spD = dados.get("SpD")
         self.base_vel = dados.get("Vel")
@@ -895,7 +895,7 @@ def ExecuteRodada(sala):
         Log = ExecuteAtaque(move, sala["partida"])
         sala["Log"].append(Log)
         for pokemon in sala["partida"].pokemons_jogador1 + sala["partida"].pokemons_jogador2:
-            pokemon.Verifica()
+            pokemon.Verifica(sala["partida"])
 
     LogFimTurno = []
     for pokemon in sala["partida"].pokemons_jogador1 + sala["partida"].pokemons_jogador2:

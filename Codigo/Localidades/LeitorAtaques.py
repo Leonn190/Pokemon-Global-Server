@@ -121,7 +121,7 @@ def ExecuteAtaque(Move, Partida):
 
     ataque = ataque_df.iloc[0].to_dict()
 
-    codigo_ataque = ataque["Code"]
+    # codigo_ataque = ataque["Code"]
 
     # ================================
     # ⚙️ Funções Irregulares (Pré-execução)
@@ -187,7 +187,7 @@ def ExecuteAtaque(Move, Partida):
         "Alvos Inimigos": [x.ID for x in AlvosInimigos],
         "Tipo": tipo,
         "Estilo": ataque["Estilo"],
-        "Assertividade": ataque["Assertividade"] + Atacante.asse
+        "Assertividade": int(str(ataque["Assertividade"]).replace("%", "")) + Atacante.asse
     })
 
     poder_ataque = Atacante.atk if ataque["Estilo"] == "n" else (
@@ -203,7 +203,7 @@ def ExecuteAtaque(Move, Partida):
         Log["SubLogs"].append(SubLog)
 
         # Modificadores de assertividade
-        assertividade = ataque["Assertividade"] + Atacante.asse
+        assertividade = int(str(ataque["Assertividade"]).replace("%", "")) + Atacante.asse
         if isinstance(assertividade, str):
             assertividade = int(assertividade.replace('%', ''))
         

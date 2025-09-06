@@ -85,7 +85,10 @@ def Transformador(acao):
         acao["Alvos"].remove("RA")
         int(acao["Alvos"])
     else:
-        acao["Movimento"] = acao["Movimento"]["nome"]
+        if isinstance(acao["Movimento"], dict):
+            acao["Movimento"] = acao["Movimento"]["nome"]
+    
+    print(acao["Movimento"])
 
     return{
         "agente": acao["Atacante"],
