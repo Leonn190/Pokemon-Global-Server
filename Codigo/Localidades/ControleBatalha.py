@@ -168,7 +168,7 @@ class Pokemon:
                 if not linha.empty:
                     self.Itens.append(linha.iloc[0].to_dict())
 
-        self.local = None
+        self.local = dados.get("Pos")
         self.ativo = False
 
         self.DanoTurno = 0
@@ -284,9 +284,9 @@ class Pokemon:
             if _vamp_total_cura > 0:
                 Log["Vampirismo"] = _vamp_total_cura
             if Log.get("FimTurno"):
-                Log["DanoFinal"] = Log.get("DanoFinal") + dano
+                Log["Dano Final"] = Log.get("Dano Final") + dano
             else:
-                Log["DanoFinal"] = dano
+                Log["Dano Final"] = dano
 
         self.DanoTurno += dano
 
@@ -328,12 +328,12 @@ class Pokemon:
         if self.PodeUsarHabilidade:
             for habilidade in self.Habilidades:
                 if habilidade["Ativação"] == "AoCurar":
-                    cura, alvo = HabDic[str(habilidade["Code"])](cura, alvo)
+                    cura, alvo = HabDic[str(habilidade["Code"])](self, cura, alvo)
             
         if self.PodeUsarPassivaItem:
             for item in self.Itens:
                 if item["Ativação"] == "AoCurar":
-                    cura, alvo = IteDic[str(item["Code"])](cura, alvo)
+                    cura, alvo = IteDic[str(item["Code"])](self, cura, alvo)
 
         alvo.ReceberCura(cura, Log)
         
@@ -345,12 +345,12 @@ class Pokemon:
         if self.PodeUsarHabilidade:
             for habilidade in self.Habilidades:
                 if habilidade["Ativação"] == "AoReceberCura":
-                    cura = HabDic[str(habilidade["Code"])](cura)
+                    cura = HabDic[str(habilidade["Code"])](self, cura)
                 
         if self.PodeUsarPassivaItem:
             for item in self.Itens:
                 if item["Ativação"] == "AoReceberCura":
-                    cura = IteDic[str(item["Code"])](cura)
+                    cura = IteDic[str(item["Code"])](self, cura)
             
         cura_final = min(self.base_vida - self.vida, cura)
         self.vida = min(self.base_vida, self.vida + cura)
@@ -362,6 +362,29 @@ class Pokemon:
             Log["Curas"].append({
                 "Alvo": self.ID,
                 "Cura": cura_final
+            })
+
+    def ReceberBarreira(self, barreira, Log=None):
+
+        if self.PodeUsarHabilidade:
+            for habilidade in self.Habilidades:
+                if habilidade["Ativação"] == "AoReceberBarreira":
+                    barreira = HabDic[str(habilidade["Code"])](self, barreira)
+                
+        if self.PodeUsarPassivaItem:
+            for item in self.Itens:
+                if item["Ativação"] == "AoReceberBarreira":
+                    barreira = IteDic[str(item["Code"])](self, barreira)
+            
+        self.Barreira =+ barreira
+
+        # --- Registro no log ---
+        if Log is not None:
+            if "Barreiras" not in Log:
+                Log["Barreiras"] = []
+            Log["Barreiras"].append({
+                "Alvo": self.ID,
+                "Barreira": barreira
             })
 
     def ModificarStatus(self, Status, Alteração, Log=None):
@@ -491,8 +514,30 @@ class Pokemon:
                 "Turnos": TurnosReal
             })
 
-    def AlterarClima(self, efeito, Log=None):
-        pass
+    def AlterarClima(self, clima, partida, Log=None):
+        
+        duracao = 3
+
+        if self.PodeUsarHabilidade:
+            for habilidade in self.Habilidades:
+                if habilidade["Ativação"] == "AoMudarClima":
+                    clima, duracao = HabDic[str(habilidade["Code"])](self, clima, duracao)
+                
+        if self.PodeUsarPassivaItem:
+            for item in self.Itens:
+                if item["Ativação"] == "AoMudarClima":
+                    clima, duracao = IteDic[str(item["Code"])](self, clima, duracao)
+        
+        partida.clima = clima
+
+        if Log is not None:
+            if "Clima" not in Log:
+                Log["Clima"] = []
+            Log["Clima"].append({
+                "Alterador": self.ID,
+                "Duração": duracao,
+                "Clima": clima
+            })
 
     def ModificarArea(self, efeito, Log=None):
         pass

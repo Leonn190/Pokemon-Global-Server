@@ -188,6 +188,113 @@ class PokemonAnimator:
         }
         self._configurar_gatilho(gatilho_pct, on_gatilho)
 
+    # ---------------------- NOVAS AÇÕES ----------------------
+
+    def iniciar_curar(self, dur=0.30, freq=12.0, gatilho_pct=0.6, on_gatilho=None):
+        """Piscada verde por 'dur' segundos. freq = piscadas por segundo."""
+        self._acao = {
+            "tipo": "curar",
+            "t": 0.0,
+            "dur": max(0.01, float(dur)),
+            "freq": float(freq)
+        }
+        self._configurar_gatilho(gatilho_pct, on_gatilho)
+
+    def iniciar_investida(self, desloc, dur=0.28, gatilho_pct=0.6, on_gatilho=None):
+        """
+        Avança em linha reta e retorna (sem arco).
+        desloc: (dx, dy) deslocamento máximo no meio da animação.
+        """
+        dx, dy = desloc
+        self._acao = {
+            "tipo": "investida",
+            "t": 0.0,
+            "dur": max(0.01, float(dur)),
+            "dx": float(dx),
+            "dy": float(dy)
+        }
+        self._configurar_gatilho(gatilho_pct, on_gatilho)
+
+    def iniciar_disparo(self, alvo_pos, proj_img=None, dur=0.50, gatilho_pct=0.5, on_gatilho=None):
+        """
+        Cresce até +20% até o 'gatilho' e então dispara projétil do atacante até 'alvo_pos'.
+        - alvo_pos: (x, y) na tela/mundo onde o projétil deve chegar.
+        - proj_img: pygame.Surface opcional para o projétil. Se None, usa genérico.
+        - dur: duração total (escala + voo do projétil).
+        """
+        self._acao = {
+            "tipo": "disparo",
+            "t": 0.0,
+            "dur": max(0.05, float(dur)),
+            "alvo": (float(alvo_pos[0]), float(alvo_pos[1])),
+            "crescimento": 1.20,       # +20%
+            "gatilho_fired": False
+        }
+        # prepara estrutura do projétil
+        self._projetil = {
+            "ativo": False,
+            "pos": None,                      # (x, y) atual
+            "ini": None,                      # origem
+            "fim": self._acao["alvo"],        # destino
+            "t": 0.0,
+            "dur": max(0.10, self._acao["dur"] * (1.0 - float(gatilho_pct))),
+            "img": proj_img,
+            "tamanho": 12                     # raio do genérico
+        }
+        self._configurar_gatilho(gatilho_pct, on_gatilho)
+
+    # --- NOVAS: SOFRERGOLPE (overlay de frames) e CARTUCHO (surface que sai do centro) ---
+
+    def iniciar_sofrergolpe(self, frames, fps=20, offset=(0, 0)):
+        """
+        Reproduz 'frames' por cima do pokémon (uma vez).
+        - frames: lista de pygame.Surface.
+        - fps: quadros por segundo.
+        - offset: deslocamento (x, y) relativo ao centro do pokémon.
+        """
+        if not frames:
+            return
+        self._atk_fx = {
+            "ativo": True,
+            "frames": frames,
+            "fps": max(1, int(fps)),
+            "t": 0.0,
+            "offset": (int(offset[0]), int(offset[1]))
+        }
+
+    def iniciar_cartucho(self, cartucho_surf, lado="dir", dur=0.9, altura=140, dx=80, scale_ini=0.6, scale_fim=1.0):
+        """
+        Faz o 'cartucho_surf' surgir do centro do pokémon, aumentar e subir até o topo,
+        deslocando-se para a direita/esquerda com curva parabólica e sumindo gradualmente.
+        - lado: 'dir'/'esq' ou 1/-1.
+        - dur: duração total da animação.
+        - altura: quanto sobe (px).
+        - dx: deslocamento horizontal total (px).
+        """
+        if cartucho_surf is None:
+            return
+        dir_sign = 1
+        if isinstance(lado, (int, float)):
+            dir_sign = 1 if lado >= 0 else -1
+        else:
+            lado_s = str(lado).lower()
+            if "esq" in lado_s or "left" in lado_s:
+                dir_sign = -1
+
+        self._cartucho = {
+            "ativo": True,
+            "surf": cartucho_surf.convert_alpha(),
+            "t": 0.0,
+            "dur": max(0.15, float(dur)),
+            "altura": float(altura),
+            "dx": float(dx) * dir_sign,
+            "s0": float(scale_ini),
+            "s1": float(scale_fim),
+            "orig": None  # será definido a partir do último draw do pokémon
+        }
+
+    # ---------------------------------------------------------------------------------------------
+
     def acao_em_andamento(self):
         return self._acao is not None
 
@@ -220,6 +327,20 @@ class PokemonAnimator:
     def _atualizar_acao(self, dt):
         """Avança o tempo da ação e dispara gatilho/encerra quando devido."""
         if not self._acao:
+            # atualiza overlays independentes
+            if hasattr(self, "_projetil"):
+                self._step_projetil(dt)
+            if hasattr(self, "_atk_fx"):
+                if self._atk_fx.get("ativo"):
+                    self._atk_fx["t"] += dt
+                    total = len(self._atk_fx["frames"])
+                    if int(self._atk_fx["t"] * self._atk_fx["fps"]) >= total:
+                        self._atk_fx["ativo"] = False
+            if hasattr(self, "_cartucho"):
+                if self._cartucho.get("ativo"):
+                    self._cartucho["t"] += dt
+                    if self._cartucho["t"] >= self._cartucho["dur"]:
+                        self._cartucho["ativo"] = False
             return
 
         a = self._acao
@@ -236,18 +357,36 @@ class PokemonAnimator:
                 except Exception:
                     pass  # não derrubar o loop por callback
 
+        # step dos overlays/projétil
+        if hasattr(self, "_projetil"):
+            self._step_projetil(dt)
+        if hasattr(self, "_atk_fx") and self._atk_fx.get("ativo"):
+            self._atk_fx["t"] += dt
+            total = len(self._atk_fx["frames"])
+            if int(self._atk_fx["t"] * self._atk_fx["fps"]) >= total:
+                self._atk_fx["ativo"] = False
+        if hasattr(self, "_cartucho") and self._cartucho.get("ativo"):
+            self._cartucho["t"] += dt
+            if self._cartucho["t"] >= self._cartucho["dur"]:
+                self._cartucho["ativo"] = False
+
         # fim da ação
         if a["t"] >= a["dur"]:
             self._acao = None
-            # se quiser, poderia deixar um pequeno cooldown aqui; mantive simples
+            # cooldown opcional poderia entrar aqui
 
     def _efeitos_acao(self, sprite, pos_base):
         """
         Calcula (sprite_mod, pos_mod) a partir da ação atual.
         - tomar_dano: piscada vermelha
+        - curar: piscada verde
         - avanco: offset parabólico e leve squash opcional (mantido simples)
+        - investida: offset linear (reta)
+        - disparo: scale-up até gatilho; projétil é desenhado em desenhar_extras(...)
         """
         if not self._acao:
+            # ainda assim salve a caixa para overlays
+            self._ultimo_draw = {"pos": pos_base, "size": sprite.get_size()}
             return sprite, pos_base
 
         a = self._acao
@@ -259,30 +398,137 @@ class PokemonAnimator:
 
         if a["tipo"] == "tomar_dano":
             # piscada: liga/desliga conforme freq
-            # liga quando floor(prog * dur * freq * 2) é par -> efeito “blink”
-            # Como nosso prog ∈ [0,1], usamos contador = floor(prog * freq * 2)
             contador = int((prog * a["dur"]) * a["freq"] * 2)
             blink_on = (contador % 2 == 0)
             if blink_on:
-                # cria overlay vermelho
                 overlay = pygame.Surface(sprite.get_size(), flags=pygame.SRCALPHA)
-                overlay.fill((255, 64, 64, 140))  # levemente translúcido
-                # compõe no sprite atual (copiando p/ não destruir frame original)
+                overlay.fill((255, 64, 64, 140))  # translúcido vermelho
+                sprite_mod = sprite.copy()
+                sprite_mod.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
+        elif a["tipo"] == "curar":
+            contador = int((prog * a["dur"]) * a["freq"] * 2)
+            blink_on = (contador % 2 == 0)
+            if blink_on:
+                overlay = pygame.Surface(sprite.get_size(), flags=pygame.SRCALPHA)
+                overlay.fill((64, 255, 64, 140))  # translúcido verde
                 sprite_mod = sprite.copy()
                 sprite_mod.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
 
         elif a["tipo"] == "avanco":
-            # trajetória parabólica indo e voltando: pico no meio (prog=0.5)
-            # fator curva: -4*(p-0.5)^2 + 1 -> 0 nas bordas, 1 no meio
+            # trajetória parabólica indo e voltando
             curva = -4 * (prog - 0.5) ** 2 + 1.0
             dx = a["dx"] * max(0.0, curva)
             dy = a["dy"] * max(0.0, curva)
-            # salto vertical (para cima é negativo em Y)
             lift = -a["altura"] * (4 * prog * (1 - prog))  # 0 nas pontas, -altura no meio
             x += dx
             y += dy + lift
 
+        elif a["tipo"] == "investida":
+            # mesma curva de ida/volta, mas sem lift (reta)
+            curva = -4 * (prog - 0.5) ** 2 + 1.0
+            dx = a["dx"] * max(0.0, curva)
+            dy = a["dy"] * max(0.0, curva)
+            x += dx
+            y += dy
+
+        elif a["tipo"] == "disparo":
+            # scale-up até o gatilho
+            escala_max = a.get("crescimento", 1.20)
+            if self._gat_pct > 1e-6:
+                sprog = min(1.0, prog / self._gat_pct)
+            else:
+                sprog = 1.0
+            scale = 1.0 + (escala_max - 1.0) * sprog
+            scale = max(1.0, min(escala_max, scale))
+
+            if abs(scale - 1.0) > 1e-3:
+                w, h = sprite.get_size()
+                nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
+                sprite_mod = pygame.transform.smoothscale(sprite, (nw, nh))
+                # mantém o centro visual ao escalar
+                x -= (nw - w) // 2
+                y -= (nh - h) // 2
+
+            # quando cruzar o gatilho, arma o projétil exatamente 1x
+            if (not a.get("gatilho_fired")) and prog >= self._gat_pct:
+                a["gatilho_fired"] = True
+                p = getattr(self, "_projetil", None)
+                if p is not None:
+                    p["ativo"] = True
+                    # origem ≈ centro do sprite
+                    w0, h0 = sprite_mod.get_size()
+                    p["ini"] = (x + w0 * 0.5, y + h0 * 0.35)
+                    p["pos"] = p["ini"]
+                    p["t"] = 0.0
+
+        # registra último draw para overlays (sofrergolpe e cartucho)
+        self._ultimo_draw = {"pos": (x, y), "size": sprite_mod.get_size()}
         return sprite_mod, (x, y)
+
+    # ================= EXTRAS: desenhar overlays (projétil, golpe, cartucho) =================
+
+    def desenhar_extras(self, tela):
+        """Chame após blitar o sprite do pokémon."""
+        # PROJÉTIL (se existir, já gerenciado por iniciar_disparo/_step_projetil)
+        p = getattr(self, "_projetil", None)
+        if p and p.get("ativo"):
+            x, y = p["pos"]
+            if p["img"] is not None:
+                img = p["img"]
+                rect = img.get_rect(center=(int(x), int(y)))
+                tela.blit(img, rect.topleft)
+            else:
+                r = int(p.get("tamanho", 12))
+                superficie = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
+                pygame.draw.circle(superficie, (255, 255, 255, 220), (r, r), r)
+                pygame.draw.circle(superficie, (0, 180, 255, 220), (r, r), r//2)
+                tela.blit(superficie, (int(x - r), int(y - r)))
+
+        # SOFRERGOLPE (overlay de frames sobre o pokémon)
+        fx = getattr(self, "_atk_fx", None)
+        if fx and fx.get("ativo") and hasattr(self, "_ultimo_draw"):
+            (px, py) = self._ultimo_draw["pos"]
+            (sw, sh) = self._ultimo_draw["size"]
+            cx = px + sw * 0.5 + fx["offset"][0]
+            cy = py + sh * 0.35 + fx["offset"][1]
+
+            idx = int(fx["t"] * fx["fps"])
+            if 0 <= idx < len(fx["frames"]):
+                frame = fx["frames"][idx]
+                rect = frame.get_rect(center=(int(cx), int(cy)))
+                tela.blit(frame, rect.topleft)
+
+        # CARTUCHO (sai do centro, cresce, curva p/ lado e sobe até o topo + fade)
+        c = getattr(self, "_cartucho", None)
+        if c and c.get("ativo") and hasattr(self, "_ultimo_draw"):
+            (px, py) = self._ultimo_draw["pos"]
+            (sw, sh) = self._ultimo_draw["size"]
+            # origem no centro "alto" do pokémon (levemente acima do meio)
+            orig = (px + sw * 0.5, py + sh * 0.30)
+            if c["orig"] is None:
+                c["orig"] = orig
+            else:
+                orig = c["orig"]
+
+            s = max(0.0, min(1.0, c["t"] / c["dur"]))
+            # posição (parabólica no x e linear no y até o topo)
+            x = orig[0] + c["dx"] * (s ** 2)
+            y = orig[1] - c["altura"] * s
+
+            # escala (surge pequeno e cresce)
+            esc = c["s0"] + (c["s1"] - c["s0"]) * s
+            src = c["surf"]
+            w0, h0 = src.get_size()
+            nw, nh = max(1, int(w0 * esc)), max(1, int(h0 * esc))
+            img = pygame.transform.smoothscale(src, (nw, nh))
+
+            # fade out
+            alpha = int(255 * (1.0 - s))
+            img.set_alpha(max(0, min(255, alpha)))
+
+            rect = img.get_rect(center=(int(x), int(y)))
+            tela.blit(img, rect.topleft)
 
     def desenhar(self, dt, tela, nova_pos=None, multiplicador=1.0):
         # --- animação de frames (velocidade) ---
@@ -309,39 +555,82 @@ class PokemonAnimator:
         self._atualizar_acao(dt)
         sprite, pos_desenho = self._efeitos_acao(sprite, pos_base)
 
-        # desenha
+        # desenha sprite
         rect = sprite.get_rect(center=pos_desenho)
         self.rect = tela.blit(sprite, rect)
 
-        # --- barras (mesma lógica) ---
-        vida = self.pokemon["Vida"]
-        energia = self.pokemon["Energia"]
-        vida_max = self.pokemon["VidaMax"]
-        ene_max = self.pokemon["Ene"]
+        # ===================== BARRAS ESTILO TFT =====================
+        vida      = float(self.pokemon["Vida"])
+        energia   = float(self.pokemon["Energia"])
+        vida_max  = max(1.0, float(self.pokemon["VidaMax"]))
+        ene_max   = max(1.0, float(self.pokemon["Ene"]))
 
-        largura = 100
-        offset_y = -18
+        # centro acima do pokémon
+        largura  = 70
+        offset_y = -16
 
-        # hover
+        # hover: engrossa levemente
         mouse_pos = pygame.mouse.get_pos()
         hover = self.rect.collidepoint(mouse_pos)
-        h_vida, h_ene = (6, 4) if hover else (3, 2)
+        h_vida, h_ene = (14, 7) if hover else (12, 6)
 
-        rx, ry = rect.topleft
+        # base centralizada
+        cx = rect.centerx
+        x0 = int(cx - largura // 2)
+        y0 = int(rect.top + offset_y)
 
-        # barra vida
-        vida_pct = max(0, float(vida)) / max(1, float(vida_max))
-        pygame.draw.rect(tela, (0, 0, 0), (rx, ry + offset_y, largura, h_vida))
-        pygame.draw.rect(tela, (0, 200, 0), (rx, ry + offset_y, int(largura * vida_pct), h_vida))
-        for i in range(30, int(vida_max), 30):
-            px = rx + int(largura * (i / vida_max))
-            pygame.draw.line(tela, (0, 0, 0), (px, ry + offset_y), (px, ry + offset_y + h_vida))
+        # Cores
+        cor_borda = (0, 0, 0)
+        cor_fundo = (24, 24, 24)   # fundo escuro tft-like
+        cor_vida  = (0, 200, 0)
+        cor_ene   = (0, 0, 200)
 
-        # barra energia
-        offset_y2 = offset_y + h_vida + 2
-        ene_pct = max(0, float(energia)) / max(1, float(ene_max))
-        pygame.draw.rect(tela, (0, 0, 0), (rx, ry + offset_y2, largura, h_ene))
-        pygame.draw.rect(tela, (0, 0, 200), (rx, ry + offset_y2, int(largura * ene_pct), h_ene))
-        for i in range(15, int(ene_max), 15):
-            px = rx + int(largura * (i / ene_max))
-            pygame.draw.line(tela, (0, 0, 0), (px, ry + offset_y2), (px, ry + offset_y2 + h_ene))
+        # raios de borda (cantinhos arredondados leves)
+        br_vida = min(h_vida // 2, 6)
+        br_ene  = min(h_ene  // 2, 6)
+
+        # percentuais
+        vida_pct = max(0.0, min(1.0, vida / vida_max))
+        ene_pct  = max(0.0, min(1.0, energia / ene_max))
+
+        # ----------------- VIDA (barra superior) -----------------
+        # fundo + borda
+        r_bg = pygame.Rect(x0, y0, largura, h_vida)
+        pygame.draw.rect(tela, cor_fundo, r_bg, border_radius=br_vida)
+        pygame.draw.rect(tela, cor_borda, r_bg, width=1, border_radius=br_vida)
+
+        # preenchimento
+        fill_w = int(largura * vida_pct)
+        if fill_w > 0:
+            r_fill = pygame.Rect(x0, y0, fill_w, h_vida)
+            pygame.draw.rect(tela, cor_vida, r_fill, border_radius=br_vida)
+
+            # divisórias pretas (apenas sobre a parte preenchida)
+            passo = 30.0
+            top_i = max(0, int(passo))  # evita loop vazio
+            for i in range(top_i, int(vida_max), int(passo)):
+                px = x0 + int(round(largura * (i / vida_max)))
+                if px <= x0 + fill_w - 1:
+                    # não tocar a borda superior/inferior para ficar "TFT-like"
+                    pygame.draw.line(tela, cor_borda, (px, y0 + 1), (px, y0 + h_vida - 2))
+
+        # ----------------- ENERGIA (barra inferior) -----------------
+        y1 = y0 + h_vida + 2
+        r_bg2 = pygame.Rect(x0, y1, largura, h_ene)
+        pygame.draw.rect(tela, cor_fundo, r_bg2, border_radius=br_ene)
+        pygame.draw.rect(tela, cor_borda, r_bg2, width=1, border_radius=br_ene)
+
+        fill_w2 = int(largura * ene_pct)
+        if fill_w2 > 0:
+            r_fill2 = pygame.Rect(x0, y1, fill_w2, h_ene)
+            pygame.draw.rect(tela, cor_ene, r_fill2, border_radius=br_ene)
+
+            # divisórias pretas (apenas na parte preenchida)
+            passo2 = 15.0
+            top_i2 = max(0, int(passo2))
+            for i in range(top_i2, int(ene_max), int(passo2)):
+                px = x0 + int(round(largura * (i / ene_max)))
+                if px <= x0 + fill_w2 - 1:
+                    pygame.draw.line(tela, cor_borda, (px, y1 + 1), (px, y1 + h_ene - 2))
+        # ============================================================
+

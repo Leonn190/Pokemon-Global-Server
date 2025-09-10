@@ -121,7 +121,7 @@ def ExecuteAtaque(Move, Partida):
 
     ataque = ataque_df.iloc[0].to_dict()
 
-    # codigo_ataque = ataque["Code"]
+    codigo_ataque = int(ataque["Code"])
 
     # ================================
     # ⚙️ Funções Irregulares (Pré-execução)
@@ -179,12 +179,14 @@ def ExecuteAtaque(Move, Partida):
         campo, pos = alvo[0], alvo[1:]
         if campo == "A":
             AlvosAliados += [a for a in aliados if str(a.local) == pos]
-        elif campo == "B":
+        elif campo == "I":
             AlvosInimigos += [i for i in inimigos if str(i.local) == pos]
 
     Log.update({
         "Alvos Aliados": [x.ID for x in AlvosAliados],
         "Alvos Inimigos": [x.ID for x in AlvosInimigos],
+        "AlvosBruto": Alvos,
+        "AlvificaçãoBruta": ataque["Alvo"],
         "Tipo": tipo,
         "Estilo": ataque["Estilo"],
         "Assertividade": int(str(ataque["Assertividade"]).replace("%", "")) + Atacante.asse
@@ -195,6 +197,31 @@ def ExecuteAtaque(Move, Partida):
 
     Log["SubLogs"] = []
 
+    for Alvo in AlvosAliados:
+        
+        SubLog = {"Alvo": Alvo.ID}
+        Log["SubLogs"].append(SubLog)
+
+        assertividade = int(str(ataque["Assertividade"]).replace("%", "")) + Atacante.asse
+
+        if Atacante.Efeitos.get("Confuso", 0): assertividade *= 0.5
+        if "sombrio" not in Atacante.Tipo:
+            if Partida.clima == "Noite Densa": assertividade *= 0.75
+        
+        Acertou = random.randint(1, 100) <= assertividade
+
+        chance_critico = getattr(Atacante, "crC", 0)
+        critico = random.randint(1, 100) <= chance_critico
+
+        if ataque["Estilo"] not in ["n", "e"]:
+            AtkDic[str(codigo_ataque) + "s"](Atacante, Alvo, AlvosAliados, ataque, Partida, Log, Acertou, critico)
+        
+        SubLog.update({
+            "Acertou": Acertou,
+            "Critico": critico,
+        })
+        
+
     # ================================
     # 🧮 Processamento por Alvo
     # ================================
@@ -204,15 +231,12 @@ def ExecuteAtaque(Move, Partida):
 
         # Modificadores de assertividade
         assertividade = int(str(ataque["Assertividade"]).replace("%", "")) + Atacante.asse
-        if isinstance(assertividade, str):
-            assertividade = int(assertividade.replace('%', ''))
         
         if Atacante.Efeitos.get("Confuso", 0): assertividade *= 0.5
-        if Alvo != Atacante:
-            if Alvo.Efeitos.get("Voando", 0): assertividade *= 0.5
-            if Alvo.Efeitos.get("Flutuando", 0): assertividade *= 0.75
-            if "sombrio" not in Atacante.Tipo:
-                if Partida.clima == "Noite Densa": assertividade *= 0.75
+        if Alvo.Efeitos.get("Voando", 0): assertividade *= 0.5
+        if Alvo.Efeitos.get("Flutuando", 0): assertividade *= 0.75
+        if "sombrio" not in Atacante.Tipo:
+            if Partida.clima == "Noite Densa": assertividade *= 0.75
 
         Acertou = random.randint(1, 100) <= assertividade
         Protegido = getattr(Alvo, "Protegido", False)
@@ -252,15 +276,15 @@ def ExecuteAtaque(Move, Partida):
         if Alvo.PodeUsarPassivaItem: Grupos.append(("item", Alvo.Itens))
         if Alvo.PodeUsarHabilidade: Grupos.append(("hab", Alvo.Habilidades))
 
-        for grupo in Grupos:
-            for efeito in grupo:
+        for tipo, efeitos in Grupos:
+            for efeito in efeitos:  # aqui sim só percorre os dicts
                 ativacao = efeito["Ativação"]
                 if ativacao in ["MeioAtaque", "DefesaInicio"]:
-                    dic = IteDic if "item" in ativacao else HabDic
+                    dic = IteDic if tipo == "item" else HabDic
                     func = dic[str(efeito["Code"])]
                     resultado = func(Atacante, Alvos, ataque, Partida, Log,
-                                     poder_ataque, defesa_alvo,
-                                     critico, Acertou, bonus_critico, Protegido)
+                                    poder_ataque, defesa_alvo,
+                                    critico, Acertou, bonus_critico, Protegido)
                     poder_ataque, defesa_alvo, critico, Acertou, bonus_critico, Protegido = resultado
 
         # ================================
@@ -283,11 +307,11 @@ def ExecuteAtaque(Move, Partida):
             resultado = AtkDic[str(codigo_ataque) + "f"](Atacante, Alvo, AlvosAliados, ataque, Partida, Log, dano_final)
             if resultado: dano_final = resultado
 
-        for grupo in Grupos:
-            for efeito in grupo:
+        for tipo, efeitos in Grupos:
+            for efeito in efeitos:  # aqui só percorre os dicts de efeitos
                 ativacao = efeito["Ativação"]
                 if ativacao in ["FimAtaque", "FimDefesa"]:
-                    dic = IteDic if "item" in ativacao else HabDic
+                    dic = IteDic if tipo == "item" else HabDic
                     func = dic[str(efeito["Code"])]
                     dano_final = func(Atacante, Alvos, ataque, Partida, Log, dano_final)
 
@@ -310,6 +334,7 @@ def ExecuteAtaque(Move, Partida):
 
         SubLog.update({
             "Protegido": Protegido,
+            "Acertou": Acertou,
             "Critico": critico,
             "AumentoCritico": bonus_critico,
             "Defesa": defesa_alvo,

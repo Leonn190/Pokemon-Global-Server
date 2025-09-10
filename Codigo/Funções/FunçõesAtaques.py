@@ -170,7 +170,6 @@ def transformar_s(Atacante, Alvo, AlvosAliados, ataque, Partida, Log, Acertou, c
 def resetar_forcado_s(Atacante, Alvo, AlvosAliados, ataque, Partida, Log, Acertou, critico):
     for stat in ["atk","def","spA","spD","vel","mag","per","ene","enR","crD","crC","vamp","asse"]:
         setattr(Alvo, f"var_per_{stat}", 0)
-        setattr(Alvo, f"var_temp_{stat}", 0)
     Alvo.Verifica(Partida)
 
 # 15 — Manobra Evasiva (p): Se for crítico, o atacante ganha Evasivo.
@@ -183,21 +182,22 @@ def manobra_evasiva_p(Atacante, Alvo, AlvosAliados, ataque, Partida, Log,
 def barragem_s(Atacante, Alvo, AlvosAliados, ataque, Partida, Log, Acertou, critico):
     ganho = 0.40 if critico else 0.35
     valor = int(getattr(Atacante, "mag", 0) * ganho)
-    try:
-        Atacante.Barreira += valor
-    except Exception:
-        Atacante.Barreira = valor
+    Alvo.ReceberBarreira(valor, Log)
 
 # 17 — Investida (p): Causa 10% do dano aplicado ao alvo como dano de recuo ao atacante.
 def investida_p(Atacante, Alvo, AlvosAliados, ataque, Partida, Log,
                 dano_aplicado, Acertou, Protegido, critico, morreu):
     if dano_aplicado and dano_aplicado > 0:
         recuo = int(dano_aplicado * 0.10)
-        # Prioriza método de dano se existir; senão ajusta vida diretamente
-        try:
-            Atacante.ReceberDano(recuo, Log)
-        except Exception:
-            Atacante.vida = max(0, Atacante.vida - recuo)
+        if Log["SubLogs"]:
+            pass
+        else:
+            Log["SubLogs"] = []
+        SubLog = {
+            "Alvo": Atacante
+        }
+        Atacante.ReceberDano(recuo, SubLog)
+        Log["SubLogs"].append(SubLog)
 
 # 18 — Grito de Guerra (s): Aumenta Atk de todos os aliados em 10%.
 def grito_de_guerra_s(Atacante, Alvo, AlvosAliados, ataque, Partida, Log, Acertou, critico):
@@ -212,10 +212,7 @@ def grito_de_guerra_s(Atacante, Alvo, AlvosAliados, ataque, Partida, Log, Acerto
 # 20 — Inflar (s): Ganhe barreira igual a 25% da Vida atual.
 def inflar_s(Atacante, Alvo, AlvosAliados, ataque, Partida, Log, Acertou, critico):
     valor = int(getattr(Atacante, "vida", 0) * 0.25)
-    try:
-        Atacante.Barreira += valor
-    except Exception:
-        Atacante.Barreira = valor
+    Alvo.ReceberBarreira(valor, Log)
 
 AtkDic.update({
     "1i": Enraivecer_i,          # 1 — Enraivecer (i)

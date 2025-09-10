@@ -69,11 +69,14 @@ EstadoEditorLog = {}            # estados genéricos (hover/click, etc. — se p
 EstadoBotoesAcao = {}           # estados por botão principal (seleção de ação)
 EstadoBotoesApagar = {}         # estados por botão X (apagar ação)
 
-def LeitorLogs(LogRodada, nome_arquivo="LogRodada.json"):
+def LeitorLogs(LogRodada, parametros, nome_arquivo="LogRodada.json"):
     # Abre o arquivo em modo escrita e salva o log em formato JSON
     with open(nome_arquivo, "w", encoding="utf-8") as f:
         json.dump(LogRodada, f, ensure_ascii=False, indent=4)
     print(f"✅ Log da rodada salvo em '{nome_arquivo}'")
+
+    parametros["Pronto"] = False
+    parametros["LogAtual"] = []
 
 def Transformador(acao):
     if acao["Movimento"] == 1:
@@ -100,20 +103,18 @@ def VerificaçãoCombate(parametros):
     if parametros.get("BatalhaSimples"):
         while parametros["Running"]:
             if parametros.get("Pronto"):
-                print(0)
                 parametros["Processando"] = True
                 JogadaIA = Ia.MontarJogada()
 
                 LogPl = [Transformador(acao) for acao in parametros["LogAtual"]]
                 LogIA = [Transformador(acao) for acao in JogadaIA]
+
+                print(LogPl)
                 
                 log, parametros["Sala"] = receber_e_executar_jogadas(parametros["Sala"], LogPl, LogIA)
-                LeitorLogs(log)
-
-                parametros["Pronto"] = False
+                LeitorLogs(log, parametros)
             
             else:
-                print(1)
                 time.sleep(1.5)
 
 def definir_ativos(equipe):
@@ -1366,7 +1367,7 @@ def BatalhaLoop(tela, relogio, estados, config, info):
             parametros["FugaFloat"] = FugaFloat  # útil para debug/overlay
 
         # se Fuga atingir 100, encerrar batalha e voltar ao Mundo
-        if FugaFloat >= 95.0 or parametros["Fuga"] >= 95:
+        if FugaFloat >= 96.0 or parametros["Fuga"] >= 96:
             estados["Batalha"] = False
             estados["Mundo"] = True
             info["AcabouDeSairConfronto"] = True

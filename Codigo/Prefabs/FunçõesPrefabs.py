@@ -905,3 +905,110 @@ def Tooltip(
         for ln in lines:
             tela.blit(ln, (hud_rect.left + pad_x, y))
             y += ln.get_height() + 2
+
+def Cartuchu(valor, cor, icon=None, crit=0):
+    """
+    Cria um 'cartucho' (oval com possíveis pontas) contendo um número e, opcionalmente, um ícone.
+    - valor: número exibido como string (será convertido) dentro do cartucho.
+    - cor: tupla RGB(A) de fundo do cartucho.
+    - icon: pygame.Surface opcional; se fornecido, aparecerá ao lado do valor.
+    - crit: 0..5 -> controla a quantidade/intensidade de pontas (0 = oval liso).
+    Retorna: pygame.Surface com canal alpha.
+    """
+    # -------- preparação de texto e layout --------
+    texto = str(valor)
+    fonte = pygame.font.Font(None, 28)  # simples e suficiente; ajuste se quiser
+    render_txt = fonte.render(texto, True, (0, 0, 0))  # cor ajustada depois com contraste
+    tw, th = render_txt.get_size()
+
+    iw, ih = (0, 0)
+    icon_scaled = None
+    gap = 6
+    pad_x, pad_y = 12, 8
+
+    # Altura base do cartucho: no mínimo 28 px, ajustada ao conteúdo
+    base_h = max(28, th + pad_y * 2)
+    if icon is not None:
+        iw, ih = icon.get_size()
+        # escala ícone se for muito alto, preservando proporção
+        max_h_icon = base_h - 8
+        if ih > max_h_icon and ih > 0:
+            escala = max_h_icon / ih
+            iw = max(1, int(iw * escala))
+            ih = max(1, int(ih * escala))
+            icon_scaled = pygame.transform.smoothscale(icon, (iw, ih))
+        else:
+            icon_scaled = icon.convert_alpha()
+
+    content_w = tw + (iw + (gap if icon is not None else 0))
+    w = content_w + pad_x * 2
+    h = base_h
+
+    # pequena margem para evitar recorte de antialias nas pontas
+    margin = 4
+    surf = pygame.Surface((w + margin * 2, h + margin * 2), pygame.SRCALPHA)
+    cx = (w + margin * 2) / 2.0
+    cy = (h + margin * 2) / 2.0
+
+    # -------- cor do texto com contraste --------
+    if len(cor) == 4:
+        r, g, b, *_ = cor
+    else:
+        r, g, b = cor
+    # luminância aproximada para escolher preto/branco
+    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    txt_color = (0, 0, 0) if lum > 140 else (255, 255, 255)
+    render_txt = fonte.render(texto, True, txt_color)
+
+    # -------- geometria do cartucho (oval + pontas) --------
+    # Raio base um pouco menor que metade do retângulo para arredondamento natural
+    rx = (w * 0.5) - 4
+    ry = (h * 0.5) - 4
+    rx = max(8, rx)
+    ry = max(8, ry)
+
+    # Parâmetros das pontas
+    c = max(0, min(5, int(crit)))
+    m = 0 if c == 0 else c * 2            # número de conjuntos de pontas
+    amp = 0.0 if c == 0 else (0.12 + 0.06 * (c - 1))  # intensidade radial das pontas
+
+    # Gera polígono elipsoidal com modulação radial p/ pontas
+    pontos = []
+    steps = 96
+    for i in range(steps):
+        ang = (i / steps) * (2.0 * math.pi)
+        # base elipse
+        cos_a = math.cos(ang)
+        sin_a = math.sin(ang)
+        # modulação de pontas (somente acrescenta, não "cava")
+        mod = 1.0
+        if m > 0:
+            # Usa cos(m*θ) "retificado" para criar saliências triangulares nas direções
+            k = math.cos(m * ang)
+            if k > 0:
+                # opcional: suavização ligeira da ponta
+                mod += amp * (k ** 1.5)
+        x = cx + (rx * cos_a) * mod
+        y = cy + (ry * sin_a) * mod
+        pontos.append((x, y))
+
+    # Desenha o fundo do cartucho
+    pygame.draw.polygon(surf, cor, pontos)
+
+    # -------- posicionamento do conteúdo (ícone + texto) --------
+    group_w = content_w
+    start_x = (surf.get_width() - group_w) // 2
+    center_y = surf.get_height() // 2
+
+    draw_x = start_x
+    if icon_scaled is not None:
+        icon_rect = icon_scaled.get_rect()
+        icon_rect.topleft = (draw_x, center_y - ih // 2)
+        surf.blit(icon_scaled, icon_rect.topleft)
+        draw_x += iw + gap
+
+    txt_rect = render_txt.get_rect()
+    txt_rect.topleft = (draw_x, center_y - th // 2)
+    surf.blit(render_txt, txt_rect.topleft)
+
+    return surf
