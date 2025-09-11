@@ -27,6 +27,32 @@ def CarregarAnimações():
 
     return dic
 
+def CarregarAnimaçoesAtaques():
+    pasta = os.path.join("Recursos", "Visual", "Outros", "Ataques")
+    dic = {}
+
+    for nome_arquivo in os.listdir(pasta):
+            caminho_relativo = os.path.join("Outros", "Ataques", nome_arquivo)
+            frames = Carregar_Frames(caminho_relativo)
+            if frames is not None:
+                dic[nome_arquivo] = frames  # Mantém com extensão, conforme instruído
+
+    return dic
+
+def CarregarProjeteis():
+    pasta = os.path.join("Recursos", "Visual", "Outros", "Projeteis")
+    imagens = {}
+
+    for nome_arquivo in os.listdir(pasta):
+        if nome_arquivo.lower().endswith(".png"):
+            chave = os.path.splitext(nome_arquivo)[0]  # remove .png
+            caminho_relativo = os.path.join("Outros", "Projeteis", nome_arquivo)
+            imagem = Carregar_Imagem(caminho_relativo)
+            if imagem is not None:
+                imagens[chave] = imagem
+
+    return imagens
+
 def CarregarConsumiveis():
     pasta_base = os.path.join("Recursos", "Visual", "Itens", "Consumiveis")
     imagens = {}
@@ -149,7 +175,9 @@ def CarregamentoAvançado(info,Pré):
             "Epico": Carregar_Frames("Outros/Bau Epico"),
             "Mitico": Carregar_Frames("Outros/Bau Mitico"),
             "Lendario": Carregar_Frames("Outros/Bau Lendario")
-        }
+        },
+        "Ataques": CarregarAnimaçoesAtaques(),
+        "Projeteis": CarregarProjeteis()
     })
 
     Outros["SkinsTodas"] = Outros["Skins"] + CarregarOutrasSkins()

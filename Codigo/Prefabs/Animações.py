@@ -161,7 +161,7 @@ class PokemonAnimator:
         # -------------------------------------------------
 
     # ================= API DE CONTROLE (thread-safe o suficiente p/ set simples) ================= 
-    def iniciar_tomar_dano(self, dur=0.30, freq=12.0, gatilho_pct=0.6, on_gatilho=None):
+    def iniciar_tomardano(self, dur=0.30, freq=12.0, gatilho_pct=0.6, on_gatilho=None):
         """Piscada vermelha por 'dur' segundos. freq = piscadas por segundo."""
         self._acao = {
             "tipo": "tomar_dano",
@@ -171,19 +171,20 @@ class PokemonAnimator:
         }
         self._configurar_gatilho(gatilho_pct, on_gatilho)
 
-    def iniciar_avanco(self, desloc, altura=24, dur=0.40, gatilho_pct=0.6, on_gatilho=None):
+    def iniciar_avanco(self, alvo_pos, altura=24, dur=0.40, gatilho_pct=0.6, on_gatilho=None):
         """
-        Avança numa parábola e retorna ao ponto.
-        desloc: (dx, dy) direção máxima no ápice (meio da animação).
+        Avança em parábola até 'alvo_pos' (ápice no meio) e retorna à origem.
+        alvo_pos: (ax, ay) absoluto no mesmo referencial do draw.
         altura: quanto "sobe" no meio (efeito salto).
         """
-        dx, dy = desloc
+        ax, ay = alvo_pos
         self._acao = {
             "tipo": "avanco",
             "t": 0.0,
             "dur": max(0.01, float(dur)),
-            "dx": float(dx),
-            "dy": float(dy),
+            "alvo": (float(ax), float(ay)),
+            "orig": None,          # setado no primeiro draw
+            "dx": None, "dy": None,  # calculados no primeiro draw
             "altura": float(altura)
         }
         self._configurar_gatilho(gatilho_pct, on_gatilho)
@@ -200,18 +201,19 @@ class PokemonAnimator:
         }
         self._configurar_gatilho(gatilho_pct, on_gatilho)
 
-    def iniciar_investida(self, desloc, dur=0.28, gatilho_pct=0.6, on_gatilho=None):
+    def iniciar_investida(self, alvo_pos, dur=0.28, gatilho_pct=0.6, on_gatilho=None):
         """
-        Avança em linha reta e retorna (sem arco).
-        desloc: (dx, dy) deslocamento máximo no meio da animação.
+        Avança em linha reta até 'alvo_pos' e retorna (sem arco).
+        alvo_pos: (ax, ay) absoluto no mesmo referencial do draw.
         """
-        dx, dy = desloc
+        ax, ay = alvo_pos
         self._acao = {
             "tipo": "investida",
             "t": 0.0,
             "dur": max(0.01, float(dur)),
-            "dx": float(dx),
-            "dy": float(dy)
+            "alvo": (float(ax), float(ay)),
+            "orig": None,          # setado no primeiro draw
+            "dx": None, "dy": None # calculados no primeiro draw
         }
         self._configurar_gatilho(gatilho_pct, on_gatilho)
 
@@ -299,12 +301,13 @@ class PokemonAnimator:
         }
 
     def iniciar_buff(self, dur=0.9, qtd=6, area=(60, 40), cor=(90, 200, 255),
-                    gatilho_pct=0.6, on_gatilho=None):
+                    gatilho_pct=0.6, on_gatilho=None, debuff=False):
         """
         Desenha setinhas subindo ao redor do pokémon durante 'dur'. COM gatilho.
         - qtd: número de setas.
-        - area: (largura, altura) do campo de subida.
+        - area: (largura, altura) do campo de subida/descida.
         - cor: cor das setas.
+        - debuff: se True, as setas apontam para baixo e descem.
         """
         self._buff = {
             "ativo": True,
@@ -316,7 +319,8 @@ class PokemonAnimator:
             "orig": None,  # setado no draw
             "gat_pct": float(max(0.0, min(1.0, gatilho_pct))),
             "gat_fired": False,
-            "on_gatilho": on_gatilho
+            "on_gatilho": on_gatilho,
+            "debuff": bool(debuff),  # <<< NOVO
         }
 
     # ---------------------------------------------------------------------------------------------
@@ -479,22 +483,35 @@ class PokemonAnimator:
                 sprite_mod = sprite.copy()
                 sprite_mod.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
 
-        elif a["tipo"] == "avanco":
-            # trajetória parabólica indo e voltando
-            curva = -4 * (prog - 0.5) ** 2 + 1.0
-            dx = a["dx"] * max(0.0, curva)
-            dy = a["dy"] * max(0.0, curva)
-            lift = -a["altura"] * (4 * prog * (1 - prog))  # 0 nas pontas, -altura no meio
-            x += dx
-            y += dy + lift
+        # antes de usar 'a' (self._acao), garanta que temos a âncora atual:
+        (px, py) = self._ultimo_draw["pos"]
+        (sw, sh) = self._ultimo_draw["size"]
+        anc_x = px + sw * 0.5
+        anc_y = py + sh * 0.45
 
-        elif a["tipo"] == "investida":
-            # mesma curva de ida/volta, mas sem lift (reta)
+        # se ação de movimento precisa resolver alvo → deslocamento no primeiro draw
+        if a["tipo"] in ("avanco", "investida"):
+            if a.get("orig") is None:
+                a["orig"] = (anc_x, anc_y)
+                ax, ay = a["alvo"]
+                a["dx"] = ax - anc_x
+                a["dy"] = ay - anc_y
+
+            # curva simétrica (0 nas pontas, 1 no meio)
             curva = -4 * (prog - 0.5) ** 2 + 1.0
-            dx = a["dx"] * max(0.0, curva)
-            dy = a["dy"] * max(0.0, curva)
-            x += dx
-            y += dy
+            dx = (a["dx"] or 0.0) * max(0.0, curva)
+            dy = (a["dy"] or 0.0) * max(0.0, curva)
+
+            if a["tipo"] == "avanco":
+                # lift parabólico (sobe no meio e volta)
+                lift = -a["altura"] * (4 * prog * (1 - prog))  # 0 nas pontas, -altura no meio
+                x += dx
+                y += dy + lift
+
+            elif a["tipo"] == "investida":
+                # reta (sem lift)
+                x += dx
+                y += dy
 
         elif a["tipo"] == "disparo":
             # scale-up até o gatilho
@@ -594,7 +611,7 @@ class PokemonAnimator:
             rect = img.get_rect(center=(int(x), int(y)))
             tela.blit(img, rect.topleft)
 
-        # BUFF (setinhas subindo ao redor)
+        # BUFF (setinhas subindo/descendo ao redor)
         b = getattr(self, "_buff", None)
         if b and b.get("ativo") and hasattr(self, "_ultimo_draw"):
             (px, py) = self._ultimo_draw["pos"]
@@ -608,46 +625,50 @@ class PokemonAnimator:
             s_global = max(0.0, min(1.0, b["t"] / b["dur"]))
             aw, ah = b["area"]
             qtd = b["qtd"]
+            is_debuff = b.get("debuff", False)
 
-            # desenha em uma surface com alpha para permitir fade
             layer = pygame.Surface((int(aw) + 40, int(ah) + 60), pygame.SRCALPHA)
             base_x = layer.get_width() // 2
             base_y = layer.get_height() // 2
 
-            # setinhas escalonadas no tempo (sem random)
             for i in range(qtd):
-                fase = (i / max(1, (qtd - 1))) * 0.6       # espalha no tempo
+                fase = (i / max(1, (qtd - 1))) * 0.6
                 s = min(1.0, max(0.0, s_global * 1.2 - fase))
                 if s <= 0.0:
                     continue
 
-                # posição horizontal distribuída
                 x_off = -aw * 0.5 + (aw * (i / max(1, (qtd - 1))))
-                # sobe ao longo do tempo
-                y_off = ah * (1.0 - s)
+                y_off = ah * (1.0 - s)   # 0 → topo/fundo no fim do ciclo
 
-                # alpha e leve escala
                 alpha = int(255 * (0.3 + 0.7 * s))
                 cor = (*b["cor"][:3], max(0, min(255, alpha)))
 
-                # dimensões da seta
                 seta_h = 12 + int(10 * s)
                 seta_w = 6 + int(4 * s)
 
-                # corpo (hastes)
                 x0 = int(base_x + x_off)
-                y0 = int(base_y - y_off)
-                pygame.draw.line(layer, cor, (x0, y0 + seta_h), (x0, y0), 2)
 
-                # ponta (triângulo)
-                ponta = [
-                    (x0,           y0 - 2),
-                    (x0 - seta_w,  y0 + 6),
-                    (x0 + seta_w,  y0 + 6),
-                ]
+                if not is_debuff:
+                    # BUFF normal: sobe e aponta pra cima
+                    y0 = int(base_y - y_off)
+                    pygame.draw.line(layer, cor, (x0, y0 + seta_h), (x0, y0), 2)
+                    ponta = [
+                        (x0,           y0 - 2),
+                        (x0 - seta_w,  y0 + 6),
+                        (x0 + seta_w,  y0 + 6),
+                    ]
+                else:
+                    # DEBUFF: desce e aponta pra baixo
+                    y0 = int(base_y + y_off)
+                    pygame.draw.line(layer, cor, (x0, y0 - seta_h), (x0, y0), 2)
+                    ponta = [
+                        (x0,           y0 + 2),
+                        (x0 - seta_w,  y0 - 6),
+                        (x0 + seta_w,  y0 - 6),
+                    ]
+
                 pygame.draw.polygon(layer, cor, ponta)
 
-            # fade geral no final
             layer.set_alpha(int(255 * (1.0 - 0.1 * s_global)))
             tela.blit(layer, (int(orig[0] - layer.get_width() // 2),
                             int(orig[1] - layer.get_height() // 2)))

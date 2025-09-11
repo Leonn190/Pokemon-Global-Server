@@ -357,12 +357,21 @@ class Pokemon:
 
         # --- Registro no log ---
         if Log is not None:
-            if "Curas" not in Log:
-                Log["Curas"] = []
-            Log["Curas"].append({
-                "Alvo": self.ID,
-                "Cura": cura_final
-            })
+            if "Registros" not in Log:
+                Log["Registros"] = []
+
+            encontrado = False
+            for registro in Log["Registros"]:
+                if self.ID in registro.values():
+                    registro["Cura"] = registro.get("Cura", 0) + cura_final
+                    encontrado = True
+                    break
+
+            if not encontrado:
+                Log["Registros"].append({
+                    "Alvo": self.ID,
+                    "Cura": cura_final
+                })
 
     def ReceberBarreira(self, barreira, Log=None):
 
@@ -380,12 +389,21 @@ class Pokemon:
 
         # --- Registro no log ---
         if Log is not None:
-            if "Barreiras" not in Log:
-                Log["Barreiras"] = []
-            Log["Barreiras"].append({
-                "Alvo": self.ID,
-                "Barreira": barreira
-            })
+            if "Registros" not in Log:
+                Log["Registros"] = []
+
+            encontrado = False
+            for registro in Log["Registros"]:
+                if self.ID in registro.values():
+                    registro["Barreira"] = registro.get("Barreira", 0) + barreira
+                    encontrado = True
+                    break
+
+            if not encontrado:
+                Log["Registros"].append({
+                    "Alvo": self.ID,
+                    "Barreira": barreira
+                })
 
     def ModificarStatus(self, Status, Alteração, Log=None):
         if Alteração < 0:
@@ -423,13 +441,21 @@ class Pokemon:
 
         # --- Registro no log ---
         if Log is not None:
-            if "Status" not in Log:
-                Log["Status"] = []
-            Log["Status"].append({
-                "Alvo": self.ID,
-                "Status": Status,
-                "Valor": Alteração
-            })
+            if "Registros" not in Log:
+                Log["Registros"] = []
+
+            encontrado = False
+            for registro in Log["Registros"]:
+                if self.ID in registro.values():
+                    registro[Status] = registro.get(Status, 0) + Alteração
+                    encontrado = True
+                    break
+
+            if not encontrado:
+                Log["Registros"].append({
+                    "Alvo": self.ID,
+                    Status: Alteração
+                })
 
     def AplicarEfeito(self, efeito, alvo, Log=None):
         
@@ -506,13 +532,21 @@ class Pokemon:
 
         # --- Registro no log ---
         if Log is not None:
-            if "Efeitos" not in Log:
-                Log["Efeitos"] = []
-            Log["Efeitos"].append({
-                "Alvo": self.ID,
-                "Efeito": efeito,
-                "Turnos": TurnosReal
-            })
+            if "Registros" not in Log:
+                Log["Registros"] = []
+
+            encontrado = False
+            for registro in Log["Registros"]:
+                if self.ID in registro.values():
+                    registro[efeito] = registro.get(efeito, 0) + TurnosReal
+                    encontrado = True
+                    break
+
+            if not encontrado:
+                Log["Registros"].append({
+                    "Alvo": self.ID,
+                    efeito: TurnosReal
+                })
 
     def AlterarClima(self, clima, partida, Log=None):
         
