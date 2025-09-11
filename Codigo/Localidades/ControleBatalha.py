@@ -423,9 +423,9 @@ class Pokemon:
 
         # --- Registro no log ---
         if Log is not None:
-            if "StatusAlterados" not in Log:
-                Log["StatusAlterados"] = []
-            Log["StatusAlterados"].append({
+            if "Status" not in Log:
+                Log["Status"] = []
+            Log["Status"].append({
                 "Alvo": self.ID,
                 "Status": Status,
                 "Valor": Alteração
@@ -506,9 +506,9 @@ class Pokemon:
 
         # --- Registro no log ---
         if Log is not None:
-            if "EfeitosAplicados" not in Log:
-                Log["EfeitosAplicados"] = []
-            Log["EfeitosAplicados"].append({
+            if "Efeitos" not in Log:
+                Log["Efeitos"] = []
+            Log["Efeitos"].append({
                 "Alvo": self.ID,
                 "Efeito": efeito,
                 "Turnos": TurnosReal
@@ -531,9 +531,9 @@ class Pokemon:
         partida.clima = clima
 
         if Log is not None:
-            if "Clima" not in Log:
-                Log["Clima"] = []
-            Log["Clima"].append({
+            if "Climas" not in Log:
+                Log["Climas"] = []
+            Log["Climas"].append({
                 "Alterador": self.ID,
                 "Duração": duracao,
                 "Clima": clima

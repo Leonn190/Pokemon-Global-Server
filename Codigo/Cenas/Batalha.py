@@ -1,4 +1,5 @@
 import pygame, random, time, re, json, threading
+import pandas as pd
 
 from Codigo.Modulos.Outros import Clarear, Escurecer
 from Codigo.Modulos.Paineis import PainelPokemonBatalha, CriarSurfacePainelAtaque, PainelAcao, PAINEL_ATAQUE_CACHE
@@ -12,6 +13,8 @@ from Codigo.Modulos.DesenhoPlayer import DesenharPlayer
 from Codigo.Server.ServerMundo import SairConta, SalvarConta
 from Codigo.Localidades.EstabilizadorBatalhaLocal import criar_e_inicializar_sala_local, receber_e_executar_jogadas
 from Codigo.Localidades.CombateIA import CombateIA
+
+dfa = pd.read_csv("Dados/Animações.csv")
 
 Cores = None
 Fontes = None
@@ -74,6 +77,37 @@ def LeitorLogs(LogRodada, parametros, nome_arquivo="LogRodada.json"):
     with open(nome_arquivo, "w", encoding="utf-8") as f:
         json.dump(LogRodada, f, ensure_ascii=False, indent=4)
     print(f"✅ Log da rodada salvo em '{nome_arquivo}'")
+
+    for Log in LogRodada:
+        Log["Agente"].strip("/")
+        idx, pla = Log["Agente"]
+        if pla == parametros["Player"]:
+            agente = _anim_aliados[idx]
+        else:
+            agente = _anim_inimigos[idx]
+        
+        atkanimadf = dfa[dfa["Nome"] == Log["Code Ataque"]]
+        atkanima = atkanimadf.iloc[0].to_dict()
+
+        if "Barreiras" in Log:
+            for barreira in Log["Barreiras"]:
+                pass
+
+        if "Curas" in Log:
+            for cura in Log["Curas"]:
+                pass
+
+        if "Status" in Log:
+            for status in Log["Status"]:
+                pass
+        
+        if "Efeitos" in Log:
+            for efeito in Log["Efeitos"]:
+                pass
+        
+        if "Climas" in Log:
+            for clima in Log["Climas"]:
+                pass
 
     parametros["Pronto"] = False
     parametros["LogAtual"] = []
@@ -1118,7 +1152,6 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
 
     TelaAlvoBatalha(tela, estados, eventos, parametros)
 
-
     DesenharPlayer(tela,Player.Skin,(90,920),nome=Player.Nome,Fonte=Fontes[18])
 
     if not parametros["BatalhaSimples"]:
@@ -1323,7 +1356,8 @@ def BatalhaLoop(tela, relogio, estados, config, info):
             "TelaConfigurações": {"Entrou": False},
             "Config": config,
             "Running": True,
-            "Processando": False
+            "Processando": False,
+            "Player": 1
         })
 
         parametros["AliadosAtivos"]  = definir_ativos(parametros["EquipeAliada"])

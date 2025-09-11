@@ -160,7 +160,7 @@ class PokemonAnimator:
         self._on_gatilho = None      # callback opcional
         # -------------------------------------------------
 
-    # ================= API DE CONTROLE (thread-safe o suficiente p/ set simples) =================
+    # ================= API DE CONTROLE (thread-safe o suficiente p/ set simples) ================= 
     def iniciar_tomar_dano(self, dur=0.30, freq=12.0, gatilho_pct=0.6, on_gatilho=None):
         """Piscada vermelha por 'dur' segundos. freq = piscadas por segundo."""
         self._acao = {
@@ -243,33 +243,35 @@ class PokemonAnimator:
         }
         self._configurar_gatilho(gatilho_pct, on_gatilho)
 
-    # --- NOVAS: SOFRERGOLPE (overlay de frames) e CARTUCHO (surface que sai do centro) ---
+    # --- NOVAS COM GATILHO PRÓPRIO: SOFRERGOLPE, CARTUCHO e BUFF ---
 
-    def iniciar_sofrergolpe(self, frames, fps=20, offset=(0, 0)):
+    def iniciar_sofrergolpe(self, frames, fps=20, offset=(0, 0), gatilho_pct=0.5, on_gatilho=None):
         """
-        Reproduz 'frames' por cima do pokémon (uma vez).
+        Reproduz 'frames' por cima do pokémon (uma vez) COM gatilho.
         - frames: lista de pygame.Surface.
         - fps: quadros por segundo.
         - offset: deslocamento (x, y) relativo ao centro do pokémon.
         """
         if not frames:
             return
+        dur_total = max(1e-3, len(frames) / float(max(1, int(fps))))
         self._atk_fx = {
             "ativo": True,
             "frames": frames,
             "fps": max(1, int(fps)),
             "t": 0.0,
-            "offset": (int(offset[0]), int(offset[1]))
+            "dur": dur_total,
+            "offset": (int(offset[0]), int(offset[1])),
+            "gat_pct": float(max(0.0, min(1.0, gatilho_pct))),
+            "gat_fired": False,
+            "on_gatilho": on_gatilho
         }
 
-    def iniciar_cartucho(self, cartucho_surf, lado="dir", dur=0.9, altura=140, dx=80, scale_ini=0.6, scale_fim=1.0):
+    def iniciar_cartucho(self, cartucho_surf, lado="dir", dur=0.9, altura=140, dx=80,
+                        scale_ini=0.6, scale_fim=1.0, gatilho_pct=0.5, on_gatilho=None):
         """
         Faz o 'cartucho_surf' surgir do centro do pokémon, aumentar e subir até o topo,
-        deslocando-se para a direita/esquerda com curva parabólica e sumindo gradualmente.
-        - lado: 'dir'/'esq' ou 1/-1.
-        - dur: duração total da animação.
-        - altura: quanto sobe (px).
-        - dx: deslocamento horizontal total (px).
+        deslocando-se para a direita/esquerda com curva parabólica e sumindo gradualmente. COM gatilho.
         """
         if cartucho_surf is None:
             return
@@ -290,7 +292,31 @@ class PokemonAnimator:
             "dx": float(dx) * dir_sign,
             "s0": float(scale_ini),
             "s1": float(scale_fim),
-            "orig": None  # será definido a partir do último draw do pokémon
+            "orig": None,  # será definido a partir do último draw do pokémon
+            "gat_pct": float(max(0.0, min(1.0, gatilho_pct))),
+            "gat_fired": False,
+            "on_gatilho": on_gatilho
+        }
+
+    def iniciar_buff(self, dur=0.9, qtd=6, area=(60, 40), cor=(90, 200, 255),
+                    gatilho_pct=0.6, on_gatilho=None):
+        """
+        Desenha setinhas subindo ao redor do pokémon durante 'dur'. COM gatilho.
+        - qtd: número de setas.
+        - area: (largura, altura) do campo de subida.
+        - cor: cor das setas.
+        """
+        self._buff = {
+            "ativo": True,
+            "t": 0.0,
+            "dur": max(0.15, float(dur)),
+            "qtd": max(1, int(qtd)),
+            "area": (float(area[0]), float(area[1])),
+            "cor": cor,
+            "orig": None,  # setado no draw
+            "gat_pct": float(max(0.0, min(1.0, gatilho_pct))),
+            "gat_fired": False,
+            "on_gatilho": on_gatilho
         }
 
     # ---------------------------------------------------------------------------------------------
@@ -306,11 +332,20 @@ class PokemonAnimator:
 
     def poll_acao_gatilho(self):
         """
-        Retorna True exatamente uma vez quando o progresso cruza o gatilho.
+        Retorna True exatamente uma vez quando QUALQUER gatilho (ação OU overlays) cruza o limiar.
         Útil p/ o leitor de log encadear a próxima animação.
         """
-        if self._gat_disparado:
+        if getattr(self, "_gat_disparado", False):
             self._gat_disparado = False
+            return True
+        if getattr(self, "_gat_fx_disparado", False):
+            self._gat_fx_disparado = False
+            return True
+        if getattr(self, "_gat_cartucho_disparado", False):
+            self._gat_cartucho_disparado = False
+            return True
+        if getattr(self, "_gat_buff_disparado", False):
+            self._gat_buff_disparado = False
             return True
         return False
 
@@ -326,26 +361,68 @@ class PokemonAnimator:
 
     def _atualizar_acao(self, dt):
         """Avança o tempo da ação e dispara gatilho/encerra quando devido."""
+        # ---------- overlays independentes (sempre atualizam) ----------
+        if hasattr(self, "_projetil"):
+            self._step_projetil(dt)
+
+        # sofrer golpe
+        if hasattr(self, "_atk_fx") and self._atk_fx.get("ativo"):
+            fx = self._atk_fx
+            fx["t"] += dt
+            prog_fx = min(1.0, fx["t"] / fx["dur"])
+            if (not fx["gat_fired"]) and (prog_fx >= fx["gat_pct"]):
+                fx["gat_fired"] = True
+                self._gat_fx_disparado = True
+                cb = fx.get("on_gatilho")
+                if callable(cb):
+                    try:
+                        cb(self)
+                    except Exception:
+                        pass
+            total = len(fx["frames"])
+            if int(fx["t"] * fx["fps"]) >= total:
+                fx["ativo"] = False
+
+        # cartucho
+        if hasattr(self, "_cartucho") and self._cartucho.get("ativo"):
+            c = self._cartucho
+            c["t"] += dt
+            prog_c = min(1.0, c["t"] / c["dur"])
+            if (not c["gat_fired"]) and (prog_c >= c["gat_pct"]):
+                c["gat_fired"] = True
+                self._gat_cartucho_disparado = True
+                cb = c.get("on_gatilho")
+                if callable(cb):
+                    try:
+                        cb(self)
+                    except Exception:
+                        pass
+            if c["t"] >= c["dur"]:
+                c["ativo"] = False
+
+        # buff
+        if hasattr(self, "_buff") and self._buff.get("ativo"):
+            b = self._buff
+            b["t"] += dt
+            prog_b = min(1.0, b["t"] / b["dur"])
+            if (not b["gat_fired"]) and (prog_b >= b["gat_pct"]):
+                b["gat_fired"] = True
+                self._gat_buff_disparado = True
+                cb = b.get("on_gatilho")
+                if callable(cb):
+                    try:
+                        cb(self)
+                    except Exception:
+                        pass
+            if b["t"] >= b["dur"]:
+                b["ativo"] = False
+
+        # ---------- ação principal ----------
         if not self._acao:
-            # atualiza overlays independentes
-            if hasattr(self, "_projetil"):
-                self._step_projetil(dt)
-            if hasattr(self, "_atk_fx"):
-                if self._atk_fx.get("ativo"):
-                    self._atk_fx["t"] += dt
-                    total = len(self._atk_fx["frames"])
-                    if int(self._atk_fx["t"] * self._atk_fx["fps"]) >= total:
-                        self._atk_fx["ativo"] = False
-            if hasattr(self, "_cartucho"):
-                if self._cartucho.get("ativo"):
-                    self._cartucho["t"] += dt
-                    if self._cartucho["t"] >= self._cartucho["dur"]:
-                        self._cartucho["ativo"] = False
             return
 
         a = self._acao
         a["t"] += dt
-
         prog = min(1.0, a["t"] / a["dur"])
 
         # dispara gatilho ao cruzar limiar
@@ -356,19 +433,6 @@ class PokemonAnimator:
                     self._on_gatilho(self)  # opcional
                 except Exception:
                     pass  # não derrubar o loop por callback
-
-        # step dos overlays/projétil
-        if hasattr(self, "_projetil"):
-            self._step_projetil(dt)
-        if hasattr(self, "_atk_fx") and self._atk_fx.get("ativo"):
-            self._atk_fx["t"] += dt
-            total = len(self._atk_fx["frames"])
-            if int(self._atk_fx["t"] * self._atk_fx["fps"]) >= total:
-                self._atk_fx["ativo"] = False
-        if hasattr(self, "_cartucho") and self._cartucho.get("ativo"):
-            self._cartucho["t"] += dt
-            if self._cartucho["t"] >= self._cartucho["dur"]:
-                self._cartucho["ativo"] = False
 
         # fim da ação
         if a["t"] >= a["dur"]:
@@ -462,15 +526,15 @@ class PokemonAnimator:
                     p["pos"] = p["ini"]
                     p["t"] = 0.0
 
-        # registra último draw para overlays (sofrergolpe e cartucho)
+        # registra último draw para overlays (golpe/cartucho/buff)
         self._ultimo_draw = {"pos": (x, y), "size": sprite_mod.get_size()}
         return sprite_mod, (x, y)
 
-    # ================= EXTRAS: desenhar overlays (projétil, golpe, cartucho) =================
+    # ================= EXTRAS: desenhar overlays (projétil, golpe, cartucho, buff) =================
 
     def desenhar_extras(self, tela):
         """Chame após blitar o sprite do pokémon."""
-        # PROJÉTIL (se existir, já gerenciado por iniciar_disparo/_step_projetil)
+        # PROJÉTIL
         p = getattr(self, "_projetil", None)
         if p and p.get("ativo"):
             x, y = p["pos"]
@@ -529,6 +593,64 @@ class PokemonAnimator:
 
             rect = img.get_rect(center=(int(x), int(y)))
             tela.blit(img, rect.topleft)
+
+        # BUFF (setinhas subindo ao redor)
+        b = getattr(self, "_buff", None)
+        if b and b.get("ativo") and hasattr(self, "_ultimo_draw"):
+            (px, py) = self._ultimo_draw["pos"]
+            (sw, sh) = self._ultimo_draw["size"]
+            orig = (px + sw * 0.5, py + sh * 0.45)
+            if b["orig"] is None:
+                b["orig"] = orig
+            else:
+                orig = b["orig"]
+
+            s_global = max(0.0, min(1.0, b["t"] / b["dur"]))
+            aw, ah = b["area"]
+            qtd = b["qtd"]
+
+            # desenha em uma surface com alpha para permitir fade
+            layer = pygame.Surface((int(aw) + 40, int(ah) + 60), pygame.SRCALPHA)
+            base_x = layer.get_width() // 2
+            base_y = layer.get_height() // 2
+
+            # setinhas escalonadas no tempo (sem random)
+            for i in range(qtd):
+                fase = (i / max(1, (qtd - 1))) * 0.6       # espalha no tempo
+                s = min(1.0, max(0.0, s_global * 1.2 - fase))
+                if s <= 0.0:
+                    continue
+
+                # posição horizontal distribuída
+                x_off = -aw * 0.5 + (aw * (i / max(1, (qtd - 1))))
+                # sobe ao longo do tempo
+                y_off = ah * (1.0 - s)
+
+                # alpha e leve escala
+                alpha = int(255 * (0.3 + 0.7 * s))
+                cor = (*b["cor"][:3], max(0, min(255, alpha)))
+
+                # dimensões da seta
+                seta_h = 12 + int(10 * s)
+                seta_w = 6 + int(4 * s)
+
+                # corpo (hastes)
+                x0 = int(base_x + x_off)
+                y0 = int(base_y - y_off)
+                pygame.draw.line(layer, cor, (x0, y0 + seta_h), (x0, y0), 2)
+
+                # ponta (triângulo)
+                ponta = [
+                    (x0,           y0 - 2),
+                    (x0 - seta_w,  y0 + 6),
+                    (x0 + seta_w,  y0 + 6),
+                ]
+                pygame.draw.polygon(layer, cor, ponta)
+
+            # fade geral no final
+            layer.set_alpha(int(255 * (1.0 - 0.1 * s_global)))
+            tela.blit(layer, (int(orig[0] - layer.get_width() // 2),
+                            int(orig[1] - layer.get_height() // 2)))
 
     def desenhar(self, dt, tela, nova_pos=None, multiplicador=1.0):
         # --- animação de frames (velocidade) ---
