@@ -3,7 +3,7 @@ import pygame, random, time, re, threading
 from Codigo.Modulos.Outros import Clarear, Escurecer
 from Codigo.Modulos.Paineis import PainelPokemonBatalha, CriarSurfacePainelAtaque, PainelAcao, PAINEL_ATAQUE_CACHE
 from Codigo.Prefabs.BotoesPrefab import Botao_Selecao, Botao, Botao_invisivel, Botao_Tecla
-from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda, Animar, caixa_de_texto, Fluxo, Pulso
+from Codigo.Prefabs.FunçõesPrefabs import texto_com_borda, Animar, caixa_de_texto, Fluxo, Pulso, Cartuchu
 from Codigo.Prefabs.Animações import PokemonAnimator
 from Codigo.Prefabs.Sonoridade import Musica, AtualizarMusica, tocar
 from Codigo.Geradores.GeradorPokemon import GerarMatilha, CarregarAnimacaoPokemon, GeraPokemonBatalha, CarregarPokemon
@@ -70,6 +70,74 @@ EstadoEditorLog = {}            # estados genéricos (hover/click, etc. — se p
 EstadoBotoesAcao = {}           # estados por botão principal (seleção de ação)
 EstadoBotoesApagar = {}         # estados por botão X (apagar ação)
 
+def PainelTesteAnimacoes(tela, eventos):
+    import pygame
+
+    # alvo: primeiro slot da direita (inimigos)
+    alvo_pos = _slots_direita[0] if _slots_direita else (320, 200)
+
+    # primeiro aliado (animador)
+    try:
+        aliado_anim, _ = _anim_aliados[0]  # se vier como (anim, (cx,cy))
+    except Exception:
+        aliado_anim = _anim_aliados[0]
+
+    # frames do "golpe": o PRÓPRIO Aerodactyl (animação do pokémon)
+    FRAMES_AERO = Outros["Conectando"]  # lista de Surfaces (assumido)
+    FONTE = Fontes[18]
+
+    # ---------------- UI rápida (canto sup. esq) ----------------
+    pad, bw, bh, gap = 6, 160, 26, 6
+    panel_x, panel_y = 8, 8
+    botoes = [
+        ("T Tomar dano", lambda: aliado_anim.iniciar_tomardano(dur=0.45, freq=14.0)),
+        ("A Avanço",     lambda: aliado_anim.iniciar_avanco(alvo_pos=alvo_pos, altura=28, dur=0.50)),
+        ("I Investida",  lambda: aliado_anim.iniciar_investida(alvo_pos=alvo_pos, dur=0.36)),
+        ("P Disparo",    lambda: aliado_anim.iniciar_disparo(alvo_pos=alvo_pos, dur=0.60, gatilho_pct=0.55)),
+        # SofrerGolpe com FRAMES = Aerodactyl
+        ("G SofrerGolpe", lambda: aliado_anim.iniciar_sofrergolpe(frames=FRAMES_AERO, fps=20, gatilho_pct=0.70)),
+        # Cartucho simples para teste (usando o nome do pokémon)
+        ("C Cartucho",   lambda: aliado_anim.iniciar_cartucho(
+            cartucho_surf=Cartuchu(valor=33, cor=(255, 230, 90), fonte=FONTE, crit=3),
+            dur=0.9, gatilho_pct=0.5
+        )),
+        ("B Buff",       lambda: aliado_anim.iniciar_buff(dur=0.9, qtd=6, debuff=False)),
+        ("D Debuff",     lambda: aliado_anim.iniciar_buff(dur=0.9, qtd=6, debuff=True)),
+        ("R Curar",      lambda: aliado_anim.iniciar_curar(dur=0.50, freq=12.0)),
+    ]
+
+    linhas = len(botoes)
+    panel_w = bw + pad*2
+    panel_h = pad*2 + linhas*bh + (linhas-1)*gap
+
+    painel = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+    painel.fill((30, 30, 38, 210))
+    pygame.draw.rect(painel, (80, 80, 100, 255), painel.get_rect(), 2)
+
+    rects = []
+    y = pad
+    for label, _ in botoes:
+        r = pygame.Rect(pad, y, bw, bh)
+        pygame.draw.rect(painel, (200, 210, 230), r, border_radius=6)
+        pygame.draw.rect(painel, (60, 70, 90), r, 2, border_radius=6)
+        txt = FONTE.render(label, True, (20, 25, 35))
+        painel.blit(txt, (r.x + 8, r.y + (bh - txt.get_height())//2))
+        rects.append(r.move(panel_x, panel_y))
+        y += bh + gap
+
+    tela.blit(painel, (panel_x, panel_y))
+
+    for ev in eventos:
+        if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+            mx, my = ev.pos
+            for i, rabs in enumerate(rects):
+                if rabs.collidepoint(mx, my):
+                    try:
+                        botoes[i][1]()  # dispara teste
+                    except Exception:
+                        pass
+                    break
+
 def Transformador(acao):
     if acao["Movimento"] == 1:
         acao["Movimento"] = "Mover"
@@ -103,8 +171,10 @@ def VerificaçãoCombate(parametros):
 
                 print(LogPl)
                 
-                log, parametros["Sala"] = receber_e_executar_jogadas(parametros["Sala"], LogPl, LogIA)
-                LeitorLogs(log, parametros)
+                log, partida_dic = receber_e_executar_jogadas(parametros["Sala"], LogPl, LogIA)
+                parametros["PartidaDic"] = partida_dic
+                
+                LeitorLogs(log, parametros, _anim_aliados, _anim_inimigos, Outros["Ataques"], Outros["Projeteis"], Icones)
             
             else:
                 time.sleep(1.5)
@@ -1120,6 +1190,8 @@ def TelaFundoBatalha(tela, estados, eventos, parametros):
         anim_obj.desenhar(dt, tela, nova_pos=(int(cx + dx_dir), int(cy)))
     for anim_obj, (cx, cy) in _anim_aliados:
         anim_obj.desenhar(dt, tela, nova_pos=(int(cx + dx_esq), int(cy)))
+    
+    PainelTesteAnimacoes(tela, eventos)
 
 def TelaHudBatalha(tela, estados, eventos, parametros):
     global AliadoSelecionadoCache, InimigoSelecionadoCache

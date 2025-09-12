@@ -1,64 +1,95 @@
 [
     {
-        "Agente": "1/2",
-        "Code Ataque": "Barragem",
+        "Agente": "0/2",
+        "Code Ataque": "Golpe Critico",
         "Player": 2,
         "Recuo": false,
         "Alvos Aliados": [],
         "Alvos Inimigos": [],
-        "Tipo": "normal",
-        "Estilo": "s",
-        "Assertividade": 100.0,
-        "SubLogs": [],
-        "DanoTotal": 0
-    },
-    {
-        "Agente": "3/2",
-        "Code Ataque": "Tapa",
-        "Player": 2,
-        "Recuo": false,
-        "Alvos Aliados": [],
-        "Alvos Inimigos": [],
+        "AlvosBruto": [
+            "I3"
+        ],
+        "AlvificaçãoBruta": "inimigo",
         "Tipo": "normal",
         "Estilo": "n",
-        "Assertividade": 100.0,
-        "SubLogs": [],
-        "DanoTotal": 0
+        "Assertividade": 90.0,
+        "SubLogs": []
     },
     {
-        "Agente": "0/1",
-        "Code Ataque": "Tapa Magico",
+        "Agente": "2/1",
+        "Code Ataque": "Golpe Precavido",
         "Player": 1,
         "Recuo": false,
         "Alvos Aliados": [],
         "Alvos Inimigos": [
-            "3/2"
+            "1/2",
+            "2/2"
         ],
+        "AlvosBruto": [
+            "I1",
+            "I6"
+        ],
+        "AlvificaçãoBruta": "inimigo x2",
         "Tipo": "normal",
         "Estilo": "n",
-        "Assertividade": 100.0,
+        "Assertividade": 150.0,
         "SubLogs": [
             {
-                "Alvo": "3/2",
+                "Alvo": "1/2",
                 "MultiplicadorFinal": 1.0,
-                "Dano Final": 9,
+                "Dano Final": 15,
                 "Matou": false,
                 "Protegido": false,
                 "Acertou": true,
-                "Critico": true,
-                "AumentoCritico": 7.040000000000001,
-                "Defesa": 35.915152,
-                "Perfuração": 26.400000000000006,
-                "Defesa Efetiva": 9.515151999999993,
+                "Critico": false,
+                "AumentoCritico": 4.0,
+                "Defesa": 59.953920000000004,
+                "Perfuração": 28.000224000000006,
+                "Defesa Efetiva": 31.953695999999997,
                 "Efetividade": 1.0,
-                "Steb": 3.0,
+                "Steb": 21.0,
                 "Multiplicador": 1.0,
-                "Dano Bruto": 10.080000000000002,
-                "Dano Refinado": 9.204205825327259,
-                "Dano SemiFinal": 9.852181915430299,
-                "Dano Enviado": 9
+                "Dano Bruto": 20.4,
+                "Dano Refinado": 15.459968624145244,
+                "Dano SemiFinal": 15.459968624145244,
+                "Dano Enviado": 15
+            },
+            {
+                "Alvo": "2/2",
+                "MultiplicadorFinal": 1.0,
+                "Dano Final": 17,
+                "Matou": true,
+                "Protegido": false,
+                "Acertou": true,
+                "Critico": false,
+                "AumentoCritico": 4.0,
+                "Defesa": 42.395496,
+                "Perfuração": 28.000224000000006,
+                "Defesa Efetiva": 14.395271999999995,
+                "Efetividade": 1.0,
+                "Steb": 21.0,
+                "Multiplicador": 1.0,
+                "Dano Bruto": 20.4,
+                "Dano Refinado": 17.832904842430903,
+                "Dano SemiFinal": 17.832904842430903,
+                "Dano Enviado": 17
             }
         ],
-        "DanoTotal": 9
+        "DanoTotal": 32
+    },
+    null,
+    {
+        "Agente": "1/2",
+        "Code Ataque": "Resetar",
+        "Player": 2,
+        "Recuo": false,
+        "Alvos Aliados": [],
+        "Alvos Inimigos": [],
+        "AlvosBruto": [],
+        "AlvificaçãoBruta": "sem alvo",
+        "Tipo": "normal",
+        "Estilo": "s",
+        "Assertividade": 100.0,
+        "SubLogs": []
     }
 ]

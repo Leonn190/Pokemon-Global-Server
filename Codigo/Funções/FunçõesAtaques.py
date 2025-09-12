@@ -196,7 +196,7 @@ def investida_p(Atacante, Alvo, AlvosAliados, ataque, Partida, Log,
         SubLog = {
             "Alvo": Atacante
         }
-        Atacante.ReceberDano(recuo, SubLog)
+        Atacante.TomarDano(recuo, SubLog)
         Log["SubLogs"].append(SubLog)
 
 # 18 — Grito de Guerra (s): Aumenta Atk de todos os aliados em 10%.

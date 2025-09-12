@@ -351,8 +351,9 @@ def ExecuteAtaque(Move, Partida):
 
     DanoTotal = 0
     for sub in Log["SubLogs"]:
-        DanoTotal += sub["Dano Final"]
-    Log["DanoTotal"] = DanoTotal
+        if sub.get("Dano Final", False):
+            DanoTotal += sub["Dano Final"]
+        Log["DanoTotal"] = DanoTotal
 
     # ================================
     # 🌐 Término global do ataque ('g')

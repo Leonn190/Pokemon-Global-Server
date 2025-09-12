@@ -549,6 +549,25 @@ class PokemonAnimator:
 
     # ================= EXTRAS: desenhar overlays (projétil, golpe, cartucho, buff) =================
 
+    def _step_projetil(self, dt):
+        p = getattr(self, "_projetil", None)
+        if not p or not p.get("ativo"):
+            return
+
+        p["t"] += dt
+        prog = min(1.0, p["t"] / p["dur"])
+
+        if p["ini"] and p["fim"]:
+            x0, y0 = p["ini"]
+            x1, y1 = p["fim"]
+            # interpolação linear
+            x = x0 + (x1 - x0) * prog
+            y = y0 + (y1 - y0) * prog
+            p["pos"] = (x, y)
+
+        if p["t"] >= p["dur"]:
+            p["ativo"] = False
+
     def desenhar_extras(self, tela):
         """Chame após blitar o sprite do pokémon."""
         # PROJÉTIL
@@ -709,13 +728,13 @@ class PokemonAnimator:
         ene_max   = max(1.0, float(self.pokemon["Ene"]))
 
         # centro acima do pokémon
-        largura  = 70
-        offset_y = -16
+        largura  = 80
+        offset_y = -18
 
         # hover: engrossa levemente
         mouse_pos = pygame.mouse.get_pos()
         hover = self.rect.collidepoint(mouse_pos)
-        h_vida, h_ene = (14, 7) if hover else (12, 6)
+        h_vida, h_ene = (12, 7) if hover else (10, 6)
 
         # base centralizada
         cx = rect.centerx

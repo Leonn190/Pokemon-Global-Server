@@ -55,7 +55,7 @@ efeitos_negativos = [
 ]
 
 class Pokemon:
-    def __init__(self, dados, dono, i, parti):
+    def __init__(self, dados, dono, idx, parti):
         self.nome = dados.get("nome")
         self.jogador = dono
         self.estagio = dados.get("Estagio")
@@ -64,9 +64,9 @@ class Pokemon:
         self.Peso = dados.get("Peso")
 
         if self.jogador == parti.jogador1:
-            self.ID = f"{i}/1"
+            self.ID = f"{idx}/1"
         elif self.jogador == parti.jogador2:
-            self.ID = f"{i}/2"
+            self.ID = f"{idx}/2"
 
         self.Tipo1 = dados.get("Tipo1")
         self.Tipo2 = dados.get("Tipo2")
@@ -854,8 +854,10 @@ class Partida:
         self.ArenaP2 = [None,None,None,None,None,None,None,None,None]
 
         # Cria instâncias da classe Pokemon
-        self.pokemons_jogador1 = [Pokemon(p, dono=code_jogador1, i=i, parti=self) for i, p in enumerate(pokemons_jogador1)]
-        self.pokemons_jogador2 = [Pokemon(p, dono=code_jogador2, i=i, parti=self) for i, p in enumerate(pokemons_jogador2)]
+        print (len(pokemons_jogador1))
+        print (len(pokemons_jogador2))
+        self.pokemons_jogador1 = [Pokemon(p, dono=code_jogador1, idx=idx, parti=self) for idx, p in enumerate(pokemons_jogador1)]
+        self.pokemons_jogador2 = [Pokemon(p, dono=code_jogador2, idx=i, parti=self) for i, p in enumerate(pokemons_jogador2)]
     
     def ToDic(self):
         return {
