@@ -132,399 +132,359 @@ atributos = [
     "Asse"
 ]
 
-def LeitorLogs(LogRodada, parametros, _anim_aliados, _anim_inimigos, Ataques, Projeteis, Icones, nome_arquivo="LogRodada.json"):
-    # Abre o arquivo em modo escrita e salva o log em formato JSON
-    with open(nome_arquivo, "w", encoding="utf-8") as f:
+def LeitorLogs(LogRodada, parametros, _anim_aliados, _anim_inimigos,
+               _slots_esquerda, _slots_direita, Ataques, Projeteis, Icones):
+    """
+    Leitor de logs NÃO bloqueante para rodar DENTRO do loop principal.
+    Avança passo-a-passo com base em Animator.Continue da ÚLTIMA animação armada.
+    Se não puder avançar agora, apenas retorna (na próxima chamada continua de onde parou).
+
+    Estado incremental é salvo em parametros["LeitorState"].
+    """
+
+    # ---------- salvar log (debug) ----------
+    with open("LogRodada.json", "w", encoding="utf-8") as f:
         json.dump(LogRodada, f, ensure_ascii=False, indent=4)
-    print(f"✅ Log da rodada salvo em '{nome_arquivo}'")
 
-    animaliados = []
-    for anima, _ in _anim_aliados:
-        animaliados.append(anima)
-    
-    animainimigos = []
-    for anima, _ in _anim_inimigos:
-        animainimigos.append(anima)
-    
-    _anim_aliados = animaliados
-    _anim_inimigos = animainimigos
+    # normaliza listas de animadores (somente os objetos)
+    aliados  = [an for an, _ in _anim_aliados]
+    inimigos = [an for an, _ in _anim_inimigos]
 
-    for Log in LogRodada:
+    # ---------- estado incremental ----------
+    st = parametros.setdefault("LeitorState", {
+        "i": 0,          # índice do Log na rodada
+        "j": 0,          # índice do SubLog dentro do Log atual
+        "step": 0,       # passo atual dentro do "plano" do SubLog
+        "plan": None,    # lista de passos do SubLog atual
+        "waiting_on": None,
+        "_cache": {}
+    })
 
+    # helpers
+    def _find_anim_by_id(pid, player_side):
+        if player_side == parametros["Player"]:
+            for anim in aliados:
+                if anim.pokemon["ID"] == pid:
+                    return anim
+        else:
+            for anim in inimigos:
+                if anim.pokemon["ID"] == pid:
+                    return anim
+        return None
+
+    def _resolve_agente(Log):
         ag_str = Log["Agente"].replace(" ", "")
         idx_s, pla_s = ag_str.split("/")
-        idx = int(idx_s)
-        pla = int(pla_s)
-        if pla == parametros["Player"]:
-            agenteLOG = _anim_aliados[idx]
+        idx_ag, pla_ag = int(idx_s), int(pla_s)
+        agente = _find_anim_by_id(idx_ag, pla_ag)
+        return agente, idx_ag, pla_ag
+
+    def _resolve_alvo(SubLog):
+        ag_str = SubLog["Alvo"].replace(" ", "")
+        idx_s, pla_s = ag_str.split("/")
+        idx_alvo, pla_alvo = int(idx_s), int(pla_s)
+        alvo = _find_anim_by_id(idx_alvo, pla_alvo)
+        return alvo, idx_alvo, pla_alvo
+
+    def _slot_target(Log):
+        pos_mira = None
+        alvos_brutos = Log.get("AlvosBruto") or []
+        if alvos_brutos:
+            cod = str(alvos_brutos[0]).strip().upper()  # ex.: "I5" / "A2"
+            lado = cod[0] if cod else "I"
+            try:
+                idx_slot = int(cod[1:])  # sem -1 (sua regra)
+            except:
+                idx_slot = 0
+
+            # "I" e "A" relativos ao Player do LOG
+            if lado == "I":
+                lista_slots = _slots_direita if Log["Player"] == parametros["Player"] else _slots_esquerda
+            else:  # 'A'
+                lista_slots = _slots_esquerda if Log["Player"] == parametros["Player"] else _slots_direita
+
+            if 0 <= idx_slot < len(lista_slots):
+                srect = lista_slots[idx_slot]
+                pos_mira = (int(srect.centerx), int(srect.centery))
+        return pos_mira
+
+    # Passo executável atômico
+    def _start_step(step):
+        """
+        step = {
+          "actor": Animator,
+          "method": "iniciar_...",
+          "kwargs": {...},         # inclui pct_continue quando aplicável
+          "wait": True/False,      # se True, aguardamos actor.Continue
+          "armed": False/True
+        }
+        """
+        actor = step["actor"]
+        meth  = step["method"]
+        kwargs = step.get("kwargs", {})
+        getattr(actor, meth)(**kwargs)     # dispara 1x
+        step["armed"] = True
+        if step.get("wait", True):
+            st["waiting_on"] = actor
+            return "WAIT"
+        return "GO"
+
+    # Constrói o plano (lista de passos) para um SubLog
+    def _build_plan(Log, SubLog, cache):
+        agente   = cache["agente"]
+        alvo     = cache["alvo"]
+        atkanima = cache["atkanima"]
+        anima_key = cache["anima_key"]
+
+        pos_mira = cache["pos_mira"] or alvo.pos
+
+        # estado do sublog
+        Dano = int(SubLog["Dano Final"])
+        crit = bool(SubLog["Critico"])
+        acertou = bool(SubLog["Acertou"])
+        TemDano = Dano > 0
+        Miss    = not acertou
+
+        from Codigo.Cenas.Batalha import Fontes
+        fonte = Fontes[18]
+        cor_dano = (255, 0, 0) if crit else (255, 255, 0)
+        cor_miss = (255, 255, 255)
+
+        vel = float(atkanima["Velocidade"])
+
+        steps = []
+
+        def add(actor, method, wait=True, **kwargs):
+            steps.append({"actor": actor, "method": method, "kwargs": kwargs, "wait": wait, "armed": False})
+
+        # ====== tipo de contato / projétil ======
+        contato = atkanima["Contato"]
+        proj    = atkanima["Projetil"]
+
+        if contato == "A":
+            add(agente, "iniciar_avanco", True,
+                alvo_pos=pos_mira, dur=vel, pct_continue=0.50)
+            add(alvo, "iniciar_sofrergolpe", True,
+                frames=Ataques[atkanima[anima_key]],
+                fps=Parametros_Ataque[atkanima[anima_key]],
+                pct_continue=0.85)
+
+        elif contato == "I":
+            add(agente, "iniciar_investida", True,
+                alvo_pos=pos_mira, dur=vel, pct_continue=0.50)
+            add(alvo, "iniciar_sofrergolpe", True,
+                frames=Ataques[atkanima[anima_key]],
+                fps=Parametros_Ataque[atkanima[anima_key]],
+                pct_continue=0.85)
+
         else:
-            agenteLOG = _anim_inimigos[idx]
-
-        atkanimadf = dfa[dfa["Nome"] == Log["Code Ataque"]]
-        atkanima = atkanimadf.iloc[0].to_dict()
-
-        if atkanima["Alvo"] == "U":
-            pass
-
-        for SubLog in Log["SubLogs"]:
-
-            ag_str = Log["Agente"].replace(" ", "")
-            idx_s, pla_s = ag_str.split("/")
-            idx = int(idx_s)
-            pla = int(pla_s)
-            if pla == parametros["Player"]:
-                Alvo = _anim_aliados[idx]
-                anima = "Animação"
+            if proj == "fluxo":
+                add(agente, "iniciar_disparo", True,
+                    alvo_pos=pos_mira, dur=vel, pct_continue=0.90)
+                add(alvo, "iniciar_sofrergolpe", True,
+                    frames=Ataques[atkanima[anima_key]],
+                    fps=Parametros_Ataque[atkanima[anima_key]],
+                    pct_continue=0.85)
+            elif proj == "-":
+                add(alvo, "iniciar_sofrergolpe", True,
+                    frames=Ataques[atkanima[anima_key]],
+                    fps=Parametros_Ataque[atkanima[anima_key]],
+                    pct_continue=0.85)
             else:
-                Alvo = _anim_inimigos[idx]
-                anima = "AnimaçãoAliado"
-            
-            if SubLog["Dano Final"] > 0:
-                TemDano = True
-                Miss = False
-                Dano = SubLog["Dano Final"]
-                if SubLog["Critico"]:
-                    cor = (255, 0, 0)
+                add(agente, "iniciar_disparo", True,
+                    alvo_pos=pos_mira,
+                    proj_img=Projeteis[proj],
+                    dur=vel, pct_continue=0.90)
+                add(alvo, "iniciar_sofrergolpe", True,
+                    frames=Ataques[atkanima[anima_key]],
+                    fps=Parametros_Ataque[atkanima[anima_key]],
+                    pct_continue=0.85)
+
+        # ====== pós-hit ======
+        if TemDano:
+            add(alvo, "iniciar_tomardano", True,
+                dur=max(0.12, Dano/100.0), freq=12.0, pct_continue=0.25)
+            add(alvo, "iniciar_cartucho", False,
+                cartucho_surf=Cartuchu(valor=Dano, cor=cor_dano, fonte=fonte, crit=(2 if crit else 5)))
+        elif Miss:
+            add(alvo, "iniciar_cartucho", False,
+                cartucho_surf=Cartuchu(valor="Miss", cor=cor_miss, fonte=fonte, crit=0))
+
+        return steps
+
+    # Constrói plano para REGISTROS pós-ataque (não bloqueante; encadeado por Continue)
+    def _build_plan_registros(regs, agente):
+        steps = []
+        if not regs:
+            return steps
+
+        from Codigo.Cenas.Batalha import Fontes
+        fonte = Fontes[18]
+
+        ups_total, downs_total = [], []
+        turnos_pos_total, turnos_neg_total = 0, 0
+        barreira_total = 0
+
+        for registro in regs:
+            # Cura
+            cura = int(registro.get("Cura", 0))
+            if cura > 0:
+                dur = 0.2 + cura * 0.005
+                steps.append({"actor": agente, "method": "iniciar_curar",
+                              "kwargs": {"dur": dur, "freq": 12.0, "pct_continue": 0.40},
+                              "wait": True, "armed": False})
+                steps.append({"actor": agente, "method": "iniciar_cartucho",
+                              "kwargs": {"cartucho_surf": Cartuchu(valor=cura, cor=(0,255,0), fonte=fonte, crit=0)},
+                              "wait": False, "armed": False})
+
+            # Barreira
+            barreira_total += int(registro.get("Barreira", 0))
+
+            # ups & downs (usa listas globais presumidas)
+            for a in atributos:
+                v = int(registro.get(a, 0))
+                if v > 0:
+                    ups_total.append((a, v))
+                elif v < 0:
+                    downs_total.append((a, v))
+
+            # turnos positivos/negativos (usa listas globais presumidas)
+            turnos_pos_total += sum(int(registro.get(e, 0)) for e in efeitos_positivos)
+            turnos_neg_total += sum(int(registro.get(e, 0)) for e in efeitos_negativos)
+
+        # Buffs (positivos)
+        if barreira_total > 0 or ups_total or turnos_pos_total > 0:
+            dur_b = 0.40 + len(ups_total)*0.12 + barreira_total*0.002 + turnos_pos_total*0.15
+            steps.append({"actor": agente, "method": "iniciar_buff",
+                          "kwargs": {"dur": dur_b, "qtd": 6, "area": (60, 40), "cor": (90,200,255),
+                                     "pct_continue": 0.50, "debuff": False},
+                          "wait": True, "armed": False})
+
+            if barreira_total > 0:
+                steps.append({"actor": agente, "method": "iniciar_cartucho",
+                              "kwargs": {"cartucho_surf": Cartuchu(valor=barreira_total, cor=(0,0,255), fonte=fonte, crit=0)},
+                              "wait": False, "armed": False})
+
+            for (atr, v) in ups_total:
+                steps.append({"actor": agente, "method": "iniciar_cartucho",
+                              "kwargs": {"cartucho_surf": Cartuchu(
+                                  valor=f"+{v} {atr}", cor=(255,190,210), fonte=fonte,
+                                  icon=Icones[atr], crit=3)},
+                              "wait": False, "armed": False})
+
+        # Debuffs (negativos)
+        if downs_total or turnos_neg_total > 0:
+            dur_d = 0.40 + len(downs_total)*0.12 + turnos_neg_total*0.15
+            steps.append({"actor": agente, "method": "iniciar_buff",
+                          "kwargs": {"dur": dur_d, "qtd": 6, "area": (60, 40), "cor": (255,120,120),
+                                     "pct_continue": 0.50, "debuff": True},
+                          "wait": True, "armed": False})
+
+            for (atr, v) in downs_total:
+                steps.append({"actor": agente, "method": "iniciar_cartucho",
+                              "kwargs": {"cartucho_surf": Cartuchu(
+                                  valor=f"{v} {atr}", cor=(255,190,210), fonte=fonte,
+                                  icon=Icones[atr], crit=3)},
+                              "wait": False, "armed": False})
+
+        return steps
+
+    # ===================== MOTOR DE AVANÇO (não bloqueante) ======================
+    # Permite "pular" steps já resolvidos na volta, sem repetir efeitos.
+    budget = 16  # limite de passos por chamada para evitar loop longo num único frame
+
+    while budget > 0:
+        budget -= 1
+
+        # terminou a rodada?
+        if st["i"] >= len(LogRodada):
+            parametros["Pronto"] = False
+            parametros["Rodou"] = True
+            parametros["Processando"] = False
+            parametros["LogAtual"] = []
+            parametros["LeitorState"] = {"i": 0, "j": 0, "step": 0, "plan": None, "waiting_on": None, "_cache": {}}
+            return
+
+        Log = LogRodada[st["i"]]
+        SubLogs = Log.get("SubLogs", [])
+
+        # terminou o Log atual?
+        if st["j"] >= len(SubLogs):
+            if st.get("_doing_regs") is None:
+                agente, _, _ = _resolve_agente(Log)
+                regs_steps = _build_plan_registros(Log.get("Registros", []), agente)
+                if regs_steps:
+                    st["plan"] = regs_steps
+                    st["step"] = 0
+                    st["_doing_regs"] = True
+                    continue
                 else:
-                    cor = (255, 255, 0)
-            elif SubLog["Acertou"]:
-                TemDano = False
-                Miss = False
-                cor = (255, 255, 255)
-            else:
-                TemDano = False
-                Miss = True
-                cor = (255, 255, 255)
-            
-            from Codigo.Cenas.Batalha import Fontes
-            fonte = Fontes[18]
-            
-            if atkanima["Contato"] == "A":
-                if TemDano:
-                    agenteLOG.iniciar_avanco(
-                        alvo_pos=Alvo.pos,
-                        dur=float(atkanima["Velocidade"]),
-                        gatilho_pct=0.5,
-                        on_gatilho=(
-                            lambda a=Alvo, anim=atkanima, anima_key=anima, Ataques_=Ataques, Params=Parametros_Ataque,
-                                dano=Dano, cor_=cor, fonte_=fonte, sub=SubLog: a.iniciar_sofrergolpe(
-                                frames=Ataques_[anim[anima_key]],
-                                fps=Params[anim[anima_key]],
-                                gatilho_pct=0.85,
-                                on_gatilho=(
-                                    lambda a2=a, d=dano, c=cor_, f=fonte_, sub2=sub: a2.iniciar_tomardano(
-                                        dur=d/100,
-                                        gatilho_pct=0.25,
-                                        on_gatilho=(lambda a3=a2, d2=d, c2=c, f2=f, sub3=sub2: a3.iniciar_cartucho(
-                                            cartucho_surf=Cartuchu(
-                                                valor=d2,
-                                                cor=c2,
-                                                fonte=f2,
-                                                crit=(2 if sub3["Critico"] else 5)
-                                            )
-                                        ))
-                                    )
-                                )
-                            )
-                        )
-                    )
-                elif Miss:
-                    agenteLOG.iniciar_avanco(
-                        alvo_pos=Alvo.pos,
-                        dur=float(atkanima["Velocidade"]),
-                        gatilho_pct=0.5,
-                        on_gatilho=(lambda a=Alvo, c=cor, f=fonte: a.iniciar_cartucho(
-                            cartucho_surf=Cartuchu(
-                                valor="Miss",
-                                cor=c,
-                                fonte=f,
-                                crit=0
-                            )
-                        ))
-                    )
-                else:
-                    agenteLOG.iniciar_avanco(
-                        alvo_pos=Alvo.pos,
-                        dur=float(atkanima["Velocidade"]),
-                        gatilho_pct=0.5,
-                        on_gatilho=(lambda a=Alvo, anim=atkanima, anima_key=anima, Ataques_=Ataques, Params=Parametros_Ataque: a.iniciar_sofrergolpe(
-                            frames=Ataques_[anim[anima_key]],
-                            fps=Params[anim[anima_key]]
-                        ))
-                    )
+                    st["_doing_regs"] = False
 
-            elif atkanima["Contato"] == "I":
-                if TemDano:
-                    agenteLOG.iniciar_investida(
-                        alvo_pos=Alvo.pos,
-                        dur=float(atkanima["Velocidade"]),
-                        gatilho_pct=0.5,
-                        on_gatilho=(lambda a=Alvo, anim=atkanima, anima_key=anima, Ataques_=Ataques, Params=Parametros_Ataque,
-                                        dano=Dano, cor_=cor, fonte_=fonte, sub=SubLog: a.iniciar_sofrergolpe(
-                            frames=Ataques_[anim[anima_key]],
-                            fps=Params[anim[anima_key]],
-                            gatilho_pct=0.85,
-                            on_gatilho=(lambda a2=a, d=dano, c=cor_, f=fonte_, sub2=sub: a2.iniciar_tomardano(
-                                dur=d/100,
-                                gatilho_pct=0.25,
-                                on_gatilho=(lambda a3=a2, d2=d, c2=c, f2=f, sub3=sub2: a3.iniciar_cartucho(
-                                    cartucho_surf=Cartuchu(
-                                        valor=d2,
-                                        cor=c2,
-                                        fonte=f2,
-                                        crit=(2 if sub3["Critico"] else 5)
-                                    )
-                                ))
-                            ))
-                        ))
-                    )
-                elif Miss:
-                    agenteLOG.iniciar_investida(
-                        alvo_pos=Alvo.pos,
-                        dur=float(atkanima["Velocidade"]),
-                        gatilho_pct=0.5,
-                        on_gatilho=(lambda a=Alvo, c=cor, f=fonte: a.iniciar_cartucho(
-                            cartucho_surf=Cartuchu(
-                                valor="Miss",
-                                cor=c,
-                                fonte=f,
-                                crit=0
-                            )
-                        ))
-                    )
-                else:
-                    agenteLOG.iniciar_investida(
-                        alvo_pos=Alvo.pos,
-                        dur=float(atkanima["Velocidade"]),
-                        gatilho_pct=0.5,
-                        on_gatilho=(lambda a=Alvo, anim=atkanima, anima_key=anima, Ataques_=Ataques, Params=Parametros_Ataque: a.iniciar_sofrergolpe(
-                            frames=Ataques_[anim[anima_key]],
-                            fps=Params[anim[anima_key]]
-                        ))
-                    )
+            # fim do Log → próximo
+            st["i"] += 1
+            st["j"] = 0
+            st["step"] = 0
+            st["plan"] = None
+            st["_cache"].clear()
+            st.pop("_doing_regs", None)
+            continue
 
-            else:
-                if atkanima["Projetil"] == "fluxo":
-                    if TemDano:
-                        agenteLOG.iniciar_disparo(
-                            alvo_pos=Alvo.pos,
-                            dur=float(atkanima["Velocidade"]),
-                            gatilho_pct=0.9,
-                            on_gatilho=(lambda a=Alvo, anim=atkanima, anima_key=anima, Ataques_=Ataques, Params=Parametros_Ataque,
-                                            dano=Dano, cor_=cor, fonte_=fonte, sub=SubLog: a.iniciar_sofrergolpe(
-                                frames=Ataques_[anim[anima_key]],
-                                fps=Params[anim[anima_key]],
-                                gatilho_pct=0.85,
-                                on_gatilho=(lambda a2=a, d=dano, c=cor_, f=fonte_, sub2=sub: a2.iniciar_tomardano(
-                                    dur=d/100,
-                                    gatilho_pct=0.25,
-                                    on_gatilho=(lambda a3=a2, d2=d, c2=c, f2=f, sub3=sub2: a3.iniciar_cartucho(
-                                        cartucho_surf=Cartuchu(
-                                            valor=d2,
-                                            cor=c2,
-                                            fonte=f2,
-                                            crit=(2 if sub3["Critico"] else 5)
-                                        )
-                                    ))
-                                ))
-                            ))
-                        )
-                    elif Miss:
-                        agenteLOG.iniciar_disparo(
-                            alvo_pos=Alvo.pos,
-                            dur=float(atkanima["Velocidade"]),
-                            gatilho_pct=0.9,
-                            on_gatilho=(lambda a=Alvo, c=cor, f=fonte: a.iniciar_cartucho(
-                                cartucho_surf=Cartuchu(
-                                    valor="Miss",
-                                    cor=c,
-                                    fonte=f,
-                                    crit=0
-                                )
-                            ))
-                        )
-                    else:
-                        agenteLOG.iniciar_disparo(
-                            alvo_pos=Alvo.pos,
-                            dur=float(atkanima["Velocidade"]),
-                            gatilho_pct=0.9,
-                            on_gatilho=(lambda a=Alvo, anim=atkanima, anima_key=anima, Ataques_=Ataques, Params=Parametros_Ataque: a.iniciar_sofrergolpe(
-                                frames=Ataques_[anim[anima_key]],
-                                fps=Params[anim[anima_key]]
-                            ))
-                        )
+        # ---------- prepara cache do SubLog (1x) ----------
+        if not st["plan"]:
+            SubLog = SubLogs[st["j"]]
 
-                elif atkanima["Projetil"] == "-":
-                    if TemDano:
-                        Alvo.iniciar_sofrergolpe(
-                            frames=Ataques[atkanima[anima]],
-                            fps=Parametros_Ataque[atkanima[anima]],
-                            gatilho_pct=0.85,
-                            on_gatilho=(lambda a=Alvo, d=Dano, c=cor, f=fonte, sub=SubLog: a.iniciar_tomardano(
-                                dur=d/100,
-                                gatilho_pct=0.25,
-                                on_gatilho=(lambda a2=a, d2=d, c2=c, f2=f, sub2=sub: a2.iniciar_cartucho(
-                                    cartucho_surf=Cartuchu(
-                                        valor=d2,
-                                        cor=c2,
-                                        fonte=f2,
-                                        crit=(2 if sub2["Critico"] else 5)
-                                    )
-                                ))
-                            ))
-                        )
-                    elif Miss:
-                        Alvo.iniciar_cartucho(
-                            cartucho_surf=Cartuchu(
-                                valor="Miss",
-                                cor=cor,
-                                fonte=fonte,
-                                crit=0
-                            )
-                        )
-                    else:
-                        Alvo.iniciar_sofrergolpe(
-                            frames=Ataques[atkanima[anima]],
-                            fps=Parametros_Ataque[atkanima[anima]]
-                        )
-                else:
-                    if TemDano:
-                        agenteLOG.iniciar_disparo(
-                            alvo_pos=Alvo.pos,
-                            proj_img=Projeteis[atkanima["Projetil"]],
-                            dur=float(atkanima["Velocidade"]),
-                            gatilho_pct=0.9,
-                            on_gatilho=(lambda a=Alvo, anim=atkanima, anima_key=anima, Ataques_=Ataques, Params=Parametros_Ataque,
-                                            dano=Dano, cor_=cor, fonte_=fonte, sub=SubLog: a.iniciar_sofrergolpe(
-                                frames=Ataques_[anim[anima_key]],
-                                fps=Params[anim[anima_key]],
-                                gatilho_pct=0.85,
-                                on_gatilho=(lambda a2=a, d=dano, c=cor_, f=fonte_, sub2=sub: a2.iniciar_tomardano(
-                                    dur=d/100,
-                                    gatilho_pct=0.25,
-                                    on_gatilho=(lambda a3=a2, d2=d, c2=c, f2=f, sub3=sub2: a3.iniciar_cartucho(
-                                        cartucho_surf=Cartuchu(
-                                            valor=d2,
-                                            cor=c2,
-                                            fonte=f2,
-                                            crit=(2 if sub3["Critico"] else 5)
-                                        )
-                                    ))
-                                ))
-                            ))
-                        )
-                    elif Miss:
-                        agenteLOG.iniciar_disparo(
-                            alvo_pos=Alvo.pos,
-                            proj_img=Projeteis[atkanima["Projetil"]],
-                            dur=float(atkanima["Velocidade"]),
-                            gatilho_pct=0.9,
-                            on_gatilho=(lambda a=Alvo, c=cor, f=fonte: a.iniciar_cartucho(
-                                cartucho_surf=Cartuchu(
-                                    valor="Miss",
-                                    cor=c,
-                                    fonte=f,
-                                    crit=0
-                                )
-                            ))
-                        )
-                    else:
-                        agenteLOG.iniciar_disparo(
-                            alvo_pos=Alvo.pos,
-                            proj_img=Projeteis[atkanima["Projetil"]],
-                            dur=float(atkanima["Velocidade"]),
-                            gatilho_pct=0.9,
-                            on_gatilho=(lambda a=Alvo, anim=atkanima, anima_key=anima, Ataques_=Ataques, Params=Parametros_Ataque: a.iniciar_sofrergolpe(
-                                frames=Ataques_[anim[anima_key]],
-                                fps=Params[anim[anima_key]]
-                            ))
-                        )
+            agente, idx_ag, pla_ag   = _resolve_agente(Log)
+            alvo,   idx_alvo, pla_alvo = _resolve_alvo(SubLog)
 
-            while any(_anima_.acao_em_andamento() for _anima_ in _anim_aliados + _anim_inimigos):
-                pass
+            atkanimadf = dfa[dfa["Nome"] == Log["Code Ataque"]]
+            atkanima = atkanimadf.iloc[0].to_dict()
+            anima_key = "Animação" if (pla_alvo == parametros["Player"]) else "AnimaçãoAliado"
 
-            if "Registros" in SubLog:
-                for registro in SubLog["Registros"]:
-                    ag_str = Log["Agente"].replace(" ", "")
-                    idx_s, pla_s = ag_str.split("/")
-                    idx, pla = int(idx_s), int(pla_s)
-                    agente = _anim_aliados[idx] if pla == parametros["Player"] else _anim_inimigos[idx]
+            pos_mira = _slot_target(Log)
 
-                    # --- valores brutos do registro ---
-                    qtd_cura     = registro.get("Cura", 0)
-                    qtd_barreira = registro.get("Barreira", 0)
+            st["_cache"] = {
+                "agente": agente, "alvo": alvo,
+                "idx_ag": idx_ag, "pla_ag": pla_ag,
+                "idx_alvo": idx_alvo, "pla_alvo": pla_alvo,
+                "atkanima": atkanima, "anima_key": anima_key,
+                "pos_mira": pos_mira
+            }
 
-                    ups   = [(a, registro[a]) for a in atributos if a in registro and registro[a] > 0]
-                    downs = [(a, registro[a]) for a in atributos if a in registro and registro[a] < 0]
+            st["plan"] = _build_plan(Log, SubLog, st["_cache"])
+            st["step"]  = 0
 
-                    turnos_pos = sum(registro[e] for e in efeitos_positivos if e in registro)
-                    turnos_neg = sum(registro[e] for e in efeitos_negativos if e in registro)
+        # ---------- executar/avançar um step ----------
+        plan = st["plan"]
+        k = st["step"]
 
-                    # --- AÇÕES (cura, buff, debuff) ---
-                    acoes = []
+        if k >= len(plan):
+            # terminou SubLog → próximo
+            st["j"] += 1
+            st["step"] = 0
+            st["plan"] = None
+            st["_cache"].clear()
+            st["waiting_on"] = None
+            continue
 
-                    if qtd_cura > 0:
-                        dur = 0.2 + qtd_cura * 0.005
-                        acoes.append(lambda on_done=None, a=agente, d=dur, val=qtd_cura:
-                            a.iniciar_curar(
-                                dur=d,
-                                on_gatilho=lambda a2=a, v=val: a2.iniciar_cartucho(
-                                    cartucho_surf=Cartuchu(valor=v, cor=(0,255,0), fonte=fonte, crit=0),
-                                    on_gatilho=(lambda: on_done() if on_done else None)
-                                )
-                            )
-                        )
+        step = plan[k]
 
-                    if qtd_barreira > 0 or ups or turnos_pos > 0:
-                        dur = 0.4 + len(ups)*0.18 + qtd_barreira*0.002 + turnos_pos*0.15
-                        acoes.append(lambda on_done=None, a=agente, d=dur, ups=ups, qb=qtd_barreira:
-                            a.iniciar_buff(
-                                dur=d, debuff=False,
-                                on_gatilho=lambda a2=a: (
-                                    a2.iniciar_cartucho(cartucho_surf=Cartuchu(valor=qb, cor=(0,0,255), fonte=fonte, crit=0)) if qb>0 else None,
-                                    [a2.iniciar_cartucho(
-                                        cartucho_surf=Cartuchu(
-                                            valor=f"+{v} {atr}",
-                                            cor=(255,190,210),  # rosa claro
-                                            fonte=fonte,
-                                            icon=Icones[atr],
-                                            crit=3
-                                        )
-                                    ) for atr,v in ups],
-                                    on_done() if on_done else None
-                                )
-                            )
-                        )
+        if not step["armed"]:
+            result = _start_step(step)
+            if result == "WAIT":
+                return  # não bloqueia o loop principal
+            st["step"] += 1
+            continue
 
-                    if downs or turnos_neg > 0:
-                        dur = 0.4 + len(downs)*0.18 + turnos_neg*0.15
-                        acoes.append(lambda on_done=None, a=agente, d=dur, downs=downs:
-                            a.iniciar_buff(
-                                dur=d, debuff=True,
-                                on_gatilho=lambda a2=a: (
-                                    [a2.iniciar_cartucho(
-                                        cartucho_surf=Cartuchu(
-                                            valor=f"{v} {atr}",
-                                            cor=(255,190,210),
-                                            fonte=fonte,
-                                            icon=Icones[atr],
-                                            crit=3
-                                        )
-                                    ) for atr,v in downs],
-                                    on_done() if on_done else None
-                                )
-                            )
-                        )
+        if step.get("wait", True):
+            actor = step["actor"]
+            if not actor.Continue:
+                st["waiting_on"] = actor
+                return
+            st["waiting_on"] = None
+            st["step"] += 1
+            continue
+        else:
+            st["step"] += 1
+            continue
 
-                    # --- Encadeia tudo (cura -> buff -> debuff) ---
-                    def encadear(lista):
-                        on_done = None
-                        for st in reversed(lista):
-                            prev = on_done
-                            on_done = (lambda st_=st, cb=prev: (lambda: st_(cb)))
-                        if on_done: on_done()
-
-                    encadear(acoes)
-
-    parametros["Pronto"] = False
-    parametros["LogAtual"] = []

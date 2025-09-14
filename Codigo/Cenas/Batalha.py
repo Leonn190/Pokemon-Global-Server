@@ -71,10 +71,9 @@ EstadoBotoesAcao = {}           # estados por botão principal (seleção de aç
 EstadoBotoesApagar = {}         # estados por botão X (apagar ação)
 
 def PainelTesteAnimacoes(tela, eventos):
-    import pygame
 
     # alvo: primeiro slot da direita (inimigos)
-    alvo_pos = _slots_direita[0] if _slots_direita else (320, 200)
+    alvo_pos = (1500, 450)
 
     # primeiro aliado (animador)
     try:
@@ -90,20 +89,20 @@ def PainelTesteAnimacoes(tela, eventos):
     pad, bw, bh, gap = 6, 160, 26, 6
     panel_x, panel_y = 8, 8
     botoes = [
-        ("T Tomar dano", lambda: aliado_anim.iniciar_tomardano(dur=0.45, freq=14.0)),
-        ("A Avanço",     lambda: aliado_anim.iniciar_avanco(alvo_pos=alvo_pos, altura=28, dur=0.50)),
-        ("I Investida",  lambda: aliado_anim.iniciar_investida(alvo_pos=alvo_pos, dur=0.36)),
-        ("P Disparo",    lambda: aliado_anim.iniciar_disparo(alvo_pos=alvo_pos, dur=0.60, gatilho_pct=0.55)),
+        ("T Tomar dano", lambda: aliado_anim.iniciar_tomardano(dur=0.45, freq=14.0, pct_continue=0.6)),
+        ("A Avanço",     lambda: aliado_anim.iniciar_avanco(alvo_pos=alvo_pos, altura=280, dur=0.50, pct_continue=0.5)),
+        ("I Investida",  lambda: aliado_anim.iniciar_investida(alvo_pos=alvo_pos, dur=0.36, pct_continue=0.5)),
+        ("P Disparo",    lambda: aliado_anim.iniciar_disparo(alvo_pos=alvo_pos, dur=0.60, pct_continue=0.55)),
         # SofrerGolpe com FRAMES = Aerodactyl
-        ("G SofrerGolpe", lambda: aliado_anim.iniciar_sofrergolpe(frames=FRAMES_AERO, fps=20, gatilho_pct=0.70)),
-        # Cartucho simples para teste (usando o nome do pokémon)
+        ("G SofrerGolpe", lambda: aliado_anim.iniciar_sofrergolpe(frames=FRAMES_AERO, fps=20, pct_continue=0.70)),
+        # Cartucho simples para teste
         ("C Cartucho",   lambda: aliado_anim.iniciar_cartucho(
             cartucho_surf=Cartuchu(valor=33, cor=(255, 230, 90), fonte=FONTE, crit=3),
-            dur=0.9, gatilho_pct=0.5
+            dur=0.9, pct_continue=0.5
         )),
-        ("B Buff",       lambda: aliado_anim.iniciar_buff(dur=0.9, qtd=6, debuff=False)),
-        ("D Debuff",     lambda: aliado_anim.iniciar_buff(dur=0.9, qtd=6, debuff=True)),
-        ("R Curar",      lambda: aliado_anim.iniciar_curar(dur=0.50, freq=12.0)),
+        ("B Buff",       lambda: aliado_anim.iniciar_buff(dur=0.9, qtd=6, debuff=False, pct_continue=0.6)),
+        ("D Debuff",     lambda: aliado_anim.iniciar_buff(dur=0.9, qtd=6, debuff=True,  pct_continue=0.6)),
+        ("R Curar",      lambda: aliado_anim.iniciar_curar(dur=0.50, freq=12.0, pct_continue=0.6)),
     ]
 
     linhas = len(botoes)
@@ -162,7 +161,7 @@ def Transformador(acao):
 def VerificaçãoCombate(parametros):
     if parametros.get("BatalhaSimples"):
         while parametros["Running"]:
-            if parametros.get("Pronto"):
+            if parametros.get("Pronto") and not parametros.get("Rodou"):
                 parametros["Processando"] = True
                 JogadaIA = Ia.MontarJogada()
 
@@ -173,9 +172,8 @@ def VerificaçãoCombate(parametros):
                 
                 log, partida_dic = receber_e_executar_jogadas(parametros["Sala"], LogPl, LogIA)
                 parametros["PartidaDic"] = partida_dic
-                
-                LeitorLogs(log, parametros, _anim_aliados, _anim_inimigos, Outros["Ataques"], Outros["Projeteis"], Icones)
-            
+                parametros["LogProcessar"] = log
+
             else:
                 time.sleep(1.5)
 
@@ -1233,7 +1231,7 @@ def TelaHudBatalha(tela, estados, eventos, parametros):
     else:
         txt = "Pronto!"
 
-    Botao(tela, txt, (1660,1020,260,60),Texturas["amarelo"],(0,0,0),(240,240,240),lambda: parametros.update({"Pronto": True}), Fontes[35], BG, eventos)
+    Botao(tela, txt, (1660,1020,260,60),Texturas["amarelo"],(0,0,0),(240,240,240),lambda: parametros.update({"Pronto": True, "Rodou": False}), Fontes[35], BG, eventos)
     
     if parametros["AlvosSelecionados"] is not [] and parametros["AtacanteSelecionado"] is not None and parametros["MovimentoSelecionado"] is not None:
         if parametros["AliadoSelecionado"]["Energia"] - parametros["CustoAtualEnergia"] >= -5:
@@ -1331,6 +1329,11 @@ def BatalhaTelaPadrao(tela, estados, eventos, parametros):
 
     Botao_Tecla("esc",lambda: parametros.update({"Tela": BatalhaTelaOpçoes}))
 
+    if parametros["Processando"]:
+        if parametros["LogProcessar"]:
+                LeitorLogs(parametros["LogProcessar"], parametros, _anim_aliados, _anim_inimigos,
+                _slots_esquerda, _slots_direita, Outros["Ataques"], Outros["Projeteis"], Icones)
+
 def BatalhaLoop(tela, relogio, estados, config, info):
     global Cores, Fontes, Texturas, Fundos, Outros, Pokemons, Estruturas, Equipaveis, Consumiveis, Animaçoes, Icones, Player, Ia, dt
     global _anim_aliados, _anim_inimigos, AliadoSelecionadoCache, InimigoSelecionadoCache, Acao_surface_cache
@@ -1387,6 +1390,8 @@ def BatalhaLoop(tela, relogio, estados, config, info):
             "Config": config,
             "Running": True,
             "Processando": False,
+            "Rodou": False,
+            "LogProcessar": None,
             "Player": 1
         })
 
