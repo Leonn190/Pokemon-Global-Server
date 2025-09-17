@@ -174,6 +174,7 @@ def VerificaçãoCombate(parametros):
                 parametros["PartidaDic"] = partida_dic
                 parametros["LogProcessar"] = log
 
+                parametros["Rodou"] = True
             else:
                 time.sleep(1.5)
 
@@ -1422,6 +1423,7 @@ def BatalhaLoop(tela, relogio, estados, config, info):
 
     while estados["Batalha"]:
         dt = relogio.get_time() / 1000.0
+        parametros["dt"] = dt
 
         # sincroniza aumentos externos (ex.: clique no botão "Fugir" somou só no inteiro)
         fuga_int = int(parametros.get("Fuga", 0))

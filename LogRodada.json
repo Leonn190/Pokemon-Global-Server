@@ -1,32 +1,32 @@
 [
-    {
-        "Agente": "0/2",
-        "Code Ataque": "Barragem",
-        "Player": 2,
-        "Recuo": false,
-        "Alvos Aliados": [],
-        "Alvos Inimigos": [],
-        "AlvosBruto": [],
-        "AlvificaçãoBruta": "sem alvo",
-        "Tipo": "normal",
-        "Estilo": "s",
-        "Assertividade": 100.0,
-        "SubLogs": []
-    },
-    {
-        "Agente": "0/1",
-        "Code Ataque": "Manobra Evasiva",
-        "Player": 1,
-        "Recuo": false,
-        "Alvos Aliados": [],
-        "Alvos Inimigos": [],
-        "AlvosBruto": [
-            "I7"
-        ],
-        "AlvificaçãoBruta": "inimigo",
-        "Tipo": "normal",
-        "Estilo": "n",
-        "Assertividade": 100.0,
-        "SubLogs": []
-    }
+  {
+    "Agente": "0/2",
+    "Code Ataque": "Provocar",
+    "Player": 2,
+    "Recuo": false,
+    "Alvos Aliados": [],
+    "Alvos Inimigos": [],
+    "AlvosBruto": [],
+    "AlvificaçãoBruta": "sem alvo",
+    "Tipo": "normal",
+    "Estilo": "s",
+    "Assertividade": 100.0,
+    "SubLogs": []
+  },
+  {
+    "Agente": "0/1",
+    "Code Ataque": "Estocada",
+    "Player": 1,
+    "Recuo": false,
+    "Alvos Aliados": [],
+    "Alvos Inimigos": [],
+    "AlvosBruto": [
+      "I3"
+    ],
+    "AlvificaçãoBruta": "inimigo",
+    "Tipo": "normal",
+    "Estilo": "n",
+    "Assertividade": 100.0,
+    "SubLogs": []
+  }
 ]

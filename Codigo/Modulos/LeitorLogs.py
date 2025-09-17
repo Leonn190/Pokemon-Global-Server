@@ -132,202 +132,275 @@ atributos = [
     "Asse"
 ]
 
-def LeitorLogs(LogRodada, parametros, _anim_aliados, _anim_inimigos,
+def LeitorLogs(LogRodada, parametros, 
+               _anim_aliados, _anim_inimigos,
                _slots_esquerda, _slots_direita, Ataques, Projeteis, Icones):
-    """
-    Leitor de logs NÃO bloqueante para rodar DENTRO do loop principal.
-    Avança passo-a-passo com base em Animator.Continue da ÚLTIMA animação armada.
-    Se não puder avançar agora, apenas retorna (na próxima chamada continua de onde parou).
+    import time, json
+    from Codigo.Cenas.Batalha import Fontes
 
-    Estado incremental é salvo em parametros["LeitorState"].
-    """
+    # -------- salvar rodada em JSON (debug) --------
+    try:
+        with open("LogRodada.json", "w", encoding="utf-8") as f:
+            json.dump(LogRodada, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print("[LEITOR] Falha ao salvar LogRodada.json:", e)
 
-    # ---------- salvar log (debug) ----------
-    with open("LogRodada.json", "w", encoding="utf-8") as f:
-        json.dump(LogRodada, f, ensure_ascii=False, indent=4)
-
-    # normaliza listas de animadores (somente os objetos)
+    # ---------- animadores ----------
     aliados  = [an for an, _ in _anim_aliados]
     inimigos = [an for an, _ in _anim_inimigos]
+    todos_anim = aliados + inimigos
 
-    # ---------- estado incremental ----------
+    # ---------- estado ----------
     st = parametros.setdefault("LeitorState", {
-        "i": 0,          # índice do Log na rodada
-        "j": 0,          # índice do SubLog dentro do Log atual
-        "step": 0,       # passo atual dentro do "plano" do SubLog
-        "plan": None,    # lista de passos do SubLog atual
-        "waiting_on": None,
-        "_cache": {}
+        "i": 0, "j": 0, "step": 0, "plan": None, "waiting_on": None, "_cache": {}
     })
 
-    # helpers
-    def _find_anim_by_id(pid, player_side):
-        if player_side == parametros["Player"]:
-            for anim in aliados:
-                if anim.pokemon["ID"] == pid:
-                    return anim
+    # cooldown entre logs
+    if st.get("_cooldown_until"):
+        if time.time() < st["_cooldown_until"]:
+            return
         else:
-            for anim in inimigos:
-                if anim.pokemon["ID"] == pid:
-                    return anim
+            st.pop("_cooldown_until", None)
+
+    # ---------- helpers (lado/pos) ----------
+    def _poke_dict(anim):
+        d = getattr(anim, "Pokemon", None)
+        return d if isinstance(d, dict) else getattr(anim, "pokemon", {})
+
+    def _other_side(s): return 2 if s == 1 else 1
+    PLAYER_SIDE = int(parametros.get("Player", 1))
+
+    # listas de referência para checar lado por equipe
+    equipe_aliada  = parametros.get("EquipeAliada", []) or []
+    equipe_inimiga = parametros.get("EquipeInimiga", []) or []
+
+    aliada_ids  = {int(p.get("ID")) for p in equipe_aliada  if isinstance(p, dict) and "ID" in p}
+    inimiga_ids = {int(p.get("ID")) for p in equipe_inimiga if isinstance(p, dict) and "ID" in p}
+
+    def _anim_side(anim):
+        """Resolve 1/2 usando membership em EquipeAliada/EquipeInimiga (identidade ou ID)."""
+        p = _poke_dict(anim)
+        pid = p.get("ID")
+        if p and p in equipe_aliada:
+            return PLAYER_SIDE
+        if p and p in equipe_inimiga:
+            return _other_side(PLAYER_SIDE)
+        if pid is not None:
+            try: pid_int = int(pid)
+            except: pid_int = pid
+            if pid_int in aliada_ids:
+                return PLAYER_SIDE
+            if pid_int in inimiga_ids:
+                return _other_side(PLAYER_SIDE)
+        return PLAYER_SIDE if anim in aliados else _other_side(PLAYER_SIDE)
+
+    def _pos_code_view_from_anim(anim):
+        """A# / I# no referencial local a partir de Pokemon['Pos'] numérico + lado do animador."""
+        p = _poke_dict(anim)
+        pos_val = p.get("Pos", None)
+        try:
+            idx = int(str(pos_val).strip())
+        except Exception:
+            return None
+        prefix = "A" if _anim_side(anim) == PLAYER_SIDE else "I"
+        return f"{prefix}{idx}"
+
+    def _find_anim_by_slotcode_view(slot_code_view):
+        code = str(slot_code_view).strip().upper()
+        for anim in todos_anim:
+            if _pos_code_view_from_anim(anim) == code:
+                return anim
+        return None
+
+    def _code_from_log_to_view(code_log, log_player):
+        """Converte I#/A# do LOG para o referencial LOCAL, usando Log['Player'] e parametros['Player']."""
+        code_log = str(code_log).strip().upper()
+        if int(log_player) == PLAYER_SIDE:
+            return code_log
+        if code_log.startswith("I"): return "A" + code_log[1:]
+        if code_log.startswith("A"): return "I" + code_log[1:]
+        return code_log
+
+    def _slot_center(Log, slot_code_log):
+        """Centro geométrico do retângulo do slot no referencial do LOG (para avanço/projétil)."""
+        code = str(slot_code_log).strip().upper()
+        lado = code[0]
+        idx_slot = (int(code[1:]) if len(code) > 1 else 1) - 1  # 1-based → 0-based
+        if lado == "I":
+            lista = _slots_direita if int(Log["Player"]) == PLAYER_SIDE else _slots_esquerda
+        else:
+            lista = _slots_esquerda if int(Log["Player"]) == PLAYER_SIDE else _slots_direita
+        idx_slot = max(0, min(idx_slot, len(lista) - 1))
+        r = lista[idx_slot]
+        return (int(r.centerx), int(r.centery))
+
+    def _sublog_by_id_side(SubLogs):
+        m = {}
+        for sl in SubLogs:
+            idx_s, pla_s = str(sl["Alvo"]).replace(" ", "").split("/")
+            m[(int(idx_s), int(pla_s))] = sl
+        return m
+
+    def _build_sublog_maps(Log):
+        """
+        id_to_sublog: (id, side) -> SubLog
+        slot_to_sublog: ViewSlotCode('A#'/'I#') -> SubLog (via animadores atuais)
+        """
+        id_map = _sublog_by_id_side(Log.get("SubLogs", []))
+        slot_map = {}
+        for anim in todos_anim:
+            p = _poke_dict(anim)
+            pid = p.get("ID")
+            if pid is None:
+                continue
+            side = _anim_side(anim)
+            sl = id_map.get((int(pid), int(side)))
+            pos_code_view = _pos_code_view_from_anim(anim)
+            if sl is not None and pos_code_view:
+                slot_map[pos_code_view] = sl
+        return id_map, slot_map
+
+    def _find_anim_by_id(pid, player_side):
+        pool = aliados if player_side == PLAYER_SIDE else inimigos
+        for anim in pool:
+            p = _poke_dict(anim)
+            if p.get("ID") == pid:
+                return anim
         return None
 
     def _resolve_agente(Log):
-        ag_str = Log["Agente"].replace(" ", "")
-        idx_s, pla_s = ag_str.split("/")
+        idx_s, pla_s = str(Log["Agente"]).replace(" ", "").split("/")
         idx_ag, pla_ag = int(idx_s), int(pla_s)
-        agente = _find_anim_by_id(idx_ag, pla_ag)
-        return agente, idx_ag, pla_ag
+        return _find_anim_by_id(idx_ag, pla_ag), idx_ag, pla_ag
 
-    def _resolve_alvo(SubLog):
-        ag_str = SubLog["Alvo"].replace(" ", "")
-        idx_s, pla_s = ag_str.split("/")
-        idx_alvo, pla_alvo = int(idx_s), int(pla_s)
-        alvo = _find_anim_by_id(idx_alvo, pla_alvo)
-        return alvo, idx_alvo, pla_alvo
-
-    def _slot_target(Log):
-        pos_mira = None
-        alvos_brutos = Log.get("AlvosBruto") or []
-        if alvos_brutos:
-            cod = str(alvos_brutos[0]).strip().upper()  # ex.: "I5" / "A2"
-            lado = cod[0] if cod else "I"
-            try:
-                idx_slot = int(cod[1:])  # sem -1 (sua regra)
-            except:
-                idx_slot = 0
-
-            # "I" e "A" relativos ao Player do LOG
-            if lado == "I":
-                lista_slots = _slots_direita if Log["Player"] == parametros["Player"] else _slots_esquerda
-            else:  # 'A'
-                lista_slots = _slots_esquerda if Log["Player"] == parametros["Player"] else _slots_direita
-
-            if 0 <= idx_slot < len(lista_slots):
-                srect = lista_slots[idx_slot]
-                pos_mira = (int(srect.centerx), int(srect.centery))
-        return pos_mira
-
-    # Passo executável atômico
+    # passo executável
     def _start_step(step):
-        """
-        step = {
-          "actor": Animator,
-          "method": "iniciar_...",
-          "kwargs": {...},         # inclui pct_continue quando aplicável
-          "wait": True/False,      # se True, aguardamos actor.Continue
-          "armed": False/True
-        }
-        """
-        actor = step["actor"]
-        meth  = step["method"]
-        kwargs = step.get("kwargs", {})
-        getattr(actor, meth)(**kwargs)     # dispara 1x
+        actor = step.get("actor"); meth = step.get("method"); kwargs = step.get("kwargs", {})
+        if actor is None or meth is None:
+            return "SKIP"
+        fn = getattr(actor, meth, None)
+        if fn is None:
+            return "SKIP"
+        try:
+            fn(**kwargs)
+        except Exception as e:
+            print(f"[LEITOR] Erro executando {meth}: {e}")
+            return "SKIP"
         step["armed"] = True
         if step.get("wait", True):
             st["waiting_on"] = actor
             return "WAIT"
         return "GO"
 
-    # Constrói o plano (lista de passos) para um SubLog
-    def _build_plan(Log, SubLog, cache):
-        agente   = cache["agente"]
-        alvo     = cache["alvo"]
-        atkanima = cache["atkanima"]
+    # ---------- plano por SLOT BRUTO ----------
+    def _build_plan_for_slot(Log, slot_index, cache):
+        agente    = cache["agente"]
+        atkanima  = cache["atkanima"]
         anima_key = cache["anima_key"]
 
-        pos_mira = cache["pos_mira"] or alvo.pos
+        slot_code_log  = str(cache["alvos_brutos"][slot_index]).strip().upper()
+        slot_code_view = _code_from_log_to_view(slot_code_log, Log["Player"])
+        pos_mira       = _slot_center(Log, slot_code_log)
 
-        # estado do sublog
-        Dano = int(SubLog["Dano Final"])
-        crit = bool(SubLog["Critico"])
-        acertou = bool(SubLog["Acertou"])
-        TemDano = Dano > 0
-        Miss    = not acertou
+        # DEBUG: listar animadores com pos normalizada + info do slot
+        anim_pos_list = []
+        for anim in todos_anim:
+            p = _poke_dict(anim)
+            name = p.get("Nome", "?")
+            pid  = p.get("ID", "?")
+            anim_pos_list.append(f"{name}#{pid}@{_pos_code_view_from_anim(anim)}")
+        print(f"[LEITOR][HIT-DEBUG]   AnimPos: {', '.join(anim_pos_list)}")
+        print(f"[LEITOR][HIT-DEBUG] LogSlot={slot_code_log} (LogPlayer={Log['Player']}) → ViewSlot={slot_code_view} @ {pos_mira}")
 
-        from Codigo.Cenas.Batalha import Fontes
-        fonte = Fontes[18]
-        cor_dano = (255, 0, 0) if crit else (255, 255, 0)
-        cor_miss = (255, 255, 255)
+        # alvo real + SubLog desse slot (no view local)
+        alvo_real   = _find_anim_by_slotcode_view(slot_code_view)
+        alvo_sublog = cache["slot_to_sublog"].get(slot_code_view)
 
-        vel = float(atkanima["Velocidade"])
+        if alvo_real is None:
+            print(f"[LEITOR][HIT-DEBUG]   → SEM pokémon no ViewSlot {slot_code_view}.")
+        else:
+            p = _poke_dict(alvo_real)
+            pid = p.get("ID", "?")
+            side = _anim_side(alvo_real)
+            print(f"[LEITOR][HIT-DEBUG]   → alvo_real: {p.get('Nome','?')}#{pid} side={side} "
+                  f"has_sublog={bool(alvo_sublog)}")
+
+        # frames/fps do golpe visual
+        anim_code = atkanima.get(anima_key) if anima_key else None
+        frames    = Ataques.get(anim_code) if anim_code else None
+        fps       = Parametros_Ataque.get(anim_code, 24)
+
+        # contato/projétil
+        contato = atkanima.get("Contato", "-")
+        proj    = atkanima.get("Projetil", "-")
+        if atkanima["Velocidade"] != "-":
+            vel     = float(atkanima.get("Velocidade", 0.4))
+        else:
+            vel = 0.1
 
         steps = []
-
         def add(actor, method, wait=True, **kwargs):
             steps.append({"actor": actor, "method": method, "kwargs": kwargs, "wait": wait, "armed": False})
 
-        # ====== tipo de contato / projétil ======
-        contato = atkanima["Contato"]
-        proj    = atkanima["Projetil"]
-
+        # 1) deslocamento do agente
         if contato == "A":
-            add(agente, "iniciar_avanco", True,
-                alvo_pos=pos_mira, dur=vel, pct_continue=0.50)
-            add(alvo, "iniciar_sofrergolpe", True,
-                frames=Ataques[atkanima[anima_key]],
-                fps=Parametros_Ataque[atkanima[anima_key]],
-                pct_continue=0.85)
-
+            add(agente, "iniciar_avanco", True,  alvo_pos=pos_mira, dur=vel, pct_continue=0.55)
         elif contato == "I":
-            add(agente, "iniciar_investida", True,
-                alvo_pos=pos_mira, dur=vel, pct_continue=0.50)
-            add(alvo, "iniciar_sofrergolpe", True,
-                frames=Ataques[atkanima[anima_key]],
-                fps=Parametros_Ataque[atkanima[anima_key]],
-                pct_continue=0.85)
-
+            add(agente, "iniciar_investida", True, alvo_pos=pos_mira, dur=vel, pct_continue=0.55)
         else:
             if proj == "fluxo":
-                add(agente, "iniciar_disparo", True,
-                    alvo_pos=pos_mira, dur=vel, pct_continue=0.90)
-                add(alvo, "iniciar_sofrergolpe", True,
-                    frames=Ataques[atkanima[anima_key]],
-                    fps=Parametros_Ataque[atkanima[anima_key]],
-                    pct_continue=0.85)
-            elif proj == "-":
-                add(alvo, "iniciar_sofrergolpe", True,
-                    frames=Ataques[atkanima[anima_key]],
-                    fps=Parametros_Ataque[atkanima[anima_key]],
-                    pct_continue=0.85)
-            else:
-                add(agente, "iniciar_disparo", True,
-                    alvo_pos=pos_mira,
-                    proj_img=Projeteis[proj],
-                    dur=vel, pct_continue=0.90)
-                add(alvo, "iniciar_sofrergolpe", True,
-                    frames=Ataques[atkanima[anima_key]],
-                    fps=Parametros_Ataque[atkanima[anima_key]],
-                    pct_continue=0.85)
+                add(agente, "iniciar_disparo", True, alvo_pos=pos_mira, dur=vel, pct_continue=0.92)
+            elif proj != "-":
+                add(agente, "iniciar_disparo", True, alvo_pos=pos_mira,
+                    proj_img=Projeteis.get(proj), dur=vel, pct_continue=0.92)
 
-        # ====== pós-hit ======
-        if TemDano:
-            add(alvo, "iniciar_tomardano", True,
-                dur=max(0.12, Dano/100.0), freq=12.0, pct_continue=0.25)
-            add(alvo, "iniciar_cartucho", False,
-                cartucho_surf=Cartuchu(valor=Dano, cor=cor_dano, fonte=fonte, crit=(2 if crit else 5)))
-        elif Miss:
-            add(alvo, "iniciar_cartucho", False,
-                cartucho_surf=Cartuchu(valor="Miss", cor=cor_miss, fonte=fonte, crit=0))
+        # 2) golpe visual no centro do slot (não-bloqueante → ramifica)
+        hit_kwargs = {"pos": pos_mira, "pct_continue": 0.90}
+        if frames is not None: hit_kwargs["frames"] = frames
+        if fps    is not None: hit_kwargs["fps"]    = fps
+        add(agente, "iniciar_aplicar_golpe", False, **hit_kwargs)
+
+        # 3) efeitos no alvo real (se houver SubLog)
+        if alvo_real is not None and alvo_sublog is not None:
+            Dano     = int(alvo_sublog.get("Dano Final", 0))
+            crit     = bool(alvo_sublog.get("Critico", False))
+            acertou  = bool(alvo_sublog.get("Acertou", True))
+            TemDano  = Dano > 0
+            Miss     = not acertou
+            matou    = bool(alvo_sublog.get("Matou", False))
+
+            fonte = Fontes[18]
+            cor_dano = (255, 0, 0) if crit else (255, 255, 0)
+            cor_miss = (255, 255, 255)
+
+            print(f"[LEITOR][HIT-DEBUG]   → SubLog alvo: dano={Dano} crit={crit} acertou={acertou} matou={matou}")
+            if TemDano:
+                if not matou:
+                    add(alvo_real, "iniciar_tomardano", False,
+                        dur=max(0.12, Dano/100.0), freq=12.0, pct_continue=0.25)
+                add(alvo_real, "iniciar_cartucho", False,
+                    cartucho_surf=Cartuchu(valor=Dano, cor=cor_dano, fonte=fonte, crit=(2 if crit else 5)))
+                print("[LEITOR][HIT-DEBUG]   → agendado tomar_dano/cartucho (dano).")
+            elif Miss:
+                add(alvo_real, "iniciar_cartucho", False,
+                    cartucho_surf=Cartuchu(valor="Miss", cor=cor_miss, fonte=fonte, crit=0))
+                print("[LEITOR][HIT-DEBUG]   → agendado cartucho (Miss).")
+            else:
+                print("[LEITOR][HIT-DEBUG]   → sem dano/miss; nada a agendar.")
 
         return steps
 
-    # Constrói plano para REGISTROS pós-ataque (não bloqueante; encadeado por Continue)
+    # registros (após todos os slots do Log)
     def _build_plan_registros(regs, agente):
         steps = []
-        if not regs:
+        if not regs or agente is None:
             return steps
-
-        from Codigo.Cenas.Batalha import Fontes
         fonte = Fontes[18]
-
         ups_total, downs_total = [], []
         turnos_pos_total, turnos_neg_total = 0, 0
         barreira_total = 0
-
-        for registro in regs:
-            # Cura
-            cura = int(registro.get("Cura", 0))
+        for r in regs:
+            cura = int(r.get("Cura", 0) or 0)
             if cura > 0:
                 dur = 0.2 + cura * 0.005
                 steps.append({"actor": agente, "method": "iniciar_curar",
@@ -336,83 +409,72 @@ def LeitorLogs(LogRodada, parametros, _anim_aliados, _anim_inimigos,
                 steps.append({"actor": agente, "method": "iniciar_cartucho",
                               "kwargs": {"cartucho_surf": Cartuchu(valor=cura, cor=(0,255,0), fonte=fonte, crit=0)},
                               "wait": False, "armed": False})
-
-            # Barreira
-            barreira_total += int(registro.get("Barreira", 0))
-
-            # ups & downs (usa listas globais presumidas)
+            barreira_total += int(r.get("Barreira", 0) or 0)
             for a in atributos:
-                v = int(registro.get(a, 0))
-                if v > 0:
-                    ups_total.append((a, v))
-                elif v < 0:
-                    downs_total.append((a, v))
+                v = int(r.get(a, 0) or 0)
+                if v > 0: ups_total.append((a, v))
+                elif v < 0: downs_total.append((a, v))
+            for e in efeitos_positivos:
+                turnos_pos_total += int(r.get(e, 0) or 0)
+            for e in efeitos_negativos:
+                turnos_neg_total += int(r.get(e, 0) or 0)
 
-            # turnos positivos/negativos (usa listas globais presumidas)
-            turnos_pos_total += sum(int(registro.get(e, 0)) for e in efeitos_positivos)
-            turnos_neg_total += sum(int(registro.get(e, 0)) for e in efeitos_negativos)
-
-        # Buffs (positivos)
         if barreira_total > 0 or ups_total or turnos_pos_total > 0:
             dur_b = 0.40 + len(ups_total)*0.12 + barreira_total*0.002 + turnos_pos_total*0.15
             steps.append({"actor": agente, "method": "iniciar_buff",
                           "kwargs": {"dur": dur_b, "qtd": 6, "area": (60, 40), "cor": (90,200,255),
                                      "pct_continue": 0.50, "debuff": False},
                           "wait": True, "armed": False})
-
             if barreira_total > 0:
                 steps.append({"actor": agente, "method": "iniciar_cartucho",
                               "kwargs": {"cartucho_surf": Cartuchu(valor=barreira_total, cor=(0,0,255), fonte=fonte, crit=0)},
                               "wait": False, "armed": False})
-
             for (atr, v) in ups_total:
                 steps.append({"actor": agente, "method": "iniciar_cartucho",
                               "kwargs": {"cartucho_surf": Cartuchu(
                                   valor=f"+{v} {atr}", cor=(255,190,210), fonte=fonte,
-                                  icon=Icones[atr], crit=3)},
-                              "wait": False, "armed": False})
+                                  icon=Icones.get(atr), crit=3)}},
+                              )
 
-        # Debuffs (negativos)
         if downs_total or turnos_neg_total > 0:
             dur_d = 0.40 + len(downs_total)*0.12 + turnos_neg_total*0.15
             steps.append({"actor": agente, "method": "iniciar_buff",
                           "kwargs": {"dur": dur_d, "qtd": 6, "area": (60, 40), "cor": (255,120,120),
                                      "pct_continue": 0.50, "debuff": True},
                           "wait": True, "armed": False})
-
             for (atr, v) in downs_total:
                 steps.append({"actor": agente, "method": "iniciar_cartucho",
                               "kwargs": {"cartucho_surf": Cartuchu(
                                   valor=f"{v} {atr}", cor=(255,190,210), fonte=fonte,
-                                  icon=Icones[atr], crit=3)},
-                              "wait": False, "armed": False})
+                                  icon=Icones.get(atr), crit=3)}},
+                              )
 
         return steps
 
-    # ===================== MOTOR DE AVANÇO (não bloqueante) ======================
-    # Permite "pular" steps já resolvidos na volta, sem repetir efeitos.
-    budget = 16  # limite de passos por chamada para evitar loop longo num único frame
-
+    # ===================== MOTOR (não bloqueante) ======================
+    budget = 16
     while budget > 0:
         budget -= 1
 
-        # terminou a rodada?
         if st["i"] >= len(LogRodada):
             parametros["Pronto"] = False
-            parametros["Rodou"] = True
             parametros["Processando"] = False
             parametros["LogAtual"] = []
             parametros["LeitorState"] = {"i": 0, "j": 0, "step": 0, "plan": None, "waiting_on": None, "_cache": {}}
             return
 
         Log = LogRodada[st["i"]]
-        SubLogs = Log.get("SubLogs", [])
+        alvos_brutos = Log.get("AlvosBruto") or []
+        num_slots = len(alvos_brutos)
 
-        # terminou o Log atual?
-        if st["j"] >= len(SubLogs):
+        # fim do Log atual?
+        if st["j"] >= num_slots:
             if st.get("_doing_regs") is None:
-                agente, _, _ = _resolve_agente(Log)
-                regs_steps = _build_plan_registros(Log.get("Registros", []), agente)
+                # usa agente do cache se existir; senão resolve pelo Log
+                ag = st.get("_cache", {}).get("agente")
+                if ag is None:
+                    ag, _, _ = _resolve_agente(Log)
+                regs_steps = _build_plan_registros(Log.get("Registros", []), ag)
                 if regs_steps:
                     st["plan"] = regs_steps
                     st["step"] = 0
@@ -421,64 +483,91 @@ def LeitorLogs(LogRodada, parametros, _anim_aliados, _anim_inimigos,
                 else:
                     st["_doing_regs"] = False
 
-            # fim do Log → próximo
+            # cooldown de 0.4s entre logs
             st["i"] += 1
             st["j"] = 0
             st["step"] = 0
             st["plan"] = None
-            st["_cache"].clear()
             st.pop("_doing_regs", None)
-            continue
+            st["_cache"].clear()
+            st["_cooldown_until"] = time.time() + 0.4
+            return
 
-        # ---------- prepara cache do SubLog (1x) ----------
+        # preparar cache do alvo bruto (1x)
         if not st["plan"]:
-            SubLog = SubLogs[st["j"]]
+            # agente (via campo Agente do Log)
+            try:
+                idx_s, pla_s = str(Log["Agente"]).replace(" ", "").split("/")
+                idx_ag, pla_ag = int(idx_s), int(pla_s)
+            except Exception:
+                idx_ag, pla_ag = None, None
+            agente = None
+            if idx_ag is not None:
+                for anim in todos_anim:
+                    p = _poke_dict(anim)
+                    if int(p.get("ID", -999)) == idx_ag and _anim_side(anim) == pla_ag:
+                        agente = anim
+                        break
 
-            agente, idx_ag, pla_ag   = _resolve_agente(Log)
-            alvo,   idx_alvo, pla_alvo = _resolve_alvo(SubLog)
+            # animações do golpe do agente
+            atkanimadf = dfa[dfa["Nome"] == Log.get("Code Ataque")]
+            if len(atkanimadf):
+                atkanima = atkanimadf.iloc[0].to_dict()
+                anima_key = "Animação"
+            else:
+                atkanima = {"Contato": "-", "Projetil": "fluxo", "Velocidade": 0.4}
+                anima_key = None
 
-            atkanimadf = dfa[dfa["Nome"] == Log["Code Ataque"]]
-            atkanima = atkanimadf.iloc[0].to_dict()
-            anima_key = "Animação" if (pla_alvo == parametros["Player"]) else "AnimaçãoAliado"
-
-            pos_mira = _slot_target(Log)
+            id_to_sublog, slot_to_sublog = _build_sublog_maps(Log)
 
             st["_cache"] = {
-                "agente": agente, "alvo": alvo,
+                "agente": agente,
                 "idx_ag": idx_ag, "pla_ag": pla_ag,
-                "idx_alvo": idx_alvo, "pla_alvo": pla_alvo,
                 "atkanima": atkanima, "anima_key": anima_key,
-                "pos_mira": pos_mira
+                "alvos_brutos": alvos_brutos,
+                "id_to_sublog": id_to_sublog,
+                "slot_to_sublog": slot_to_sublog,
             }
 
-            st["plan"] = _build_plan(Log, SubLog, st["_cache"])
-            st["step"]  = 0
+            st["plan"] = _build_plan_for_slot(Log, st["j"], st["_cache"])
+            st["step"] = 0
 
-        # ---------- executar/avançar um step ----------
+            if not st["plan"]:
+                st["j"] += 1
+                st["plan"] = None
+                continue
+
+        # executar/avançar um step
         plan = st["plan"]
         k = st["step"]
 
         if k >= len(plan):
-            # terminou SubLog → próximo
             st["j"] += 1
             st["step"] = 0
             st["plan"] = None
-            st["_cache"].clear()
             st["waiting_on"] = None
             continue
 
         step = plan[k]
 
         if not step["armed"]:
-            result = _start_step(step)
-            if result == "WAIT":
-                return  # não bloqueia o loop principal
+            res = _start_step(step)
+            if res == "WAIT":
+                return
+            elif res == "SKIP":
+                st["step"] += 1
+                continue
             st["step"] += 1
             continue
 
         if step.get("wait", True):
             actor = step["actor"]
-            if not actor.Continue:
+            cont = getattr(actor, "Continue", None)
+            if cont is None:
+                st["waiting_on"] = None
+                st["step"] += 1
+                continue
+            if not cont:
                 st["waiting_on"] = actor
                 return
             st["waiting_on"] = None

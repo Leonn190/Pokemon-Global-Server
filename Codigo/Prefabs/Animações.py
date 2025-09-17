@@ -269,24 +269,30 @@ class PokemonAnimator:
 
     # --- OVERLAYS (sem gatilhos; também podem armar o Continue) ---
 
-    def iniciar_sofrergolpe(self, frames, fps=20, offset=(0, 0), pct_continue=0.5):
+    def iniciar_aplicar_golpe(self, pos, frames, fps=20, offset=(0, 0), pct_continue=0.5,
+                            scale=1.0, angle=0.0):
         """
-        Reproduz 'frames' por cima do pokémon (uma vez).
-        - frames: lista de pygame.Surface.
-        - fps: quadros por segundo.
-        - offset: deslocamento (x, y) relativo ao centro do pokémon.
+        Aplica o efeito de golpe (lista de frames) centrado em `pos` (x, y).
+        - frames: lista de pygame.Surface
+        - fps: quadros/segundo
+        - offset: deslocamento (x, y) relativo ao centro passado
+        - scale, angle: opcionais (mesma ideia do seu _draw atual)
         """
-        if not frames:
+        if not frames or not pos:
             return
-        dur_total = max(1e-3, len(frames) / float(max(1, int(fps))))
+        fps_i = max(1, int(fps))
+        dur_total = max(1e-3, len(frames) / float(fps_i))
         self._atk_fx = {
             "ativo": True,
             "frames": frames,
-            "fps": max(1, int(fps)),
+            "fps": fps_i,
             "t": 0.0,
             "dur": dur_total,
+            "pos": (int(pos[0]), int(pos[1])),
             "offset": (int(offset[0]), int(offset[1])),
             "pct_continue": float(pct_continue),
+            "scale": float(scale),
+            "angle": float(angle),
         }
         self._armar_continue(pct_continue)
 
@@ -639,20 +645,14 @@ class PokemonAnimator:
             pygame.draw.circle(surf, (0, 180, 255, 220), (r, r), r//2)
             tela.blit(surf, (int(x - r), int(y - r)))
 
-    def _draw_sofrer_golpe(self, tela):
+    def _draw_aplicar_golpe(self, tela):
         fx = getattr(self, "_atk_fx", None)
         if not fx or not fx.get("ativo"):
             return
 
-        # âncora: self.posCenter (fallback no centro visual atual)
-        if hasattr(self, "posCenter"):
-            cx, cy = self.posCenter
-        elif hasattr(self, "_ultimo_draw"):
-            (px, py) = self._ultimo_draw["pos"]
-            (sw, sh) = self._ultimo_draw["size"]
-            cx = px + sw * 0.5
-            cy = py + sh * 0.45
-        else:
+        # centro absoluto informado no iniciar_aplicar_golpe
+        cx, cy = fx.get("pos", (None, None))
+        if cx is None or cy is None:
             return
 
         # offset opcional
@@ -662,9 +662,7 @@ class PokemonAnimator:
 
         # frame atual
         idx = int(fx.get("t", 0.0) * fx.get("fps", 24))
-        frames = fx.get("frames", [])
-        if not frames:
-            return
+        frames = fx.get("frames", []) or []
         if not (0 <= idx < len(frames)):
             return
 
@@ -878,7 +876,7 @@ class PokemonAnimator:
     def desenhar_extras(self, tela):
         """Desenhe todos os overlays após blitar o sprite do pokémon."""
         self._draw_projetil(tela)
-        self._draw_sofrer_golpe(tela)
+        self._draw_aplicar_golpe(tela)
         self._draw_cartucho(tela)
         self._draw_buff(tela)
 
@@ -912,17 +910,6 @@ class PokemonAnimator:
         self.rect = tela.blit(sprite, rect)
 
         self.desenhar_extras(tela)
-
-        # =============== DEBUG: centro (quadrado vermelho) ===============
-        try:
-            cx, cy = self.posCenter
-        except Exception:
-            cx, cy = rect.center
-        debug_sz = 6
-        tela.fill((255, 0, 0), pygame.Rect(int(cx - debug_sz//2),
-                                           int(cy - debug_sz//2),
-                                           debug_sz, debug_sz))
-        # ================================================================
 
         # ===================== BARRAS ESTILO TFT =====================
         vida     = float(self.pokemon["Vida"])
