@@ -189,7 +189,7 @@ class PokemonAnimator:
         }
         self._armar_continue(pct_continue)
 
-    def iniciar_avanco(self, alvo_pos, altura=24, dur=0.40, pct_continue=0.6):
+    def iniciar_avanco(self, alvo_pos, altura=240, dur=0.40, pct_continue=0.6):
         """
         Avança em parábola até 'alvo_pos' (ápice no meio) e retorna à origem.
         alvo_pos: (ax, ay) absoluto no mesmo referencial do draw.
@@ -296,7 +296,7 @@ class PokemonAnimator:
         }
         self._armar_continue(pct_continue)
 
-    def iniciar_cartucho(self, cartucho_surf, lado="dir", dur=0.9, altura=140, dx=80,
+    def iniciar_cartucho(self, cartucho_surf, lado="dir", dur=1.05, altura=140, dx=80,
                          scale_ini=0.6, scale_fim=1.0, pct_continue=0.5):
         """
         Faz o 'cartucho_surf' surgir do centro do pokémon, aumentar e subir até o topo,

@@ -1,15 +1,19 @@
 
 from Codigo.Localidades.ControleBatalha import ExecutePartida, ExecuteRodada
+import copy
 
-def criar_e_inicializar_sala_local(pokemons_jogador1,pokemons_ia,code_p1="LOCAL_P1",code_ia="IA_LOCAL"):
+def criar_e_inicializar_sala_local(pokemons_jogador1, pokemons_ia,
+                                   code_p1="LOCAL_P1", code_ia="IA_LOCAL"):
+
+    # fazemos cópias profundas para não referenciar diretamente
+    pokemons_p1 = copy.deepcopy(pokemons_jogador1)
+    pokemons_ia_copy = copy.deepcopy(pokemons_ia)
 
     sala = {
         "jogador1": code_p1,
-        "pokemons_jogador1": pokemons_jogador1,
-
-        "jogador2": code_ia,                 # sempre IA local
-        "pokemons_jogador2": pokemons_ia,
-
+        "pokemons_jogador1": pokemons_p1,
+        "jogador2": code_ia,   # sempre IA local
+        "pokemons_jogador2": pokemons_ia_copy,
         "modo_local": True
     }
 
@@ -18,6 +22,7 @@ def criar_e_inicializar_sala_local(pokemons_jogador1,pokemons_ia,code_p1="LOCAL_
     sala["Log"] = []
     sala["jogada_jogador1"] = None
     sala["jogada_jogador2"] = None
+
     return sala
 
 def receber_e_executar_jogadas(sala, jogada_p1, jogada_p2=None):

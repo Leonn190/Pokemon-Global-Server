@@ -2,22 +2,22 @@ Nome,Contato,Projetil,Velocidade,Animação,AnimaçãoAliado,Alvo
 Enraivecer,-,-,-,!None,!None,U
 Recarga,-,-,-,!None,!None,U
 Provocar,-,-,-,!None,!None,U
-Rosnar,-,fluxo,0.35,!None,!None,U
-Biscoito,-,biscoito,0.25,!None,!None,M
-Tapa,A,-,0.5,!None,!None,U
-Tapa Especial,A,-,0.5,!None,!None,U
-Tapa Magico,A,-,0.5,!None,!None,U
+Rosnar,-,fluxo,0.6,!None,!None,U
+Biscoito,-,biscoito,0.35,!None,!None,M
+Tapa,A,-,0.7,!None,!None,U
+Tapa Especial,A,-,0.7,!None,!None,U
+Tapa Magico,A,-,0.7,!None,!None,U
 Resetar,-,-,-,!None,!None,U
-Golpe Critico,-,fluxo,0.4,!None,!None,U
-Cabeçada,A,-,0.55,!None,!None,U
-Estocada,I,-,0.35,!None,!None,U
+Golpe Critico,-,fluxo,0.7,!None,!None,U
+Cabeçada,A,-,0.75,!None,!None,U
+Estocada,I,-,0.6,!None,!None,U
 Transformar,-,-,-,!None,!None,U
 Resetar Forçado,-,-,-,!None,!None,U
-Manobra Evasiva,A,-,0.45,!None,!None,U
+Manobra Evasiva,A,-,0.65,!None,!None,U
 Barragem,-,-,-,!None,!None,U
-Investida,I,-,0.5,!None,!None,U
+Investida,I,-,0.65,!None,!None,U
 Grito de Guerra,-,-,-,!None,!None,U
-Golpe Precavido,A,-,0.5,!None,!None,S
+Golpe Precavido,A,-,0.6,!None,!None,S
 Inflar,-,-,-,!None,!None,U
 Pancada Seca,,,,,,
 Ataque Rapido,,,,,,

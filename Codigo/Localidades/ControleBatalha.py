@@ -436,8 +436,7 @@ class Pokemon:
                 if item["Ativação"] == "AoMutarStatus":
                     self, Status, Alteração = IteDic[str(item["Code"])](self, Status, Alteração)
 
-        valor_atual = getattr(self, Status)
-        setattr(self, Status, valor_atual + Alteração)
+        setattr(self, f"var_per_{Status}", Alteração)
 
         # --- Registro no log ---
         if Log is not None:

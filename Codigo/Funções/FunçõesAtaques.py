@@ -1,7 +1,7 @@
 AtkDic = {}
 
-# 1 — Enraivecer (i): Se vida < 50%, ganha Aprimorado (se SpA > Atk) senão ganha Amplificado.
-def Enraivecer_i(Atacante, Alvos, ataque, Partida, Log, Recuo):
+# 1 — Enraivecer (s): Se vida < 50%, ganha Aprimorado (se SpA > Atk) senão ganha Amplificado.
+def Enraivecer_s(Atacante, Alvo, AlvosAliados, ataque, Partida, Log, Acertou, critico):
 
     # Se Vida abaixo de 50%:
     #     - Ganha Aprimorado se SpA > Atk
@@ -12,7 +12,6 @@ def Enraivecer_i(Atacante, Alvos, ataque, Partida, Log, Recuo):
             Atacante.AplicarEfeito("Aprimorado", Atacante, Log)
         else:
             Atacante.AplicarEfeito("Amplificado", Atacante, Log)
-    return Recuo
 
 # 2 — Recarga (f): Recupera 200% do custo de energia e aumenta SpA em 5%.
 def Recarga_f(Atacante, Alvo, AlvosAliados, ataque, Partida, Log, dano_final):
@@ -215,7 +214,7 @@ def inflar_s(Atacante, Alvo, AlvosAliados, ataque, Partida, Log, Acertou, critic
     Alvo.ReceberBarreira(valor, Log)
 
 AtkDic.update({
-    "1i": Enraivecer_i,          # 1 — Enraivecer (i)
+    "1s": Enraivecer_s,          # 1 — Enraivecer (s)
     "2f": Recarga_f,             # 2 — Recarga (f)
     "3s": Provocar_s,            # 3 — Provocar (s)
     "4s": Rosnar_s,              # 4 — Rosnar (s)

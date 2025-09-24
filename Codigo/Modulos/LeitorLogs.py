@@ -152,7 +152,8 @@ def LeitorLogs(LogRodada, parametros,
 
     # ---------- estado ----------
     st = parametros.setdefault("LeitorState", {
-        "i": 0, "j": 0, "step": 0, "plan": None, "waiting_on": None, "_cache": {}
+        "i": 0, "j": 0, "step": 0, "plan": None, "waiting_on": None, "_cache": {},
+        "_contact_until": {}  # semáforo por agente p/ animações de CONTATO
     })
 
     # cooldown entre logs
@@ -273,6 +274,132 @@ def LeitorLogs(LogRodada, parametros,
         idx_ag, pla_ag = int(idx_s), int(pla_s)
         return _find_anim_by_id(idx_ag, pla_ag), idx_ag, pla_ag
 
+    # ---------- helpers EXECUTIVOS (mutação oficial) ----------
+    def _normalize_attr_key(k: str):
+        """mapa de chaves do log -> chaves do dicionário oficial."""
+        mapa = {
+            "atk":  "Atk",  "def":  "Def",
+            "spa":  "SpA",  "spd":  "SpD",
+            "vel":  "Vel",  "vida": "Vida",
+            "mag":  "Mag",  "per":  "Per",
+            "ene":  "Ene",  "enr":  "EnR",
+            "crd":  "CrD",  "crc":  "CrC",
+            "vamp": "Vamp", "asse": "Asse",
+        }
+        
+        return mapa.get(str(k).lower(), str(k).capitalize())
+
+    def _get_official_team(side_num: int):
+        return (parametros.get("EquipeAliada", []),
+                parametros.get("EquipeInimiga", []),
+                PLAYER_SIDE)
+
+    def _find_official_by_id_side(pid: int, side_num: int):
+        aliada, inimiga, ps = _get_official_team(side_num)
+        team = aliada if int(side_num) == int(ps) else inimiga
+        for pok in team:
+            try:
+                if int(pok.get("ID")) == int(pid):
+                    return pok
+            except Exception:
+                pass
+        return None
+
+    def _add_delta(d: dict, key_candidates, delta):
+        """soma delta na 1ª chave existente; se Vida/HP, limita mínimo 0."""
+        if not isinstance(key_candidates, (list, tuple)):
+            key_candidates = [key_candidates]
+        for k in key_candidates:
+            if k in d:
+                try:
+                    d[k] = d.get(k, 0) + delta
+                    if k in ("Vida", "HP", "Hp"):
+                        if d[k] < 0: d[k] = 0
+                except Exception:
+                    pass
+                return True
+        return False
+
+    def _mutate_official_by_id_side(pid: int, side_num: int, changes: dict):
+        """changes aceita chaves oficiais ('Vida','Barreira','Atk'...) ou brutas ('atk','hp'...)."""
+        pok = _find_official_by_id_side(pid, side_num)
+        if not pok:
+            print(f"[LEITOR][EXEC] Não achei pokémon oficial ID={pid} side={side_num} para mutação.")
+            return
+        for k, v in changes.items():
+            if k in ("Vida", "HP", "Hp") or str(k).lower() in ("vida", "hp"):
+                if not _add_delta(pok, ("Vida", "HP", "Hp"), int(v)):
+                    # se não existe, cria Vida
+                    pok["Vida"] = max(0, int(pok.get("Vida", 0)) + int(v))
+                continue
+            if str(k).lower() == "barreira" or k == "Barreira":
+                if not _add_delta(pok, ("Barreira",), int(v)):
+                    pok["Barreira"] = int(v)
+                continue
+            # atributos em geral
+            key = _normalize_attr_key(k)
+            if key in pok:
+                try:
+                    pok[key] = pok.get(key, 0) + int(v)
+                except Exception:
+                    pass
+            else:
+                # se não existir, não cria (mantém conservador)
+                pass
+
+    def _apply_damage_mutation_from_sublog(alvo_anim, alvo_sublog):
+        """Aplica dano oficial ao alvo do sublog."""
+        try:
+            p = _poke_dict(alvo_anim)
+            pid = int(p.get("ID"))
+            side = int(_anim_side(alvo_anim))
+            # usa Dano Final; se não houver, cai para Dano Enviado
+            dano = int(alvo_sublog.get("Dano Final", alvo_sublog.get("Dano Enviado", 0)) or 0)
+            if dano > 0:
+                _mutate_official_by_id_side(pid, side, {"Vida": -dano})
+        except Exception as e:
+            print("[LEITOR][EXEC] Falha aplicando dano oficial:", e)
+
+    def _apply_regs_mutations(regs, agente_anim):
+        """Percorre Registros e aplica mutações no alvo indicado (ou no próprio agente, se faltou Alvo)."""
+        if not regs:
+            return
+        # fallback: agente
+        ag_id = None; ag_side = None
+        if agente_anim is not None:
+            try:
+                ag_id = int(_poke_dict(agente_anim).get("ID"))
+                ag_side = int(_anim_side(agente_anim))
+            except Exception:
+                ag_id = None; ag_side = None
+
+        for r in regs:
+            # destino
+            alvo_txt = r.get("Alvo")
+            if alvo_txt:
+                try:
+                    idx_s, pla_s = str(alvo_txt).replace(" ", "").split("/")
+                    pid_t, side_t = int(idx_s), int(pla_s)
+                except Exception:
+                    pid_t, side_t = ag_id, ag_side
+            else:
+                pid_t, side_t = ag_id, ag_side
+
+            if pid_t is None or side_t is None:
+                continue
+
+            # para cada chave mutável no registro
+            for k, v in r.items():
+                if k == "Alvo" or v in (None, 0, "0"):
+                    continue
+                if str(k).lower() == "cura":
+                    _mutate_official_by_id_side(pid_t, side_t, {"Vida": int(v)})
+                elif str(k).lower() == "barreira":
+                    _mutate_official_by_id_side(pid_t, side_t, {"Barreira": int(v)})
+                else:
+                    # atributos: log vem minúsculo (ex.: "atk": -4) → dicionário usa maiúsculo (ex.: "Atk")
+                    _mutate_official_by_id_side(pid_t, side_t, { _normalize_attr_key(k): int(v) })
+
     # passo executável
     def _start_step(step):
         actor = step.get("actor"); meth = step.get("method"); kwargs = step.get("kwargs", {})
@@ -330,11 +457,11 @@ def LeitorLogs(LogRodada, parametros,
         frames    = Ataques.get(anim_code) if anim_code else None
         fps       = Parametros_Ataque.get(anim_code, 24)
 
-        # contato/projétil
+        # contato/projétil e velocidade (tempo de execução)
         contato = atkanima.get("Contato", "-")
         proj    = atkanima.get("Projetil", "-")
         if atkanima["Velocidade"] != "-":
-            vel     = float(atkanima.get("Velocidade", 0.4))
+            vel = float(atkanima.get("Velocidade", 0.5))
         else:
             vel = 0.1
 
@@ -342,12 +469,23 @@ def LeitorLogs(LogRodada, parametros,
         def add(actor, method, wait=True, **kwargs):
             steps.append({"actor": actor, "method": method, "kwargs": kwargs, "wait": wait, "armed": False})
 
-        # 1) deslocamento do agente
+        # 1) deslocamento do agente (CONTATO respeita semáforo)
         if contato == "A":
-            add(agente, "iniciar_avanco", True,  alvo_pos=pos_mira, dur=vel, pct_continue=0.55)
+            add(agente, "iniciar_avanco", True,  alvo_pos=pos_mira, dur=vel, pct_continue=0.6)
+            # marca ocupação do agente até fim da animação de contato
+            try:
+                st["_contact_until"][(int(cache["idx_ag"]), int(cache["pla_ag"]))] = time.time() + vel
+            except Exception:
+                pass
         elif contato == "I":
-            add(agente, "iniciar_investida", True, alvo_pos=pos_mira, dur=vel, pct_continue=0.55)
+            add(agente, "iniciar_investida", True, alvo_pos=pos_mira, dur=vel, pct_continue=0.6)
+            # marca ocupação do agente até fim da animação de contato
+            try:
+                st["_contact_until"][(int(cache["idx_ag"]), int(cache["pla_ag"]))] = time.time() + vel
+            except Exception:
+                pass
         else:
+            # projétil/fluxo não entra no semáforo
             if proj == "fluxo":
                 add(agente, "iniciar_disparo", True, alvo_pos=pos_mira, dur=vel, pct_continue=0.92)
             elif proj != "-":
@@ -377,14 +515,17 @@ def LeitorLogs(LogRodada, parametros,
             if TemDano:
                 if not matou:
                     add(alvo_real, "iniciar_tomardano", False,
-                        dur=max(0.12, Dano/100.0), freq=12.0, pct_continue=0.25)
+                        dur=max(0.2, Dano/50.0), freq=12.0, pct_continue=0.3)
                 add(alvo_real, "iniciar_cartucho", False,
                     cartucho_surf=Cartuchu(valor=Dano, cor=cor_dano, fonte=fonte, crit=(2 if crit else 5)))
                 print("[LEITOR][HIT-DEBUG]   → agendado tomar_dano/cartucho (dano).")
+                # ---------------- EXECUTIVO: aplicar dano oficial ----------------
+                _apply_damage_mutation_from_sublog(alvo_real, alvo_sublog)
             elif Miss:
                 add(alvo_real, "iniciar_cartucho", False,
                     cartucho_surf=Cartuchu(valor="Miss", cor=cor_miss, fonte=fonte, crit=0))
                 print("[LEITOR][HIT-DEBUG]   → agendado cartucho (Miss).")
+                # Miss: não aplica mutação
             else:
                 print("[LEITOR][HIT-DEBUG]   → sem dano/miss; nada a agendar.")
 
@@ -407,7 +548,7 @@ def LeitorLogs(LogRodada, parametros,
                               "kwargs": {"dur": dur, "freq": 12.0, "pct_continue": 0.40},
                               "wait": True, "armed": False})
                 steps.append({"actor": agente, "method": "iniciar_cartucho",
-                              "kwargs": {"cartucho_surf": Cartuchu(valor=cura, cor=(0,255,0), fonte=fonte, crit=0)},
+                              "kwargs": {"cartucho_surf": Cartuchu(valor=cura, cor=(0,255,0), fonte=fonte, crit=0)} ,
                               "wait": False, "armed": False})
             barreira_total += int(r.get("Barreira", 0) or 0)
             for a in atributos:
@@ -420,21 +561,20 @@ def LeitorLogs(LogRodada, parametros,
                 turnos_neg_total += int(r.get(e, 0) or 0)
 
         if barreira_total > 0 or ups_total or turnos_pos_total > 0:
-            dur_b = 0.40 + len(ups_total)*0.12 + barreira_total*0.002 + turnos_pos_total*0.15
+            dur_b = 0.45 + len(ups_total)*0.12 + barreira_total*0.002 + turnos_pos_total*0.15
             steps.append({"actor": agente, "method": "iniciar_buff",
                           "kwargs": {"dur": dur_b, "qtd": 6, "area": (60, 40), "cor": (90,200,255),
                                      "pct_continue": 0.50, "debuff": False},
                           "wait": True, "armed": False})
             if barreira_total > 0:
                 steps.append({"actor": agente, "method": "iniciar_cartucho",
-                              "kwargs": {"cartucho_surf": Cartuchu(valor=barreira_total, cor=(0,0,255), fonte=fonte, crit=0)},
+                              "kwargs": {"cartucho_surf": Cartuchu(valor=barreira_total, cor=(0,0,255), fonte=fonte, crit=0)} ,
                               "wait": False, "armed": False})
             for (atr, v) in ups_total:
                 steps.append({"actor": agente, "method": "iniciar_cartucho",
                               "kwargs": {"cartucho_surf": Cartuchu(
                                   valor=f"+{v} {atr}", cor=(255,190,210), fonte=fonte,
-                                  icon=Icones.get(atr), crit=3)}},
-                              )
+                                  icon=Icones.get(atr), crit=3)}})
 
         if downs_total or turnos_neg_total > 0:
             dur_d = 0.40 + len(downs_total)*0.12 + turnos_neg_total*0.15
@@ -446,8 +586,10 @@ def LeitorLogs(LogRodada, parametros,
                 steps.append({"actor": agente, "method": "iniciar_cartucho",
                               "kwargs": {"cartucho_surf": Cartuchu(
                                   valor=f"{v} {atr}", cor=(255,190,210), fonte=fonte,
-                                  icon=Icones.get(atr), crit=3)}},
-                              )
+                                  icon=Icones.get(atr), crit=3)}})
+
+        # ---------------- EXECUTIVO: aplicar mutações oficiais dos Registros ----------------
+        _apply_regs_mutations(regs, agente)
 
         return steps
 
@@ -483,14 +625,14 @@ def LeitorLogs(LogRodada, parametros,
                 else:
                     st["_doing_regs"] = False
 
-            # cooldown de 0.4s entre logs
+            # cooldown de 0.75s entre logs
             st["i"] += 1
             st["j"] = 0
             st["step"] = 0
             st["plan"] = None
             st.pop("_doing_regs", None)
             st["_cache"].clear()
-            st["_cooldown_until"] = time.time() + 0.4
+            st["_cooldown_until"] = time.time() + 0.8
             return
 
         # preparar cache do alvo bruto (1x)
@@ -528,6 +670,24 @@ def LeitorLogs(LogRodada, parametros,
                 "id_to_sublog": id_to_sublog,
                 "slot_to_sublog": slot_to_sublog,
             }
+
+            # checagem de semáforo ANTES de montar o plano do alvo atual (para CONTATO)
+            contato_preview = atkanima.get("Contato", "-")
+            if atkanima.get("Velocidade", "-") != "-":
+                try:
+                    vel_preview = float(atkanima.get("Velocidade", 0.5))
+                except Exception:
+                    vel_preview = 0.5
+            else:
+                vel_preview = 0.1
+
+            if contato_preview in ("A", "I") and (idx_ag is not None and pla_ag is not None):
+                key = (int(idx_ag), int(pla_ag))
+                busy_until = st["_contact_until"].get(key, 0.0)
+                now = time.time()
+                if now < busy_until:
+                    st["_cooldown_until"] = busy_until
+                    return
 
             st["plan"] = _build_plan_for_slot(Log, st["j"], st["_cache"])
             st["step"] = 0
