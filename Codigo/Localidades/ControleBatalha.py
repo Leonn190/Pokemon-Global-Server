@@ -892,19 +892,23 @@ def adjacentes(pokemon, lista_pokemons):
     return [p for p in lista if int(p.local) in posicoes_adj]
 
 def OrdenarJogadasPorVelocidade(sala):
-    jogadas_raw = sala["jogada_jogador1"] + sala["jogada_jogador2"]
     jogadas_ordenadas = []
 
-    for jogada in jogadas_raw:
-        if jogada in sala["jogada_jogador1"]:
-            jogador = 1
-        else:
-            jogador = 2
+    jogadas_j1 = sala.get("jogada_jogador1") or []
+    jogadas_j2 = sala.get("jogada_jogador2") or []
+
+    jogadas_raw = [(1, jogada) for jogada in jogadas_j1] + [(2, jogada) for jogada in jogadas_j2]
+
+    for jogador, jogada in jogadas_raw:
         idx = jogada["agente"]
 
         if jogador == 1:
+            if idx < 0 or idx >= len(sala["partida"].pokemons_jogador1):
+                continue
             agente = sala["partida"].pokemons_jogador1[idx]
         else:
+            if idx < 0 or idx >= len(sala["partida"].pokemons_jogador2):
+                continue
             agente = sala["partida"].pokemons_jogador2[idx]
 
         jogada["agente"] = agente
