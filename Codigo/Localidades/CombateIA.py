@@ -21,17 +21,31 @@ class CombateIA:
             if not movs:
                 continue
 
-            # escolhe 1 dos 4 primeiros
-            candidatos = movs[:4] if len(movs) >= 4 else movs
-            move_escolhido = random.choice(candidatos)
+            # normaliza para dicts e remove entradas inválidas
+            movs = [m for m in movs if isinstance(m, dict)]
+            if not movs:
+                continue
 
-            # custo do move (aceita variações de chave)
-            custo = move_escolhido.get("custo")
+            def _custo_move(move):
+                custo = move.get("custo", move.get("Custo", 0))
+                try:
+                    return int(float(custo))
+                except (TypeError, ValueError):
+                    return 0
 
-            # energia suficiente?
             energia_atual = poke.get("Energia", 0)
-            if energia_atual < custo:
+            try:
+                energia_atual = int(float(energia_atual))
+            except (TypeError, ValueError):
+                energia_atual = 0
+
+            # escolhe 1 dos 4 primeiros, priorizando os que cabem na energia
+            candidatos = movs[:4] if len(movs) >= 4 else movs
+            candidatos_viaveis = [m for m in candidatos if _custo_move(m) <= energia_atual]
+            if not candidatos_viaveis:
                 continue  # não age neste turno
+
+            move_escolhido = random.choice(candidatos_viaveis)
 
             # nome do move (apenas o nome vai em "Movimento")
             nome_mov = (move_escolhido.get("Nome")
@@ -88,4 +102,3 @@ class CombateIA:
             })
 
         return self.JogadaAtual
-
