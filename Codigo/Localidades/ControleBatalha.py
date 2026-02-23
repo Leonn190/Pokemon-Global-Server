@@ -575,7 +575,9 @@ class Pokemon:
     def ModificarArea(self, efeito, Log=None):
         pass
 
-    def GanharEnergia(self):
+    def GanharEnergia(self, Log=None):
+
+        energia_antes = self.Energia
 
         if self.Efeitos.get("Descarregado", 0) > 0:
             self.Energia += self.enR * 0.5
@@ -583,7 +585,21 @@ class Pokemon:
             self.Energia += self.enR * 1.5
         else:
             self.Energia += self.enR
+
+        # Energia atual nunca ultrapassa a energia máxima (Ene)
         self.Energia = min([self.Energia, self.ene])
+
+        # Registra o ganho real de energia no log para sincronizar com o cliente
+        if Log is not None:
+            ganho_real = self.Energia - energia_antes
+            if ganho_real != 0:
+                if "Registros" not in Log:
+                    Log["Registros"] = []
+
+                Log["Registros"].append({
+                    "Alvo": self.ID,
+                    "Energia": int(round(ganho_real))
+                })
     
     def Mover(self, local, forçado):
 
@@ -697,7 +713,7 @@ class Pokemon:
                 cura = int(vida_perdida * 0.05)
                 self.ReceberCura(cura, Log=Log)
 
-        self.GanharEnergia()
+        self.GanharEnergia(Log=Log)
     
     def Verifica(self, Partida):
 
