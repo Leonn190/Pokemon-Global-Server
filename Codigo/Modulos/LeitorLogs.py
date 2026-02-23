@@ -155,6 +155,9 @@ def LeitorLogs(LogRodada, parametros,
         "i": 0, "j": 0, "step": 0, "plan": None, "waiting_on": None, "_cache": {},
         "_contact_until": {}  # semáforo por agente p/ animações de CONTATO
     })
+    # retrocompat: estados antigos podem existir sem chaves novas
+    st.setdefault("_cache", {})
+    st.setdefault("_contact_until", {})
 
     # cooldown entre logs
     if st.get("_cooldown_until"):
@@ -282,7 +285,7 @@ def LeitorLogs(LogRodada, parametros,
             "spa":  "SpA",  "spd":  "SpD",
             "vel":  "Vel",  "vida": "Vida",
             "mag":  "Mag",  "per":  "Per",
-            "ene":  "Ene",  "enr":  "EnR",
+            "ene":  "Energia",  "energia": "Energia", "enr":  "EnR",
             "crd":  "CrD",  "crc":  "CrC",
             "vamp": "Vamp", "asse": "Asse",
         }
@@ -301,6 +304,23 @@ def LeitorLogs(LogRodada, parametros,
             try:
                 if int(pok.get("ID")) == int(pid):
                     return pok
+            except Exception:
+                pass
+        return None
+
+    def _find_side_by_id(pid: int):
+        """Descobre lado do pokémon pelo ID nas equipes oficiais."""
+        aliada, inimiga, ps = _get_official_team(PLAYER_SIDE)
+        for pok in aliada:
+            try:
+                if int(pok.get("ID")) == int(pid):
+                    return int(ps)
+            except Exception:
+                pass
+        for pok in inimiga:
+            try:
+                if int(pok.get("ID")) == int(pid):
+                    return 2 if int(ps) == 1 else 1
             except Exception:
                 pass
         return None
@@ -331,6 +351,12 @@ def LeitorLogs(LogRodada, parametros,
                 if not _add_delta(pok, ("Vida", "HP", "Hp"), int(v)):
                     # se não existe, cria Vida
                     pok["Vida"] = max(0, int(pok.get("Vida", 0)) + int(v))
+                continue
+            if str(k).lower() in ("energia", "ene"):
+                atual = float(pok.get("Energia", 0))
+                novo = atual + float(v)
+                teto = float(pok.get("Ene", novo))
+                pok["Energia"] = max(0.0, min(novo, teto))
                 continue
             if str(k).lower() == "barreira" or k == "Barreira":
                 if not _add_delta(pok, ("Barreira",), int(v)):
@@ -381,7 +407,11 @@ def LeitorLogs(LogRodada, parametros,
                     idx_s, pla_s = str(alvo_txt).replace(" ", "").split("/")
                     pid_t, side_t = int(idx_s), int(pla_s)
                 except Exception:
-                    pid_t, side_t = ag_id, ag_side
+                    try:
+                        pid_t = int(str(alvo_txt).strip())
+                        side_t = _find_side_by_id(pid_t)
+                    except Exception:
+                        pid_t, side_t = ag_id, ag_side
             else:
                 pid_t, side_t = ag_id, ag_side
 
@@ -602,7 +632,10 @@ def LeitorLogs(LogRodada, parametros,
             parametros["Pronto"] = False
             parametros["Processando"] = False
             parametros["LogAtual"] = []
-            parametros["LeitorState"] = {"i": 0, "j": 0, "step": 0, "plan": None, "waiting_on": None, "_cache": {}}
+            parametros["LeitorState"] = {
+                "i": 0, "j": 0, "step": 0, "plan": None, "waiting_on": None,
+                "_cache": {}, "_contact_until": {}
+            }
             return
 
         Log = LogRodada[st["i"]]
@@ -736,4 +769,3 @@ def LeitorLogs(LogRodada, parametros,
         else:
             st["step"] += 1
             continue
-
