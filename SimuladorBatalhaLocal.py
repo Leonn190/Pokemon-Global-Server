@@ -16,8 +16,6 @@ import pygame
 
 from Codigo.Carregar.CarregamentoAvançado import CarregamentoAvançado
 from Codigo.Carregar.CarregamentoBasico import CarregamentoBasico
-from Codigo.Cenas.Batalha import BatalhaLoop
-from Codigo.Cenas import Mundo
 from Codigo.Geradores.GeradorPokemon import (
     MaterializarPokemon,
     criar_pokemon_especifico,
@@ -99,7 +97,7 @@ def _criar_alvo_fake() -> AlvoConfrontoFake:
     return AlvoConfrontoFake(Dados=_gerar_pokemon_materializado_comum())
 
 
-def _montar_info_config_estados() -> tuple[Dict, Dict, Dict]:
+def _montar_info_config_estados(Mundo) -> tuple[Dict, Dict, Dict]:
     info = {
         "Carregado": False,
         "Alvo": "Batalha",
@@ -152,7 +150,13 @@ def _main() -> None:
         pass
 
     pygame.init()
+    pygame.font.init()
     pygame.mixer.init()
+
+    # Importa cenas somente após inicializar pygame/font,
+    # pois alguns módulos constroem fontes no import-time.
+    from Codigo.Cenas import Mundo
+    from Codigo.Cenas.Batalha import BatalhaLoop
 
     tela = pygame.display.set_mode((1920, 1080), pygame.NOFRAME)
     pygame.display.set_caption("Simulador de Batalha Local 6v6")
@@ -163,7 +167,7 @@ def _main() -> None:
 
     relogio = pygame.time.Clock()
 
-    info, config, estados = _montar_info_config_estados()
+    info, config, estados = _montar_info_config_estados(Mundo)
 
     VerificaSonoridade(config)
 
