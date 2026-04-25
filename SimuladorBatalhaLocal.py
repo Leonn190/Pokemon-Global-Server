@@ -129,7 +129,7 @@ def _montar_info_config_estados(Mundo) -> tuple[Dict, Dict, Dict]:
     CarregamentoBasico(info)
     CarregamentoAvançado(info, Pré=True)
 
-    _, _, _, _, outros, _, _, _, _, animacoes, _ = info["Conteudo"]
+    cores, fontes, texturas, fundos, outros, pokemons, consumiveis, equipaveis, estruturas, animacoes, icones = info["Conteudo"]
     nomes_permitidos = _nomes_com_animacao_valida()
 
     # limpeza extra: remove entradas de animação vazias para forçar fallback do carregador normal
@@ -139,6 +139,21 @@ def _montar_info_config_estados(Mundo) -> tuple[Dict, Dict, Dict]:
 
     # Injeta player fake no módulo Mundo, que é de onde a cena de batalha lê.
     Mundo.player = _criar_player_fake(outros, nomes_permitidos)
+
+    # Inicializa dependências globais dos painéis de batalha
+    # (normalmente preenchidas quando o Mundo roda antes da batalha).
+    from Codigo.Modulos import Paineis as ModPaineis
+    ModPaineis.cores = cores
+    ModPaineis.fontes = fontes
+    ModPaineis.texturas = texturas
+    ModPaineis.fundos = fundos
+    ModPaineis.outros = outros
+    ModPaineis.pokemons = pokemons
+    ModPaineis.estruturas = estruturas
+    ModPaineis.equipaveis = equipaveis
+    ModPaineis.consumiveis = consumiveis
+    ModPaineis.animaçoes = animacoes
+    ModPaineis.icones = icones
 
     info["ParametrosConfronto"] = {
         "BatalhaSimples": True,
