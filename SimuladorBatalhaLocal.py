@@ -32,6 +32,7 @@ def _gerar_pokemon_comum() -> Dict:
     """Gera 1 Pokémon usando o próprio gerador do projeto, priorizando raridade comum."""
     raridade_col = "Raridade"
     nome_col = "Nome"
+    estagio_col = "Estagio"
 
     candidatos = df_pokemons
 
@@ -41,16 +42,44 @@ def _gerar_pokemon_comum() -> Dict:
         if not comuns.empty:
             candidatos = comuns
 
-    nome = random.choice(candidatos[nome_col].dropna().tolist())
+    # Evita nomes que quebram no criar_pokemon_especifico (Estagio inválido/NaN)
+    if estagio_col in candidatos.columns:
+        estagio_numerico = candidatos[estagio_col].astype(str).str.replace(",", ".", regex=False)
+        estagio_numerico = estagio_numerico.str.strip()
+        estagio_numerico = estagio_numerico[~estagio_numerico.str.contains(r"[^0-9\.\-]", na=True)]
+        idx_validos = estagio_numerico.index
+        candidatos = candidatos.loc[idx_validos]
+
+    # Também elimina entradas explicitamente bloqueadas pela geração do projeto
+    if raridade_col in candidatos.columns:
+        candidatos = candidatos[candidatos[raridade_col].astype(str).str.strip() != "-"]
+
+    pool_nomes = candidatos[nome_col].dropna().tolist()
+    if not pool_nomes:
+        pool_nomes = df_pokemons[nome_col].dropna().tolist()
+    if not pool_nomes:
+        raise RuntimeError("Não foi possível montar pool de nomes para geração de Pokémon.")
 
     # Fluxo real de geração: compactado -> desserializado -> materializado -> formato batalha
-    compactado = criar_pokemon_especifico(nome)
-    while not compactado:
-        nome = random.choice(df_pokemons[nome_col].dropna().tolist())
-        compactado = criar_pokemon_especifico(nome)
+    compacto_valido = None
+    tentativas = 0
+    max_tentativas = 250
+    while not compacto_valido and tentativas < max_tentativas:
+        tentativas += 1
+        nome = random.choice(pool_nomes)
+        try:
+            compactado = criar_pokemon_especifico(nome)
+            if not compactado:
+                continue
+            materializado = MaterializarPokemon(desserializar_pokemon(compactado))
+            compacto_valido = GeraPokemonBatalha(materializado)
+        except (ValueError, TypeError):
+            compacto_valido = None
 
-    materializado = MaterializarPokemon(desserializar_pokemon(compactado))
-    return GeraPokemonBatalha(materializado)
+    if not compacto_valido:
+        raise RuntimeError("Falha ao gerar Pokémon válido após múltiplas tentativas.")
+
+    return compacto_valido
 
 
 def _gerar_equipe(tamanho: int = 6) -> List[Dict]:
