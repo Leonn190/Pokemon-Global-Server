@@ -8,6 +8,7 @@ mesma cena `Codigo.Cenas.Batalha.BatalhaLoop` usada no jogo.
 from __future__ import annotations
 
 import ctypes
+import os
 import random
 from dataclasses import dataclass
 from typing import Dict, List
@@ -39,7 +40,23 @@ class PlayerFake:
     Pokemons: List[Dict]
 
 
-def _gerar_pokemon_materializado_comum() -> Dict:
+def _nomes_com_animacao_valida() -> set[str]:
+    pasta = os.path.join("Recursos", "Visual", "Pokemons", "Animação")
+    validos: set[str] = set()
+    if not os.path.isdir(pasta):
+        return validos
+
+    for nome in os.listdir(pasta):
+        caminho = os.path.join(pasta, nome)
+        if not os.path.isdir(caminho):
+            continue
+        tem_frame = any(arq.lower().endswith(".png") for arq in os.listdir(caminho))
+        if tem_frame:
+            validos.add(nome.lower())
+    return validos
+
+
+def _gerar_pokemon_materializado_comum(nomes_permitidos: set[str] | None = None) -> Dict:
     candidatos = df_pokemons
 
     if "Raridade" in candidatos.columns:
@@ -54,6 +71,9 @@ def _gerar_pokemon_materializado_comum() -> Dict:
 
     if "Raridade" in candidatos.columns:
         candidatos = candidatos[candidatos["Raridade"].astype(str).str.strip() != "-"]
+
+    if nomes_permitidos:
+        candidatos = candidatos[candidatos["Nome"].astype(str).str.lower().isin(nomes_permitidos)]
 
     nomes = candidatos["Nome"].dropna().tolist() or df_pokemons["Nome"].dropna().tolist()
     if not nomes:
@@ -72,12 +92,12 @@ def _gerar_pokemon_materializado_comum() -> Dict:
     raise RuntimeError("Falha ao gerar Pokémon materializado para o simulador.")
 
 
-def _gerar_time_materializado_6() -> List[Dict]:
-    return [_gerar_pokemon_materializado_comum() for _ in range(6)]
+def _gerar_time_materializado_6(nomes_permitidos: set[str] | None = None) -> List[Dict]:
+    return [_gerar_pokemon_materializado_comum(nomes_permitidos) for _ in range(6)]
 
 
-def _criar_player_fake(outros: Dict) -> PlayerFake:
-    equipe = _gerar_time_materializado_6()
+def _criar_player_fake(outros: Dict, nomes_permitidos: set[str]) -> PlayerFake:
+    equipe = _gerar_time_materializado_6(nomes_permitidos)
     pokemons = list(equipe)
 
     skin = outros["Skins"][1] if outros.get("Skins") else pygame.Surface((64, 64), pygame.SRCALPHA)
@@ -93,8 +113,8 @@ def _criar_player_fake(outros: Dict) -> PlayerFake:
     )
 
 
-def _criar_alvo_fake() -> AlvoConfrontoFake:
-    return AlvoConfrontoFake(Dados=_gerar_pokemon_materializado_comum())
+def _criar_alvo_fake(nomes_permitidos: set[str]) -> AlvoConfrontoFake:
+    return AlvoConfrontoFake(Dados=_gerar_pokemon_materializado_comum(nomes_permitidos))
 
 
 def _montar_info_config_estados(Mundo) -> tuple[Dict, Dict, Dict]:
@@ -109,14 +129,20 @@ def _montar_info_config_estados(Mundo) -> tuple[Dict, Dict, Dict]:
     CarregamentoBasico(info)
     CarregamentoAvançado(info, Pré=True)
 
-    _, _, _, _, outros, *_ = info["Conteudo"]
+    _, _, _, _, outros, _, _, _, _, animacoes, _ = info["Conteudo"]
+    nomes_permitidos = _nomes_com_animacao_valida()
+
+    # limpeza extra: remove entradas de animação vazias para forçar fallback do carregador normal
+    for chave in list(animacoes.keys()):
+        if not animacoes[chave]:
+            del animacoes[chave]
 
     # Injeta player fake no módulo Mundo, que é de onde a cena de batalha lê.
-    Mundo.player = _criar_player_fake(outros)
+    Mundo.player = _criar_player_fake(outros, nomes_permitidos)
 
     info["ParametrosConfronto"] = {
         "BatalhaSimples": True,
-        "AlvoConfronto": _criar_alvo_fake(),
+        "AlvoConfronto": _criar_alvo_fake(nomes_permitidos),
     }
 
     estados = {
@@ -156,7 +182,7 @@ def _main() -> None:
     # Importa cenas somente após inicializar pygame/font,
     # pois alguns módulos constroem fontes no import-time.
     from Codigo.Cenas import Mundo
-    from Codigo.Cenas.Batalha import BatalhaLoop
+    from Codigo.Cenas import Batalha as ModBatalha
 
     tela = pygame.display.set_mode((1920, 1080), pygame.NOFRAME)
     pygame.display.set_caption("Simulador de Batalha Local 6v6")
@@ -169,10 +195,14 @@ def _main() -> None:
 
     info, config, estados = _montar_info_config_estados(Mundo)
 
+    # Patch local-only: evita GerarMatilha puxar espécies sem assets de animação.
+    nomes_permitidos = _nomes_com_animacao_valida()
+    ModBatalha.GerarMatilha = lambda pokemon, max=6: _gerar_time_materializado_6(nomes_permitidos)[:max]
+
     VerificaSonoridade(config)
 
     # Chama exatamente a mesma cena/loop de batalha do jogo.
-    BatalhaLoop(tela, relogio, estados, config, info)
+    ModBatalha.BatalhaLoop(tela, relogio, estados, config, info)
 
     pygame.quit()
 
