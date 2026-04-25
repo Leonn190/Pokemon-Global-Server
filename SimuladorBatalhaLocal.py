@@ -118,7 +118,7 @@ def _custo_move(move: Dict) -> float:
 
 
 def _ataque_suportado(nome_ataque: str) -> bool:
-    """Garante que funções irregulares do ataque existem em AtkDic (evita KeyError no motor)."""
+    """Modo ultra-seguro: só libera ataques diretos (n/e) sem função irregular."""
     linha = _DF_ATAQUES[_DF_ATAQUES["Ataque"] == nome_ataque]
     if linha.empty:
         return False
@@ -130,12 +130,17 @@ def _ataque_suportado(nome_ataque: str) -> bool:
     if funcoes in {"nan", "none"}:
         funcoes = ""
 
-    # No motor atual, ataques de estilo "s" sempre chamam <code>s (mesmo com função diferente).
-    if estilo not in {"n", "e"} and f"{codigo}s" not in AtkDic:
+    # Para evitar bugs aleatórios no motor legado, só usamos ataques diretos.
+    if estilo not in {"n", "e"}:
         return False
 
-    for sufixo in ("i", "m", "p", "f", "g"):
-        if sufixo in funcoes and f"{codigo}{sufixo}" not in AtkDic:
+    # Bloqueia qualquer função irregular (i/m/s/p/f/g), mesmo se existir em AtkDic.
+    if any(sufixo in funcoes for sufixo in ("i", "m", "s", "p", "f", "g")):
+        return False
+
+    # Mantém proteção extra: se vier sufixo disfarçado, também não deixa passar.
+    for sufixo in ("i", "m", "s", "p", "f", "g"):
+        if f"{codigo}{sufixo}" in AtkDic and sufixo in funcoes:
             return False
 
     return True
