@@ -125,11 +125,16 @@ def _ataque_suportado(nome_ataque: str) -> bool:
 
     ataque = linha.iloc[0]
     codigo = int(ataque["Code"])
+    estilo = str(ataque.get("Estilo", "")).lower().strip()
     funcoes = str(ataque.get("função", "")).lower()
     if funcoes in {"nan", "none"}:
         funcoes = ""
 
-    for sufixo in ("i", "m", "s", "p", "f"):
+    # No motor atual, ataques de estilo "s" sempre chamam <code>s (mesmo com função diferente).
+    if estilo not in {"n", "e"} and f"{codigo}s" not in AtkDic:
+        return False
+
+    for sufixo in ("i", "m", "p", "f", "g"):
         if sufixo in funcoes and f"{codigo}{sufixo}" not in AtkDic:
             return False
 
