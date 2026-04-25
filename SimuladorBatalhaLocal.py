@@ -15,6 +15,8 @@ from __future__ import annotations
 import random
 from typing import Dict, List, Optional
 
+import pandas as pd
+
 from Codigo.Geradores.GeradorPokemon import (
     GeraPokemonBatalha,
     MaterializarPokemon,
@@ -26,6 +28,10 @@ from Codigo.Localidades.EstabilizadorBatalhaLocal import (
     criar_e_inicializar_sala_local,
     receber_e_executar_jogadas,
 )
+from Codigo.Funções.FunçõesAtaques import AtkDic
+
+
+_DF_ATAQUES = pd.read_csv("Dados/Ataques.csv")
 
 
 def _gerar_pokemon_comum() -> Dict:
@@ -111,6 +117,25 @@ def _custo_move(move: Dict) -> float:
         return 0.0
 
 
+def _ataque_suportado(nome_ataque: str) -> bool:
+    """Garante que funções irregulares do ataque existem em AtkDic (evita KeyError no motor)."""
+    linha = _DF_ATAQUES[_DF_ATAQUES["Ataque"] == nome_ataque]
+    if linha.empty:
+        return False
+
+    ataque = linha.iloc[0]
+    codigo = int(ataque["Code"])
+    funcoes = str(ataque.get("função", "")).lower()
+    if funcoes in {"nan", "none"}:
+        funcoes = ""
+
+    for sufixo in ("i", "m", "s", "p", "f"):
+        if sufixo in funcoes and f"{codigo}{sufixo}" not in AtkDic:
+            return False
+
+    return True
+
+
 def _escolher_alvo_inimigo(equipe_inimiga: List[Dict]) -> Optional[str]:
     vivos_ativos = [p for p in equipe_inimiga if p.get("Ativo") and p.get("Vida", 0) > 0]
     if not vivos_ativos:
@@ -140,7 +165,19 @@ def _montar_jogadas(equipe: List[Dict], equipe_inimiga: List[Dict]) -> List[Dict
         if not viaveis:
             continue
 
-        move = random.choice(viaveis)
+        ataques_suportados = [m for m in viaveis if _nome_move(m) and _ataque_suportado(_nome_move(m))]
+        if not ataques_suportados:
+            # fallback seguro para nunca quebrar em AtkDic: movimenta para outra casa
+            pos_atual = int(poke.get("Pos", 5) or 5)
+            opcoes = [p for p in range(1, 10) if p != pos_atual]
+            jogadas.append({
+                "agente": idx,
+                "ataque": "Mover",
+                "alvo": random.choice(opcoes) if opcoes else pos_atual,
+            })
+            continue
+
+        move = random.choice(ataques_suportados)
         nome_ataque = _nome_move(move)
         if not nome_ataque:
             continue
